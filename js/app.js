@@ -42,7 +42,8 @@
         </header>
         <main class="login-meio">
           <div class="login-cartao vidro">
-            <h1>Entrar no ICM</h1>
+            <img class="login-marca" src="img/icm-marca.png" alt="ICM">
+            <h1>Entrar</h1>
             <p class="sub">Sistema de gestão · acesso restrito à equipe</p>
             <form id="form-login" autocomplete="on">
               <div class="campo-linha"><label for="lg-u">Usuário</label><input id="lg-u" name="usuario" autocomplete="username" required></div>
@@ -74,7 +75,7 @@
     const p = D.pessoa(eu.id);
     $('#app').innerHTML = `
       <header class="topo vidro">
-        <a class="marca" href="#/" aria-label="Painel ICM"><img src="img/logo-branca.png" alt=""><span>ICM</span></a>
+        <a class="marca" href="#/" aria-label="Painel ICM"><img src="img/icm-marca.png" alt="ICM"><span class="marca-txt">Gestão</span></a>
         <nav class="nav" id="nav">
           ${NAV.map(([k, h, r]) => `<a href="${h}" data-nav="${k}">${icon(k)}${r}${k === 'chat' ? '<span class="ponto" id="nav-chat-ponto" hidden></span>' : ''}</a>`).join('')}
         </nav>

@@ -41,7 +41,7 @@
   };
   document.addEventListener('click', e => { const b = e.target.closest('[data-wa]'); if (!b) return; const it = reg.get(b.dataset.wa); if (it) ICM.wa.abrir(it); });
 
-  const TIPOS = { falta_alerta: ['Faltas — alerta', 'warn'], falta_desligamento: ['Faltas — desligamento', 'danger'], reuniao: ['Reunião de pais', ''], evento: ['Evento', ''], mensalidade: ['Mensalidade em atraso', 'danger'], assinatura: ['Documentos para assinar', 'neutral'], portal: ['Acesso ao portal', 'neutral'] };
+  const TIPOS = { falta_alerta: ['Faltas — alerta', 'warn'], falta_desligamento: ['Faltas — desligamento', 'danger'], reuniao: ['Reunião de pais', ''], evento: ['Evento', ''], mensalidade: ['Mensalidade em atraso', 'danger'], assinatura: ['Documentos para assinar', 'neutral'], portal: ['Acesso ao portal', 'neutral'], agradecimento_doacao: ['Agradecer doação', 'ok'], lembrete_recorrente: ['Doador mensal', ''] };
 
   ICM.pages.avisos = async function (el, params, query) {
     ICM.app.setCrumbs([['Início', '#/'], ['Avisos às famílias']]);

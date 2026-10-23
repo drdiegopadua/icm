@@ -77,7 +77,7 @@
         const ativos = mats.filter(m => m.status === 'ativo'), sairam = mats.filter(m => m.status !== 'ativo');
         const canMng = ICM.auth.can('turmas.alunos');
         panel.innerHTML = `<div class="tab-panel col">
-          <div class="card"><div class="card-head"><div><div class="card-title">Alunos ativos</div><div class="card-sub">${ativos.length} de ${t.vagas || '∞'} vagas</div></div><div class="row"><button class="btn btn-sm" data-cart>${I('key', 16)} Carteirinhas (QR)</button>${canMng ? `<button class="btn btn-primary btn-sm" data-add>${I('userPlus', 16)} Incluir alunos</button>` : ''}</div></div>
+          <div class="card"><div class="card-head"><div><div class="card-title">Alunos ativos</div><div class="card-sub">${ativos.length} de ${t.vagas || '∞'} vagas</div></div><div class="row">${ICM.auth.can('avaliacoes.registrar') ? `<button class="btn btn-sm" data-aval>${I('chart', 16)} Avaliar evolução</button>` : ''}<button class="btn btn-sm" data-cart>${I('key', 16)} Carteirinhas (QR)</button>${canMng ? `<button class="btn btn-primary btn-sm" data-add>${I('userPlus', 16)} Incluir alunos</button>` : ''}</div></div>
             ${ativos.length ? `<div class="table-wrap"><table class="table"><thead><tr><th>Aluno</th><th>Entrada</th><th>Faltas no mês</th><th>Saúde</th><th></th></tr></thead><tbody>
             ${ativos.map(m => { const l = linhas.find(x => x.aluno_id === m.aluno_id) || { F: 0, nivel: 'ok' }; const sa = m.aluno.saude || {}; return `<tr>
               <td><a class="row" href="#/alunos/${esc(m.aluno_id)}" style="color:inherit">${ICM.util.avatar(m.aluno.nome, m.aluno.foto, 'sm')}<div><b>${esc(m.aluno.nome)}</b><div class="xs muted">${esc(m.aluno.matricula)}</div></div></a></td>
@@ -92,6 +92,7 @@
         </div>`;
         const add = panel.querySelector('[data-add]'); if (add) add.addEventListener('click', () => incluirAlunos(ativos.map(m => m.aluno_id)));
         panel.querySelector('[data-cart]').addEventListener('click', () => ICM.pages._carteirinhas(ativos.map(m => m.aluno)));
+        const av = panel.querySelector('[data-aval]'); if (av) av.addEventListener('click', () => ICM.pages._avaliarTurma(t.id));
         panel.querySelectorAll('[data-out]').forEach(b => b.addEventListener('click', () => retirarAluno(b.dataset.out, b.dataset.nome)));
       },
 

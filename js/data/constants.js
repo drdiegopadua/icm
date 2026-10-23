@@ -65,6 +65,15 @@
       'importar.dados': ['admin', 'coordenacao'],
       'docinst.ver': ['admin', 'coordenacao', 'secretaria'],
       'docinst.gerir': ['admin', 'coordenacao'],
+      'financeiro.ver': ['admin', 'coordenacao'],
+      'financeiro.lancar': ['admin', 'coordenacao'],
+      'financeiro.aprovar': ['admin'],
+      'compras.solicitar': ['admin', 'coordenacao', 'secretaria', 'professor'],
+      'compras.cotar': ['admin', 'coordenacao', 'secretaria'],
+      'compras.aprovar': ['admin'],
+      'campanhas.gerir': ['admin', 'coordenacao'],
+      'social.gerir': ['admin', 'coordenacao', 'secretaria'],
+      'avaliacoes.registrar': ['admin', 'coordenacao', 'professor'],
       'backup.exportar': ['admin'],
       'privacidade.gerir': ['admin']
     },
@@ -116,6 +125,31 @@
       bancario: { nome: 'Comprovante da conta bancária', validade: false },
       outro: { nome: 'Outro documento', validade: true }
     },
+    // ---------- Financeiro ----------
+    RUBRICAS: {
+      pessoal: 'Pessoal e encargos', servicos_pf: 'Serviços de terceiros — PF', servicos_pj: 'Serviços de terceiros — PJ',
+      material_consumo: 'Material de consumo', material_permanente: 'Equipamentos e material permanente', alimentacao: 'Alimentação',
+      transporte: 'Transporte e deslocamento', comunicacao: 'Comunicação e divulgação', administrativas: 'Despesas administrativas (água, luz, internet, aluguel)',
+      tarifas: 'Tarifas bancárias', impostos: 'Impostos e taxas', outras: 'Outras despesas'
+    },
+    CATEGORIAS_RECEITA: {
+      repasse: 'Repasse de parceria / convênio', incentivo: 'Captação via lei de incentivo', doacao_pf: 'Doação — pessoa física', doacao_pj: 'Doação — empresa / fundação',
+      mensalidade: 'Contribuição de associados', evento: 'Eventos e bazar', rendimento: 'Rendimento de aplicação', outra: 'Outras receitas'
+    },
+    TIPOS_CONTA_FIN: { corrente: 'Conta corrente', especifica: 'Conta específica de parceria', aplicacao: 'Aplicação', caixa: 'Caixa (dinheiro)' },
+    // Vida útil para depreciação linear (anos) — referência: tabela da Receita Federal (IN RFB 1.700/2017)
+    VIDA_UTIL: { informatica: 5, climatizacao: 10, eletrodomestico: 10, audio_video: 5, instrumento: 10, esportivo: 5, jardinagem: 5, mobiliario: 10, outro: 10 },
+
+    // ---------- Acompanhamento social e evolução ----------
+    ORGAOS_REDE: ['CRAS', 'CREAS', 'Conselho Tutelar', 'UBS / Saúde', 'CAPS / CAPSi', 'Escola', 'Defensoria / Justiça', 'Assistência jurídica', 'Outro'],
+    STATUS_ENCAMINHAMENTO: { enviado: ['Enviado', 'warn'], atendimento: ['Em atendimento', ''], concluido: ['Concluído', 'ok'], sem_retorno: ['Sem retorno', 'danger'] },
+    AREAS_PIA: ['Convivência familiar', 'Escolar', 'Saúde', 'Socioeconômica', 'Desenvolvimento pessoal', 'Proteção / direitos', 'Projeto de vida'],
+    COMPETENCIAS: {
+      assiduidade: 'Assiduidade e pontualidade', tecnica: 'Habilidade técnica na modalidade', convivencia: 'Convivência e respeito',
+      autonomia: 'Autonomia e responsabilidade', escola: 'Desempenho escolar', autoestima: 'Autoestima e confiança', cooperacao: 'Trabalho em equipe'
+    },
+    MOMENTOS_AVALIACAO: { inicial: 'Inicial', intermediaria: 'Intermediária', final: 'Final' },
+
     TIPOS_CONTA: { corrente: 'Conta corrente', poupanca: 'Conta poupança', pagamento: 'Conta de pagamento' },
     TIPOS_PIX: { cpf: 'CPF', cnpj: 'CNPJ', email: 'E-mail', telefone: 'Telefone', aleatoria: 'Chave aleatória' },
 
@@ -146,7 +180,9 @@
       aniv_equipe: 'Parabéns, {nome}! 🎉 Toda a equipe do {org} deseja um feliz aniversário, muita saúde e alegria. Obrigado por fazer parte desta história! 🎂',
       aniv_voluntario: 'Feliz aniversário, {nome}! 🎉 Seu trabalho voluntário transforma vidas no {org}. Que seu novo ciclo seja cheio de alegria! 🎂💙',
       aniv_associado: 'Olá, {nome}! O {org} deseja um feliz aniversário! 🎉 Obrigado por caminhar com a gente como associado(a). 🎂',
-      aniv_doador: 'Feliz aniversário, {nome}! 🎉 O {org} agradece por apoiar nossas crianças e adolescentes. Desejamos um ano cheio de alegria! 🎂💙',
+      agradecimento_doacao: 'Olá, {nome}! 💙 Recebemos sua doação de {valor} para {destino}. Muito obrigado! Graças a pessoas como você, crianças e adolescentes do {org} têm acesso a cultura, esporte e educação. Seu recibo: {recibo}.',
+      lembrete_recorrente: 'Olá, {nome}! Obrigado por ser doador(a) mensal do {org}. 💙 Segue o Pix para a doação deste mês ({valor}): {pix}\nSe preferir pausar, é só responder esta mensagem.',
+      aniv_doador:'Feliz aniversário, {nome}! 🎉 O {org} agradece por apoiar nossas crianças e adolescentes. Desejamos um ano cheio de alegria! 🎂💙',
       aniv_patrocinador:'Olá, {nome}! Hoje celebramos {anos} de parceria com o {org}! 🎉 Graças ao seu apoio, crianças e adolescentes têm acesso a cultura, esporte e educação. Muito obrigado! 💙'
     },
 

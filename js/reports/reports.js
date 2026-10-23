@@ -387,8 +387,8 @@
     const cats = Object.entries(ICM.C.CATEGORIAS_PAT).filter(([k]) => itens.some(i => i.categoria === k));
     cats.forEach(([k, c]) => {
       const l = itens.filter(i => i.categoria === k);
-      html += sec(`<h2>${esc(c.nome)}</h2>${table([{ t: 'Tombo' }, { t: 'Descrição' }, { t: 'Local' }, { t: 'Qtd.', c: 1 }, { t: 'Empr.', c: 1 }, { t: 'Estado' }, { t: 'Origem' }, ...(valores ? [{ t: 'NF' }, { t: 'Valor total', c: 1 }] : [])],
-        l.map(i => { const p = projetos.find(x => x.id === i.projeto_id); return [i.tombo, [i.nome, i.marca, i.modelo].filter(Boolean).join(' · '), i.local, i.quantidade, i.emprestados, (ICM.C.ESTADOS_PAT[i.estado] || '') + (i.situacao === 'manutencao' ? ' (manutenção)' : ''), p ? p.nome : 'Próprio/doação', ...(valores ? [i.nota_fiscal || '—', i.valor_unitario ? U().money(i.quantidade * i.valor_unitario) : '—'] : [])]; }))}`);
+      html += sec(`<h2>${esc(c.nome)}</h2>${table([{ t: 'Tombo' }, { t: 'Descrição' }, { t: 'Local' }, { t: 'Qtd.', c: 1 }, { t: 'Empr.', c: 1 }, { t: 'Estado' }, { t: 'Origem' }, ...(valores ? [{ t: 'NF' }, { t: 'Valor aquisição', c: 1 }, { t: 'Valor contábil', c: 1 }] : [])],
+        l.map(i => { const p = projetos.find(x => x.id === i.projeto_id); const dp = ICM.api.depreciacao(i); return [i.tombo, [i.nome, i.marca, i.modelo].filter(Boolean).join(' · '), i.local, i.quantidade, i.emprestados, (ICM.C.ESTADOS_PAT[i.estado] || '') + (i.situacao === 'manutencao' ? ' (manutenção)' : ''), p ? p.nome : 'Próprio/doação', ...(valores ? [i.nota_fiscal || '—', i.valor_unitario ? U().money(i.quantidade * i.valor_unitario) : '—', dp.total ? U().money(dp.contabil) : '—'] : [])]; }))}`);
     });
     if (baixados.length) html += sec(`<h2>Bens baixados</h2>${table([{ t: 'Tombo' }, { t: 'Descrição' }, { t: 'Motivo' }], baixados.map(i => [i.tombo, i.nome, ((i.historico || []).filter(h => h.tipo === 'baixa').pop() || {}).descricao || '']))}`);
     html += signs('Responsável pelo patrimônio', 'Direção');

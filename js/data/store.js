@@ -28,6 +28,7 @@
     if (!db.estoque_itens) { Object.assign(db, ICM.seedGestao(db)); mudou = true; }
     if (!db.docs_inst) { Object.assign(db, ICM.seedInst(db)); mudou = true; }
     if (!db.chat_canais) { Object.assign(db, ICM.seedChat(db)); mudou = true; }
+    if (!db.fin_contas) { Object.assign(db, ICM.seedFinanceiro(db)); mudou = true; }
     if (mudou) persist();
   }
 

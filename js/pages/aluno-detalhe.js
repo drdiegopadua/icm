@@ -19,7 +19,7 @@
 
     const TABS = [
       ['geral', 'Visão geral', 'user'], ['timeline', 'Linha do tempo', 'history'], ['turmas', 'Turmas e frequência', 'layers'],
-      ['agenda', 'Calendário', 'calendar'], ['ocorrencias', 'Advertências e ocorrências', 'alert'], ['emprestimos', 'Empréstimos', 'download'],
+      ['agenda', 'Calendário', 'calendar'], ['ocorrencias', 'Advertências e ocorrências', 'alert'], ['emprestimos', 'Empréstimos', 'download'], ['evolucao', 'Evolução', 'chart'], ['social', 'Acompanhamento social', 'heart'],
       ['social', 'Social e financeiro', 'wallet'], ['saude', 'Saúde', 'heartPulse'], ['escola', 'Escolaridade', 'school']
     ];
 
@@ -164,6 +164,9 @@
             [['Tipo sanguíneo', s.tipo_sanguineo], ['Plano de saúde', s.plano_saude], ['UBS de referência', s.ubs], ['Deficiência', s.deficiencia], ['Apto a atividade física', s.apto_atividade_fisica ? 'Sim' : 'Não'], ['Contato de emergência', s.contato_emergencia], ['Observações', s.observacoes]])}
         </div>`;
       },
+
+      async evolucao() { await ICM.pages._abaEvolucao(panel, a); },
+      async social() { await ICM.pages._abaSocial(panel, a); },
 
       async emprestimos() {
         const l = await ICM.api.emprestimos.list({ aluno_id: a.id });

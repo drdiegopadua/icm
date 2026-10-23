@@ -105,6 +105,10 @@ Senha de todos: `icm@2026`. Também dá para entrar clicando nos botões de demo
   - **bloqueio automático de choque de horário**, inclusive ao cadastrar turmas no mesmo espaço;
   - insumos ligados aos bens do patrimônio.
 - O **relatório anual da OSC** passa a incluir NPS, reuniões e participação das famílias, horas voluntárias, certificados, doações privadas, famílias associadas e demanda da lista de espera.
+- **Financeiro por projeto**: contas a pagar e receber, rubricas, **rateio** entre projetos, comprovante anexado, importação de **NF-e (XML)**, orçamento **previsto × realizado** por rubrica com alerta de estouro, conta específica por parceria (Lei 13.019) e **conciliação bancária** por extrato OFX/CSV. Relatórios de execução financeira, fluxo de caixa e contas em aberto.
+- **Compras**: pedido → **3 orçamentos** → mapa comparativo → aprovação (justificativa obrigatória se não for o menor preço) → conta a pagar gerada no Financeiro. Cadastro de fornecedores. **Depreciação** automática do patrimônio.
+- **Arrecadação online**: campanhas com meta e termômetro, **página pública de doação** (`#/doar`) com **Pix copia e cola e QR Code** (padrão BR Code do Banco Central), confirmação que gera doador, recibo e receita, e mensagens de agradecimento e lembrete para doadores mensais.
+- **Acompanhamento social**: **PIA** (Plano Individual de Atendimento), **encaminhamentos à rede** com retorno, pareceres e **avaliação de evolução** dos alunos (7 competências, de 1 a 5, inicial/intermediária/final), com relatório de resultados por projeto.
 - **Usuários e perfis de acesso**, com matriz de permissões, e **auditoria** de todas as ações.
 
 ## Estrutura

@@ -119,24 +119,26 @@
 
   // ======================= ARQUIVOS ANEXOS =======================
   // Protótipo: guardados no navegador (limite ~2 MB por arquivo). Na fase Supabase vão para bucket PRIVADO com link temporário.
-  const TIPOS_OK = /^(application\/pdf|image\/(jpeg|png|webp))$/;
+  const TIPOS_OK = /^(application\/pdf|image\/(jpeg|png|webp)|text\/xml|application\/xml)$/;
+  // Quem pode anexar/abrir arquivos: RH, documentos da instituição, financeiro e compras
+  const podeArquivos = () => ['equipe.gerir', 'docinst.gerir', 'financeiro.lancar', 'compras.cotar'].some(p => can(p));
   const arquivos = {
     async salvar(file, dono) {
-      need('equipe.gerir');
+      if (!podeArquivos()) H().deny();
       if (!file) throw new Error('Selecione um arquivo.');
-      if (!TIPOS_OK.test(file.type)) throw new Error('Envie PDF, JPG, PNG ou WEBP.');
+      if (!TIPOS_OK.test(file.type) && !/\.xml$/i.test(file.name)) throw new Error('Envie PDF, JPG, PNG, WEBP ou XML.');
       let data;
       if (file.type.startsWith('image/')) data = await u().compressImage(file, 1600, .82);
       else {
         if (file.size > 2 * 1024 * 1024) throw new Error('PDF acima de 2 MB. Reduza o arquivo (ex.: ilovepdf.com/pt/comprimir_pdf) ou fotografe o documento.');
         data = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(r.error); r.readAsDataURL(file); });
       }
-      const x = await S().insert('arquivos', { nome: file.name, mime: file.type.startsWith('image/') ? 'image/jpeg' : file.type, tamanho: Math.round(data.length * 0.75), data, dono, enviado_por: me().nome });
+      const x = await S().insert('arquivos', { nome: file.name, mime: file.type.startsWith('image/') ? 'image/jpeg' : (file.type || 'application/xml'), tamanho: Math.round(data.length * 0.75), data, dono, enviado_por: me().nome });
       await audit('anexar', dono.col, dono.id, `Arquivo anexado: ${file.name}`);
       return { id: x.id, nome: x.nome, mime: x.mime, tamanho: x.tamanho };
     },
-    async get(id) { need('equipe.gerir'); const x = await S().get('arquivos', id); if (x) await audit('visualizar_arquivo', x.dono.col, x.dono.id, `Arquivo aberto: ${x.nome}`); return x; },
-    async remove(id) { need('equipe.gerir'); await S().remove('arquivos', id); }
+    async get(id) { if (!podeArquivos()) H().deny(); const x = await S().get('arquivos', id); if (x) await audit('visualizar_arquivo', x.dono.col, x.dono.id, `Arquivo aberto: ${x.nome}`); return x; },
+    async remove(id) { if (!podeArquivos()) H().deny(); await S().remove('arquivos', id); }
   };
 
   // ======================= AVISOS (WhatsApp) =======================
@@ -195,6 +197,25 @@
       if (can('assinaturas.solicitar')) {
         const pend = await S().list('assinaturas', x => x.status === 'pendente');
         [...new Set(pend.map(p => p.aluno_id))].forEach(aid => push('assinatura', al(aid), { link: linkApp('/portal') }, `assin:${aid}:${pend.filter(p => p.aluno_id === aid).length}`, `${pend.filter(p => p.aluno_id === aid).length} documento(s) para assinar`));
+      }
+      // Régua de relacionamento com doadores: agradecer doações recentes e lembrar doadores mensais
+      if (can('doadores.gerir')) {
+        const doadores = await S().list('doadores'); const projetos = await S().list('projetos');
+        const ok = d => d && d.telefone && d.aceita_comunicacao !== false;
+        (await S().list('doacoes', x => x.data >= u().addDays(hoje, -15))).forEach(x => {
+          const d = doadores.find(y => y.id === x.doador_id); if (!ok(d)) return;
+          const fake = { id: d.id, nome: d.nome, responsavel: { nome: d.contato || d.nome, telefone: d.telefone } };
+          push('agradecimento_doacao', fake, { nome: (d.contato || d.nome).split(' ')[0], valor: u().money(x.valor), destino: (projetos.find(p => p.id === x.projeto_id) || {}).nome || 'nossas atividades', recibo: x.recibo }, `agrad:${x.id}`, `Agradecer doação ${x.recibo} (${u().money(x.valor)})`, x.data);
+        });
+        const pix = (await S().getConfig()).pix || {};
+        const recorrentes = (await S().list('doacoes_online', x => x.recorrente && x.status === 'confirmada'));
+        [...new Set(recorrentes.map(x => x.doador_id))].forEach(did => {
+          const d = doadores.find(y => y.id === did); if (!ok(d)) return;
+          const ult = recorrentes.filter(x => x.doador_id === did).sort((a, b) => b.confirmado_em.localeCompare(a.confirmado_em))[0];
+          if (ult.confirmado_em > u().addDays(hoje, -28)) return;
+          const fake = { id: d.id, nome: d.nome, responsavel: { nome: d.nome, telefone: d.telefone } };
+          push('lembrete_recorrente', fake, { nome: d.nome.split(' ')[0], valor: u().money(ult.valor), pix: pix.chave ? `chave ${pix.chave}` : '' }, `recor:${did}:${hoje.slice(0, 7)}`, `Doador(a) mensal — último Pix em ${u().fmtDate(ult.confirmado_em)}`);
+        });
       }
       return out;
     }

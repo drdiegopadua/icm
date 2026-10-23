@@ -58,6 +58,10 @@
     { re: /^\/usuarios$/, page: 'usuarios', perm: 'usuarios.gerenciar' },
     { re: /^\/config$/, page: 'config' },
     { re: /^\/auditoria$/, page: 'auditoria', perm: 'auditoria.ver' },
+    { re: /^\/financeiro$/, page: 'financeiro', perm: 'financeiro.ver' },
+    { re: /^\/compras$/, page: 'compras' },
+    { re: /^\/campanhas$/, page: 'campanhas', perm: 'campanhas.gerir' },
+    { re: /^\/social$/, page: 'social', perm: 'social.gerir' },
     { re: /^\/chat$/, page: 'chat' },
     { re: /^\/chat\/([\w-]+)$/, page: 'chat', keys: ['id'] }
   ];
@@ -69,6 +73,7 @@
       { href: '#/alunos', icon: 'users', label: 'Alunos', desc: 'Matrícula, ficha e histórico', match: /^\/alunos/ },
       { href: '#/chamada', icon: 'userCheck', label: 'Chamada (celular)', desc: 'Presença rápida pelo QR da carteirinha', match: /^\/chamada/ },
       ICM.auth.can('espera.gerir') && { href: '#/espera', icon: 'list', label: 'Lista de espera', desc: 'Triagem e vagas', match: /^\/espera/ },
+      ICM.auth.can('social.gerir') && { href: '#/social', icon: 'heartPulse', label: 'Acompanhamento social', desc: 'PIA, encaminhamentos à rede e evolução', match: /^\/social/ },
       { href: '#/aniversariantes', icon: 'star', label: 'Aniversariantes', match: /^\/aniversariantes/ }
     ] },
     { label: 'Pedagógico', icon: 'folder', itens: [
@@ -83,6 +88,7 @@
       { href: '#/voluntarios', icon: 'heart', label: 'Voluntários', match: /^\/voluntarios/ },
       ICM.auth.can('associados.gerir') && { href: '#/associados', icon: 'key', label: 'Associados', match: /^\/associados/, count: 'inadimplentes' },
       ICM.auth.can('doadores.gerir') && { href: '#/doadores', icon: 'dollar', label: 'Doadores e parceiros', match: /^\/doadores/ },
+      ICM.auth.can('campanhas.gerir') && { href: '#/campanhas', icon: 'heart', label: 'Campanhas e doação online', desc: 'Página de doação com Pix', match: /^\/campanhas/ },
       { href: '#/pesquisas', icon: 'pie', label: 'Pesquisas', match: /^\/pesquisas/ }
     ] },
     { label: 'Documentos', icon: 'fileText', itens: [
@@ -91,6 +97,8 @@
       ICM.auth.can('docinst.ver') && { href: '#/documentos', icon: 'shield', label: 'Docs da instituição', match: /^\/documentos/, count: 'docs' }
     ] },
     { label: 'Gestão', icon: 'building', itens: [
+      ICM.auth.can('financeiro.ver') && { href: '#/financeiro', icon: 'dollar', label: 'Financeiro', desc: 'Pagar e receber, orçamento por projeto, conciliação', match: /^\/financeiro/ },
+      { href: '#/compras', icon: 'clipboard', label: 'Compras', desc: 'Pedidos, 3 orçamentos e aprovação', match: /^\/compras/ },
       { href: '#/patrimonio', icon: 'building', label: 'Patrimônio', match: /^\/patrimonio/, count: 'atrasos' },
       { href: '#/estoque', icon: 'layers', label: 'Estoque de consumo', match: /^\/estoque/ },
       ICM.auth.can('equipe.gerir') && { href: '#/equipe', icon: 'users', label: 'Equipe (RH)', desc: 'Professores e colaboradores', match: /^\/equipe/ },
@@ -282,6 +290,9 @@
     const pub = (location.hash || '').match(/^#\/verificar\/([\w-]+)/);
     const fam = (location.hash || '').match(/^#\/(portal|assinar\/([\w-]+))/);
     if (fam) { window.addEventListener('hashchange', () => location.reload()); return fam[2] ? ICM.pages.assinar(root, fam[2]) : ICM.pages.portal(root); }
+    // Página pública de doação (campanhas + Pix)
+    const doar = (location.hash || '').match(/^#\/doar(?:\/([\w-]+))?$/);
+    if (doar) { window.addEventListener('hashchange', () => location.reload()); return ICM.pages.doar(root, doar[1]); }
     if (pub) { await ICM.pages.verificar(root, pub[1]); window.addEventListener('hashchange', () => location.reload(), { once: true }); return; }
     const user = await ICM.auth.restore();
     if (user) start(user);

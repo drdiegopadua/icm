@@ -290,6 +290,7 @@
     Object.assign(base, ICM.seedComunidade(base));
     Object.assign(base, ICM.seedGestao(base));
     Object.assign(base, ICM.seedInst(base));
+    Object.assign(base, ICM.seedFinanceiro(base));
     return base;
   }
 

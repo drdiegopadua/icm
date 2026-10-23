@@ -479,10 +479,17 @@ span.ag-chip { display: inline-block; }
 .doc .doc-head .logo svg, .cert-head svg { width: 100%; height: auto; color: #0e1838; }
 @media (prefers-reduced-motion: reduce) { .icm-marca.anim .ml { animation: none; } .icm-marca .icm-brilho { display: none; } }
 
-@media (max-width: 1320px) {
+/* Telas de notebook (1366px etc.): menu mais compacto para não sobrepor marca, itens e busca */
+.tn-menu { justify-content: safe center; }
+@media (max-width: 1480px) {
+  .topnav .brand-txt { display: none; }
   .tn-item { padding: 0 9px; font-size: 14px; }
   .tn-menu > .tn-item > svg, .tn-grupo-btn > svg:first-child { display: none; }
   .tn-busca { width: 160px; }
+}
+@media (max-width: 1240px) {
+  .tn-item { padding: 0 7px; font-size: 13.5px; gap: 4px; }
+  .tn-busca { width: 120px; }
 }
 @media (max-width: 1080px) {
   .topnav { margin: 10px 12px 0; height: 62px; }
@@ -552,3 +559,16 @@ span.ag-chip { display: inline-block; }
   .chat-voltar { display: inline-flex; }
   .chat-msg { max-width: 92%; }
 }
+
+/* Evolução dos alunos (inicial × atual) */
+.evo-row { display: flex; align-items: center; gap: 10px; padding: 5px 0; }
+.evo-row .small { min-width: 0; }
+.evo-bar { position: relative; width: 46%; height: 16px; border-radius: 99px; background: var(--surface-sunken); box-shadow: var(--sh-in); overflow: hidden; flex: none; }
+.evo-bar span { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 99px; }
+.evo-bar .at { background: linear-gradient(90deg, #059669, #34d399); opacity: .9; }
+.evo-bar .ini { background: rgba(100,116,139,.55); z-index: 1; height: 6px; top: 5px; }
+.evo-leg { display: inline-block; width: 18px; height: 8px; border-radius: 4px; margin: 0 4px 0 8px; }
+.evo-leg.ini { background: rgba(100,116,139,.55); } .evo-leg.at { background: #10b981; }
+.aval .av-sel { height: 34px; padding: 0 22px 0 8px; width: 64px; background-position: right 6px center; }
+.termo { margin: 4px 0; }
+@media (max-width: 640px) { .evo-bar { width: 38%; } }

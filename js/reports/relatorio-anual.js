@@ -27,17 +27,31 @@
 
   // ---------- Textos padrão (editáveis) ----------
   function textosPadrao(d) {
-    const areas = Object.values(ICM.C.AREAS).map(a => a.nome.toLowerCase());
-    const lista = areas.slice(0, -1).join(', ') + ' e ' + areas.slice(-1);
     return {
-      nome: ICM.C.ORG.nome, razao: ICM.C.ORG.razao, cnpj: ICM.C.ORG.cnpj, cidade: ICM.C.ORG.cidade, site: '', instagram: '', email: ICM.C.ORG.email || '', telefone: '', endereco: ICM.C.ORG.endereco || '',
-      apresentacao: `O ${ICM.C.ORG.nome} é uma organização da sociedade civil sem fins lucrativos que atua nas áreas de ${lista}. Nosso trabalho oferece, gratuitamente, atividades regulares a crianças, adolescentes e jovens, acompanhando cada um deles e suas famílias.\n\nEm ${d.ano}, foram ${N(d.alunos.length)} pessoas atendidas em ${N(d.turmas.length)} turmas de ${N(d.projetos.length)} projetos, somando ${N(d.horas)} horas de atividades e ${N(d.aulas.length)} aulas realizadas. Cada aula tem plano, chamada, relatório e fotos registrados no ICM Sistema, o que garante transparência a famílias, parceiros e financiadores.`,
-      missao: 'Promover o desenvolvimento integral de crianças, adolescentes e jovens por meio da cultura, do esporte, do meio ambiente, da educação e da saúde, fortalecendo vínculos familiares e comunitários.',
-      visao: 'Ser referência regional em transformação social, ampliando oportunidades e reduzindo desigualdades nos territórios onde atuamos.',
-      valores: 'Ética e transparência; respeito à diversidade; proteção integral de crianças e adolescentes; trabalho em rede; excelência pedagógica; compromisso com a comunidade.',
+      nome: ICM.C.ORG.nome, razao: ICM.C.ORG.razao, cnpj: ICM.C.ORG.cnpj, cidade: ICM.C.ORG.cidade, site: ICM.C.ORG.site || '', instagram: ICM.C.ORG.instagram || '', email: ICM.C.ORG.email || '', telefone: '', endereco: ICM.C.ORG.endereco || '',
+      apresentacao: `Fundado em 16 de agosto de 2021, na cidade de Afonso Cláudio-ES, o ${ICM.C.ORG.nome} nasceu com um propósito claro: criar oportunidades reais para quem mais precisa. Ao longo de sua trajetória, tem impactado centenas de jovens e famílias por meio de projetos sociais que unem cultura, esporte e educação — promovendo desenvolvimento humano, inclusão social e transformação de vidas. Mais do que números, construímos histórias: histórias de superação, aprendizado e novos caminhos.
+
+Em ${d.ano}, foram ${N(d.alunos.length)} pessoas atendidas em ${N(d.turmas.length)} turmas de ${N(d.projetos.length)} projetos, somando ${N(d.horas)} horas de atividades gratuitas e ${N(d.aulas.length)} aulas realizadas. Cada aula tem plano, chamada, relatório e fotos registrados no ICM Sistema, o que garante transparência a famílias, parceiros e financiadores.`,
+      missao: 'Promover o desenvolvimento humano e social por meio de ações culturais, esportivas e educacionais, criando oportunidades que transformam vidas e fortalecem comunidades.',
+      visao: 'Ser referência na transformação social nas montanhas capixabas, ampliando o acesso à cultura, educação e inclusão para todos.',
+      valores: 'Transparência em cada ação, respeito, inclusão, responsabilidade social e transformação através da educação.',
       relacionamento: 'Nossa relação com a sociedade, o poder público, empresas e famílias é baseada na confiança, na prestação de contas e no diálogo permanente. Todos os dados pessoais são tratados conforme a LGPD, com acesso restrito por perfil e registro de auditoria.',
-      compliance: 'O Instituto mantém estatuto atualizado, atas registradas, mandatos da diretoria vigentes e certidões de regularidade acompanhadas mensalmente. A política de proteção de crianças e adolescentes e o tratamento de dados conforme a LGPD orientam a atuação de toda a equipe e dos voluntários.',
-      ods: [3, 4, 5, 10, 11, 13, 15, 17]
+      compliance: 'O Instituto é reconhecido como de Utilidade Pública Municipal (Lei nº 2.617/2024) e Estadual (Lei nº 12.580/2025), inscrito no Conselho Municipal dos Direitos da Criança e do Adolescente (CMDCA) e certificado como Ponto de Cultura pelo Ministério da Cultura. Mantém estatuto atualizado, atas registradas, mandatos da diretoria vigentes e certidões de regularidade acompanhadas mensalmente, com todos os documentos disponíveis na página de transparência.',
+      ods: [1, 2, 3, 4, 10, 11, 16, 17],
+      // Linha do tempo institucional (Ano | Título — descrição); entra no relatório até o ano escolhido
+      marcos: `2021 | Fundação do Instituto — 16 de agosto de 2021, em Afonso Cláudio-ES.
+2022 | Primeiros projetos nas escolas — aulas de música nas escolas do município, com 100 atendidos.
+2024 | Lei de Incentivo à Cultura Capixaba — primeiro projeto aprovado na LICC.
+2024 | Utilidade Pública Municipal — Lei nº 2.617/2024, Município de Afonso Cláudio/ES.
+2025 | Lei Rouanet — pioneiro na região na captação pela Lei Federal de Incentivo à Cultura, com a Orquestra Jônice Tristão.
+2025 | Utilidade Pública Estadual — Lei nº 12.580/2025, Estado do Espírito Santo.
+2025 | CMDCA — inscrição no Conselho Municipal dos Direitos da Criança e do Adolescente.
+2026 | Ponto de Cultura — certificação do Ministério da Cultura.`,
+      parceiros: `EDP
+Grupo Tristão
+Sicoob
+Prefeitura Municipal de Afonso Cláudio
+Ifes`
     };
   }
 
@@ -183,9 +197,10 @@
           ${diretoria.length ? `<div class="rv-h2" style="margin-top:4mm">Diretoria e conselhos</div><div class="rv-small">${diretoria.map(m => `<div><b>${esc(m.cargo)}</b> — ${esc(m.nome)}</div>`).join('')}</div>` : ''}</div></div>` });
 
     // Reconhecimento
+    const marcos = linhas(d.inst.marcos).map(l => { const m = l.match(/^(\d{4})\s*\|\s*(.+)$/); if (!m || m[1] > d.ano) return null; const [t, ...r] = m[2].split(/\s+[—–-]\s+/); return { t: `${m[1]} · ${t}`, txt: r.join(' — '), ev: null, ano: m[1] }; }).filter(Boolean).reverse();
     const recCfg = linhas(d.anoCfg.reconhecimentos).map(l => { const [t, ...r] = l.split(/\s+[—–-]\s+/); return { t, txt: r.join(' — '), ev: null }; });
-    const recEv = d.eventos.filter(e => ['campeonato', 'participacao', 'apresentacao'].includes(e.tipo) && e.resultado).slice(0, Math.max(0, 5 - recCfg.length)).map(e => ({ t: e.titulo, txt: `${U().fmtDate(e.data)} · ${e.local || ''} — ${e.resultado}`, ev: e.id }));
-    const recs = recCfg.concat(recEv);
+    const recEv = d.eventos.filter(e => ['campeonato', 'participacao', 'apresentacao'].includes(e.tipo) && e.resultado).slice(0, Math.max(0, 4 - recCfg.length)).map(e => ({ t: e.titulo, txt: `${U().fmtDate(e.data)} · ${e.local || ''} — ${e.resultado}`, ev: e.id }));
+    const recs = recCfg.concat(recEv, marcos).slice(0, 7);
     if (recs.length) add({ sec: S1, titulo: 'Reconhecimento', html: () => `${arcos([170, 60, 220])}<div class="rv-in"><h1 class="rv-h">Reconhecimento</h1><div style="width:175mm;margin-top:6mm">
       ${recs.map(r => `<div class="rv-rec">${foto(d, { evento: r.ev || undefined })}<div><b>${esc(r.t)}</b><p>${esc(r.txt)}</p></div></div>`).join('')}</div></div>` });
 
@@ -245,7 +260,7 @@
     const porCat = contar(pj, x => x.categoria || 'Empresas').map(c => ({ ...c, nomes: pj.filter(x => (x.categoria || 'Empresas') === c.l).map(x => x.nome) }));
     const financiadores = [...new Set(d.projetos.map(p => p.financiador).filter(Boolean))];
     const rede = [...new Set(d.encaminhamentos.map(e => e.orgao).filter(Boolean))];
-    const extras = linhas(d.anoCfg.parceiros);
+    const extras = [...new Set(linhas(d.anoCfg.parceiros).concat(linhas(d.inst.parceiros)))];
     add({ sec: S2, titulo: 'Parcerias e relacionamento', html: () => `<div class="rv-in" style="display:grid;grid-template-columns:1fr 1fr;gap:12mm">
       <div><h1 class="rv-h">Parcerias e relacionamento</h1><p>Em ${esc(d.ano)}, as atividades contaram com a participação de ${N(financiadores.length + pj.length + extras.length)} financiadores, empresas e instituições parceiras, além da rede pública de proteção social, que recebe nossos encaminhamentos.</p>
         <div class="rv-h2" style="margin-top:5mm">Financiadores dos projetos</div><div class="rv-logos">${financiadores.map(f => `<span>${esc(f)}</span>`).join('') || '<span>—</span>'}</div>
@@ -402,6 +417,8 @@
         <div class="grid grid-2">${F({ name: 'missao', label: 'Missão', type: 'textarea', rows: 3, value: inst.missao })}${F({ name: 'visao', label: 'Visão', type: 'textarea', rows: 3, value: inst.visao })}
           ${F({ name: 'valores', label: 'Valores', type: 'textarea', rows: 3, value: inst.valores })}${F({ name: 'relacionamento', label: 'Relacionamento com a sociedade', type: 'textarea', rows: 3, value: inst.relacionamento })}</div>
         ${F({ name: 'compliance', label: 'Compliance e governança', type: 'textarea', rows: 3, value: inst.compliance })}
+        ${F({ name: 'marcos', label: 'Linha do tempo e certificações (uma por linha: Ano | Título — descrição)', type: 'textarea', rows: 5, value: inst.marcos })}
+        ${F({ name: 'parceirosInst', label: 'Parceiros e patrocinadores permanentes (um por linha)', type: 'textarea', rows: 3, value: inst.parceiros })}
         <div><label>Objetivos de Desenvolvimento Sustentável (ODS) que a instituição atende</label><div class="row wrap mt-2" style="gap:6px">${ODS.map(([n, c], i) => `<label class="badge" style="cursor:pointer;background:${c};color:#fff;gap:6px"><input type="checkbox" data-ods value="${i + 1}" ${inst.ods.includes(i + 1) ? 'checked' : ''}> ${i + 1}. ${esc(n)}</label>`).join('')}</div></div>
         <div class="section-title mt-4">Ano de ${esc(ano)}</div>
         ${F({ name: 'mensagem', label: 'Mensagem de abertura (aparece em destaque em "Quem somos")', type: 'textarea', rows: 2, value: a.mensagem || '' })}
@@ -418,7 +435,8 @@
     });
     m.$('[data-ok]').addEventListener('click', e => ICM.ui.busy(e.currentTarget, async () => {
       const f = m.$('[data-f]'); const v = n => (f.elements[n] ? f.elements[n].value.trim() : '');
-      const novoInst = {}; ['nome', 'razao', 'cnpj', 'cidade', 'endereco', 'telefone', 'email', 'site', 'instagram', 'apresentacao', 'missao', 'visao', 'valores', 'relacionamento', 'compliance'].forEach(k => { if (v(k)) novoInst[k] = v(k); });
+      const novoInst = {}; ['nome', 'razao', 'cnpj', 'cidade', 'endereco', 'telefone', 'email', 'site', 'instagram', 'apresentacao', 'missao', 'visao', 'valores', 'relacionamento', 'compliance', 'marcos'].forEach(k => { if (v(k)) novoInst[k] = v(k); });
+      if (v('parceirosInst')) novoInst.parceiros = v('parceirosInst');
       novoInst.ods = [...f.querySelectorAll('[data-ods]:checked')].map(x => +x.value);
       const midia = {}; ['instagram_seguidores', 'instagram_alcance', 'instagram_interacoes', 'facebook_seguidores', 'facebook_alcance', 'facebook_interacoes', 'youtube_inscritos', 'youtube_views', 'site_acessos', 'imprensa'].forEach(k => { if (v('m.' + k)) midia[k] = v('m.' + k); });
       const anos = { ...(rel.anos || {}), [ano]: { mensagem: v('mensagem'), destaques: v('destaques'), reconhecimentos: v('reconhecimentos'), parceiros: v('parceiros'), midia } };

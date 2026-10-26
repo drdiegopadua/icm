@@ -21,7 +21,7 @@
         <div class="bg-orbs"><div class="orb ring o1"></div><div class="orb o2"></div><div class="orb ring o3"></div><div class="orb o4"></div><div class="orb o5"></div></div>
         <button class="theme-fab" data-theme-toggle aria-label="Alternar tema">${I(document.documentElement.dataset.theme === 'dark' ? 'sun' : 'moon', 22)}</button>
         <div class="login-card">
-          <div class="login-logo">${ICM.logo(104, true)}</div>
+          <div class="login-logo-full">${ICM.logoCompleta(120)}</div>
           <h1 class="login-title">Bem-vindo de volta</h1>
           <div class="login-sub">Entre para continuar</div>
           <form class="login-form" autocomplete="on" novalidate>

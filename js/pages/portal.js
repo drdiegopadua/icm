@@ -10,7 +10,7 @@
     document.title = 'Portal da Família · ICM';
     if (ICM.api.portal.sessao()) return painel(root);
     root.innerHTML = `<div class="login-screen"><div class="bg-orbs"><div class="orb ring o1"></div><div class="orb o2"></div><div class="orb ring o3"></div><div class="orb o4"></div></div>${tema()}
-      <div class="login-card"><div class="login-logo">${ICM.logo(104, true)}</div>
+      <div class="login-card"><div class="login-logo-full">${ICM.logoCompleta(110)}</div>
         <h1 class="login-title">Portal da Família</h1><div class="login-sub">Acompanhe seu filho(a)</div>
         <form class="login-form" novalidate>
           <label class="login-input">${I('user', 24)}<input name="matricula" placeholder="Matrícula (ex.: ICM-2026-0003)" autocomplete="username" style="text-transform:uppercase" required></label>

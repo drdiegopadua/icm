@@ -119,7 +119,7 @@
       <div class="bg-orbs"><div class="orb ring o1"></div><div class="orb o3"></div></div>
       <div class="app app-topo">
         <header class="topnav glass">
-          <a class="brand" href="#/dashboard" aria-label="Início — ICM">${ICM.marca(62, true)}<span class="brand-txt">Gestão</span></a>
+          <a class="brand" href="#/dashboard" aria-label="Início — Instituto Cultural das Montanhas">${ICM.logoCompleta(42)}<span class="brand-txt">Gestão</span></a>
           <nav class="tn-menu" aria-label="Menu principal"></nav>
           <div class="tn-acoes">
             <div class="search tn-busca input-icon">${I('search', 18)}<input class="input" type="search" placeholder="Buscar" aria-label="Busca global"></div>

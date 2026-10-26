@@ -572,3 +572,14 @@ span.ag-chip { display: inline-block; }
 .aval .av-sel { height: 34px; padding: 0 22px 0 8px; width: 64px; background-position: right 6px center; }
 .termo { margin: 4px 0; }
 @media (max-width: 640px) { .evo-bar { width: 38%; } }
+
+/* ---------- Logo oficial do Instituto ---------- */
+.logo-icm { display: inline-block; height: var(--h, 48px); flex: none; }
+.logo-icm img { height: 100%; width: auto; display: block; }
+.logo-icm .lg-branca { display: none; }
+:root[data-theme="dark"] .logo-icm .lg-escura { display: none; }
+:root[data-theme="dark"] .logo-icm .lg-branca { display: block; }
+.login-logo-full { margin-bottom: 22px; animation: popIn .9s var(--ease-spring) both, float 6s ease-in-out infinite; }
+.login-logo-full .logo-icm { filter: drop-shadow(0 10px 18px rgba(37, 99, 235, .22)); }
+@media (max-width: 1240px) { .topnav .brand .logo-icm { --h: 36px !important; } }
+@media (max-width: 520px) { .login-logo-full .logo-icm { --h: 92px !important; } }

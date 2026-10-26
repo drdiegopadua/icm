@@ -19,4 +19,8 @@
       ${anim ? `<g class="icm-brilho" style="mix-blend-mode:overlay"><path d="${I_PATH}" fill="url(#${id})"/><path d="${CM_PATH}" fill="url(#${id})"/></g>` : ''}
     </svg>`;
   };
+  // Logo oficial completa do Instituto Cultural das Montanhas (troca de cor com o tema claro/escuro)
+  ICM.logoCompleta = function (altura = 48) {
+    return `<span class="logo-icm" style="--h:${altura}px"><img class="lg-escura" src="assets/icm-logo-escura.png" alt="Instituto Cultural das Montanhas"><img class="lg-branca" src="assets/icm-logo-branca.png" alt="" aria-hidden="true"></span>`;
+  };
 })();

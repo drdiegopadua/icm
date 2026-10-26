@@ -9,7 +9,9 @@
       cnpj: '51.892.817/0001-52',
       cidade: 'Afonso Cláudio — ES',
       endereco: 'Rua Alcino Martins de Souza, nº 110, João Valim, Afonso Cláudio — ES, CEP 29600-000',
-      email: 'institutoculturaldasmontanhas@gmail.com'
+      email: 'institutoculturaldasmontanhas@gmail.com',
+      site: 'institutoculturaldasmontanhas.org',
+      instagram: '@institutodasmontanhas'
     },
 
     AREAS: {

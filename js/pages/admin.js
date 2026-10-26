@@ -32,7 +32,7 @@
           ${F({ name: 'telefone', label: 'Telefone', value: u.telefone })}
           ${F({ name: 'papel', label: 'Perfil de acesso', type: 'select', value: u.papel || 'professor', options: Object.entries(ICM.C.PAPEIS).map(([k, v]) => [k, v.nome]) })}
           ${F({ name: 'cargo', label: 'Cargo / função', value: u.cargo })}
-          ${F({ name: 'senha', label: u.id ? 'Nova senha (opcional)' : 'Senha inicial', type: 'password', hint: 'Mínimo 8 caracteres com letras e números. Na versão final, o usuário recebe convite por e-mail e define a própria senha.', attrs: 'autocomplete="new-password"' })}
+          ${ICM.auth.modo === 'supabase' ? (u.id ? '' : '<p class="small span-2">A pessoa receberá acesso pelo <b>Primeiro acesso</b> na tela de login, usando este e-mail, e criará a própria senha.</p>') : F({ name: 'senha', label: u.id ? 'Nova senha (opcional)' : 'Senha inicial', type: 'password', hint: 'Mínimo 8 caracteres com letras e números. Na versão final, o usuário recebe convite por e-mail e define a própria senha.', attrs: 'autocomplete="new-password"' })}
           ${F({ name: 'ativo', label: 'Acesso ativo', type: 'toggle', value: u.id ? u.ativo : true })}
         </form>`,
         foot: `<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" data-ok>${I('check', 18)} Salvar</button>`

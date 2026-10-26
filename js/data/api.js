@@ -348,7 +348,8 @@
         const all = await S().list('usuarios');
         if (all.some(o => o.email.toLowerCase() === x.email.toLowerCase() && o.id !== x.id)) throw new Error('E-mail já cadastrado.');
         const patch = { ...x }; delete patch.senha;
-        if (x.senha) {
+        if (S().modo === 'supabase') { delete patch.convite; /* com banco: vira convite; a pessoa cria a própria senha no "Primeiro acesso" */ }
+        else if (x.senha) {
           if (x.senha.length < 8 || !/\d/.test(x.senha) || !/[a-zA-Z]/.test(x.senha)) throw new Error('A senha precisa ter 8+ caracteres, com letras e números.');
           patch.senha_hash = await u().sha256('icm-salt::' + x.senha);
         } else if (!x.id) throw new Error('Defina uma senha inicial.');

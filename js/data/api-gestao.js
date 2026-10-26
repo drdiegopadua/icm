@@ -228,6 +228,12 @@
     link: () => linkApp('/portal'),
     sessao: sessaoFamilia,
     async login(matricula, codigo) {
+      // Com banco: a função pública confere o código e devolve só os dados do próprio aluno(a)
+      if (S().modo === 'supabase') {
+        const snap = await S().rpc('portal_dados', { p_matricula: String(matricula || '').trim(), p_codigo: String(codigo || '').trim() });
+        sessionStorage.setItem(FKEY, JSON.stringify({ aluno_id: snap.aluno_id, exp: Date.now() + 30 * 60000, snap }));
+        S().usarSnapshot(snap); return snap.alunos[0];
+      }
       let lock = {}; try { lock = JSON.parse(localStorage.getItem(FLOCK) || '{}'); } catch (e) { /* */ }
       if (lock.ate && Date.now() < lock.ate) throw new Error('Muitas tentativas. Aguarde alguns minutos.');
       await u().sleep(500);
@@ -252,6 +258,7 @@
     // Tudo o que a família vê — somente do próprio filho(a)
     async dados() {
       const s = sessaoFamilia(); if (!s) throw new Error('Sessão expirada. Entre novamente.');
+      if (s.snap) S().usarSnapshot(s.snap);
       const a = await S().get('alunos', s.aluno_id); const hoje = u().today(); const ym = hoje.slice(0, 7);
       const mats = await S().list('matriculas', m => m.aluno_id === a.id && m.status === 'ativo');
       const turmas = await S().list('turmas'); const users = await S().list('usuarios'); const projetos = await S().list('projetos');
@@ -315,6 +322,12 @@
     },
     // Público (link enviado ao responsável)
     async porToken(token) {
+      if (S().modo === 'supabase') {
+        const r = await S().rpc('assinatura_por_token', { p_token: String(token || '') });
+        if (!r) return null;
+        const x = r.assinatura, a = r.aluno;
+        return { ...x, aluno: { nome: a.nome, matricula: a.matricula, responsavel: (a.responsavel || {}).nome }, html: textoDocumento(x.tipo, a, r.ref), titulo: ICM.C.DOCS_ASSINATURA[x.tipo] };
+      }
       const x = (await S().list('assinaturas')).find(s => s.token === token);
       if (!x) return null;
       const a = await S().get('alunos', x.aluno_id);
@@ -331,6 +344,10 @@
       if (!u().cpfValido(cpf)) throw new Error('CPF inválido.');
       if (!imagem) throw new Error('Faça sua assinatura no quadro.');
       const hash = await u().sha256(d.html);
+      if (S().modo === 'supabase') {
+        await S().rpc('responder_assinatura', { p_token: token, p: { status: 'assinado', signatario_nome: nome.trim(), signatario_cpf: String(cpf).replace(/\D/g, ''), assinatura_img: imagem, doc_hash: hash, doc_html: d.html, user_agent: navigator.userAgent.slice(0, 200) } });
+        return hash;
+      }
       await S().update('assinaturas', d.id, { status: 'assinado', assinado_em: new Date().toISOString(), signatario_nome: nome.trim(), signatario_cpf: String(cpf).replace(/\D/g, ''), assinatura_img: imagem, doc_hash: hash, doc_html: d.html, user_agent: navigator.userAgent.slice(0, 200) });
       const a = await S().get('alunos', d.aluno_id); const aut = { ...(a.autorizacoes || {}) };
       if (d.tipo === 'lgpd') { aut.lgpd = true; aut.data_termo = u().today(); }
@@ -344,6 +361,7 @@
     async recusar(token, motivo) {
       const d = await assinaturas.porToken(token);
       if (!d || d.status !== 'pendente') throw new Error('Documento indisponível.');
+      if (S().modo === 'supabase') { await S().rpc('responder_assinatura', { p_token: token, p: { status: 'recusado', motivo: motivo || '' } }); return; }
       await S().update('assinaturas', d.id, { status: 'recusado', recusado_em: new Date().toISOString(), motivo_recusa: motivo || '' });
       if (d.tipo === 'imagem') { const a = await S().get('alunos', d.aluno_id); await S().update('alunos', a.id, { autorizacoes: { ...(a.autorizacoes || {}), imagem: false } }); }
       await S().insert('auditoria', { em: new Date().toISOString(), usuario_id: 'familia', usuario_nome: 'Responsável', acao: 'recusar', entidade: 'assinaturas', entidade_id: d.id, resumo: `${d.titulo} recusado` });

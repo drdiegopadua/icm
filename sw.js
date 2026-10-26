@@ -1,12 +1,12 @@
 /* Service worker: guarda o app no aparelho para abrir e fazer chamada sem internet.
    Estratégia: tenta a rede primeiro (pega atualizações); sem rede, usa a cópia guardada. */
-const CACHE = 'icm-app-v3';
+const CACHE = 'icm-app-v4';
 const ARQUIVOS = [
   './', 'index.html', 'manifest.webmanifest', 'assets/favicon.svg', 'assets/icon-192.png', 'assets/icon-512.png', 'assets/favicon.png', 'assets/apple-touch-icon.png', 'assets/icm-marca.png',
   'css/design-system.css', 'css/app.css', 'css/report.css',
-  'js/vendor/qrcode.min.js', 'js/vendor/jsQR.js',
-  'js/core/util.js', 'js/core/icons.js', 'js/core/marca.js', 'js/core/auth.js', 'js/core/ui.js',
-  'js/data/constants.js', 'js/data/seed.js', 'js/data/seed-comunidade.js', 'js/data/seed-gestao.js', 'js/data/store.js',
+  'js/config.js', 'js/vendor/supabase.js', 'js/vendor/qrcode.min.js', 'js/vendor/jsQR.js',
+  'js/core/util.js', 'js/core/icons.js', 'js/core/marca.js', 'js/core/auth.js', 'js/core/auth-supabase.js', 'js/core/ui.js',
+  'js/data/constants.js', 'js/data/seed.js', 'js/data/seed-comunidade.js', 'js/data/seed-gestao.js', 'js/data/store.js', 'js/data/store-supabase.js',
   'js/data/api.js', 'js/data/api-comunidade.js', 'js/data/api-gestao.js', 'js/data/api-rotina.js', 'js/data/api-chat.js', 'js/data/api-financeiro.js', 'js/data/seed-financeiro.js',
   'js/pages/login.js', 'js/pages/dashboard.js', 'js/pages/alunos.js', 'js/pages/aluno-form.js', 'js/pages/aluno-detalhe.js',
   'js/pages/projetos.js', 'js/pages/turma.js', 'js/pages/eventos.js', 'js/pages/relatorios.js', 'js/pages/patrimonio.js',

@@ -121,7 +121,11 @@ css/report.css          Documento de relatório (tela + impressão/PDF)
 js/core/                util, ícones, autenticação, componentes de interface
 js/data/constants.js    Áreas, perfis, permissões, tipos de evento, regra de faltas
 js/data/seed.js         Dados fictícios de demonstração
-js/data/store.js        Armazenamento local  ← será trocado pelo Supabase
+js/config.js            Endereço e chave PÚBLICA (anon) do Supabase
+js/data/store.js        Armazenamento local (modo demonstração)
+js/data/store-supabase.js Armazenamento no Supabase (mesma interface)
+js/core/auth-supabase.js Login real: convite, primeiro acesso, esqueci a senha
+supabase/icm_banco.sql  ⭐ Banco usado pelo sistema (rodar este no SQL Editor)
 js/data/api.js          Regras de negócio + controle de acesso (as telas só usam isto)
 js/pages/               Telas
 js/reports/reports.js   Motor de relatórios
@@ -133,10 +137,18 @@ docs/SEGURANCA.md       Plano de segurança e LGPD
 tools/serve.ps1         Servidor local para testes
 ```
 
+## Ligar o banco (uma vez só)
+
+1. Supabase → **SQL Editor** → colar e rodar `supabase/icm_banco.sql`.
+2. Supabase → **Authentication → URL Configuration**: Site URL e Redirect URLs = `https://drdiegopadua.github.io/icm/`.
+3. Supabase → **Project Settings → API**: copiar a chave **anon public** para `supabaseKey` em `js/config.js`. **Nunca** a `service_role`.
+4. Abrir o sistema → **Primeiro acesso? Criar minha senha** com o e-mail convidado no fim do SQL (o administrador).
+5. Novos usuários: Administração → Novo usuário (vira convite). A pessoa entra em "Primeiro acesso" com esse e-mail.
+
+Dados sensíveis (CPF, NIS, renda, saúde completa, endereço, conta bancária e salário) ficam em registros separados (`*_privado`), que o banco só entrega a quem tem permissão. Professor só vê alunos das próprias turmas.
+
 ## Próximos passos
 
-1. Criar o projeto no Supabase e rodar `supabase/schema.sql`, depois `supabase/schema-comunidade.sql` e `supabase/schema-chat.sql`.
-2. Trocar `js/data/store.js` por um adaptador Supabase. A interface é a mesma, então as telas não mudam.
-3. Login pelo Supabase Auth (convite por e-mail, redefinição de senha e MFA para a direção).
-4. Mover as fotos para o bucket privado `fotos`, com links temporários.
-5. Publicar pelo repositório GitHub, com hospedagem estática e domínio próprio com HTTPS.
+1. Mover fotos e anexos para um bucket privado do Supabase Storage, com links temporários.
+2. MFA (segundo fator) para a direção.
+3. Domínio próprio com HTTPS.

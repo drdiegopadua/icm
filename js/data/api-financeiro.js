@@ -168,7 +168,7 @@
     async solicitar(c) {
       need('compras.solicitar');
       if (!c.titulo || !(c.itens || []).length) throw new Error('Informe o que precisa comprar.');
-      const x = await S().insert('compras', { cotacoes: [], escolhida: '', status: 'solicitada', ...c, solicitante: me().nome, solicitado_em: u().today(), numero: await seq('compras', `CMP-${u().today().slice(0, 4)}-`, 'numero') });
+      const x = await S().insert('compras', { cotacoes: [], escolhida: '', status: 'solicitada', ...c, solicitante: me().nome, solicitante_id: me().id, solicitado_em: u().today(), numero: await seq('compras', `CMP-${u().today().slice(0, 4)}-`, 'numero') });
       await audit('solicitar', 'compras', x.id, `${x.numero}: ${x.titulo}`); return x;
     },
     async salvar(c) { need('compras.cotar'); const x = await S().update('compras', c.id, { ...c, menor: undefined, fornecedor: undefined, status: c.status === 'solicitada' && c.cotacoes.length ? 'cotacao' : c.status }); return x; },
@@ -232,13 +232,21 @@
     let p = tlv('00', '01') + tlv('26', conta) + tlv('52', '0000') + tlv('53', '986') + (valor ? tlv('54', Number(valor).toFixed(2)) : '') + tlv('58', 'BR') + tlv('59', semAcento(nome).slice(0, 25)) + tlv('60', semAcento(cidade).slice(0, 15)) + tlv('62', tlv('05', (txid || '***').replace(/[^A-Za-z0-9]/g, '').slice(0, 25) || '***')) + '6304';
     return p + crc16(p);
   }
+  // Página pública de doação com banco: lê só o que a função pública do Supabase devolve
+  const publicoBanco = () => S().modo === 'supabase' && !ICM.auth.user();
+  let pubCache = null;
+  const dadosPublicos = async () => pubCache || (pubCache = await S().rpc('campanhas_publicas'));
   const captacao = {
     pixPayload,
-    async configPix() { const c = await S().getConfig(); return c.pix || { chave: '', nome: ICM.C.ORG.nome, cidade: '' }; },
+    async configPix() {
+      if (publicoBanco()) { const p = (await dadosPublicos()).pix || {}; return p.chave ? p : { chave: '', nome: ICM.C.ORG.nome, cidade: '' }; }
+      const c = await S().getConfig(); return c.pix || { chave: '', nome: ICM.C.ORG.nome, cidade: '' };
+    },
     async salvarPix(p) { need('campanhas.gerir'); if (!p.chave) throw new Error('Informe a chave Pix da instituição.'); await S().setConfig({ pix: p }); await audit('editar', 'config', 'pix', `Chave Pix: ${p.chave}`); },
     async campanhas({ publicas } = {}) {
-      const dons = await S().list('doacoes_online', d => d.status === 'confirmada');
-      let l = await S().list('campanhas');
+      const pb = publicoBanco() && await dadosPublicos();
+      const dons = pb ? pb.doacoes_online : await S().list('doacoes_online', d => d.status === 'confirmada');
+      let l = pb ? pb.campanhas : await S().list('campanhas');
       if (publicas) l = l.filter(c => c.ativa && c.fim >= u().today());
       return l.map(c => { const ds = dons.filter(d => d.campanha_id === c.id); const arrec = R2(ds.reduce((s, d) => s + d.valor, 0)); return { ...c, arrecadado: arrec, doadores: ds.length, pct: c.meta ? Math.min(100, Math.round(arrec / c.meta * 100)) : null }; });
     },
@@ -249,6 +257,12 @@
       if (!nome || nome.trim().length < 3) throw new Error('Informe seu nome.');
       if (!(valor >= 5)) throw new Error('Valor mínimo: R$ 5,00.');
       if (!email && !telefone) throw new Error('Informe e-mail ou WhatsApp para enviarmos o recibo.');
+      if (publicoBanco()) {
+        const camp = (await dadosPublicos()).campanhas.find(c => c.id === campanha_id);
+        const x = await S().rpc('doar_publico', { p: { campanha_id, nome: nome.trim(), email: email || '', telefone: telefone || '', valor, recorrente: !!recorrente, aceita_comunicacao: !!aceita_comunicacao } });
+        const pix = await captacao.configPix();
+        return { ...x, payload: pixPayload({ ...pix, valor, txid: x.txid, descricao: camp ? camp.titulo : 'Doacao' }), pix };
+      }
       const camp = await S().get('campanhas', campanha_id);
       const txid = 'ICM' + Date.now().toString(36).toUpperCase();
       const x = await S().insert('doacoes_online', { campanha_id, nome: nome.trim(), email: email || '', telefone: telefone || '', valor, recorrente: !!recorrente, aceita_comunicacao: !!aceita_comunicacao, txid, status: 'aguardando' });

@@ -154,6 +154,7 @@
     },
     // Consulta pública (sem login): devolve só o necessário para conferir
     async verificar(codigo) {
+      if (S().modo === 'supabase') return S().rpc('verificar_certificado', { p_codigo: String(codigo || '') });
       const c = (await S().list('certificados')).find(x => x.codigo === String(codigo || '').toUpperCase().trim());
       if (!c) return null;
       return { codigo: c.codigo, nome: c.nome, titulo: c.titulo, tipo: c.tipo, carga_horaria: c.carga_horaria, data_emissao: c.data_emissao, status: c.status, motivo_revogacao: c.motivo_revogacao };

@@ -86,22 +86,56 @@
       form.requestSubmit();
     }));
 
+    async function sucesso(user) {
+      try { form.lembrar.checked ? localStorage.setItem('icm_last_email', email.value.trim()) : localStorage.removeItem('icm_last_email'); } catch (er) { /* ignore */ }
+      btn.classList.remove('is-loading'); btn.classList.add('success');
+      btn.querySelector('.arrow').innerHTML = I('check', 22);
+      btn.querySelector(".btn-label").textContent = `Olá, ${user.nome.split(' ')[0]}!`;
+      await ICM.util.sleep(650);
+      root.querySelector('.login-screen').classList.add('login-exit');
+      await ICM.util.sleep(600);
+      onSuccess(user);
+    }
+    const campoCodigo = ICM.ui.field({ name: 'codigo', label: 'Código de 6 dígitos', attrs: 'inputmode="numeric" maxlength="7" style="font-size:1.6rem;letter-spacing:.4em;text-align:center"' });
+    // Verificação em duas etapas: digitar o código ou cadastrar o aplicativo na primeira vez
+    async function duasEtapas(tipo) {
+      let fator = null;
+      if (tipo === 'MFA_CADASTRAR') fator = await ICM.auth.mfa.iniciarCadastro();
+      return new Promise((resolve, reject) => {
+        const m = ICM.ui.modal({
+          title: fator ? 'Ative a verificação em duas etapas' : 'Verificação em duas etapas', size: 'sm',
+          body: `<form class="col">${fator ? `<p class="small">Seu perfil tem acesso a dados sensíveis. Além da senha, você vai usar um código do celular.</p>
+            <ol class="small" style="padding-left:18px;margin:0"><li>Instale o <b>Google Authenticator</b> ou o <b>Microsoft Authenticator</b>.</li><li>No aplicativo, toque em <b>+</b> e escaneie o QR Code abaixo.</li><li>Digite o código de 6 dígitos que aparecer.</li></ol>
+            <div style="background:#fff;border-radius:14px;padding:10px;width:200px;margin:8px auto"><img src="${esc(fator.qr)}" alt="QR Code do autenticador" width="180" height="180"></div>
+            <details class="small"><summary>Não consegue escanear? Digite a chave</summary><code style="word-break:break-all;user-select:all">${esc(fator.segredo)}</code></details>`
+            : `<p class="small">Abra o aplicativo autenticador no seu celular e digite o código do <b>ICM Sistema</b>.</p>`}${campoCodigo}</form>`,
+          foot: `<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" data-ok>${I('check', 18)} Confirmar</button>`
+        });
+        let ok = false;
+        const inp = m.$('[name=codigo]'); setTimeout(() => inp.focus(), 50);
+        m.$('form').addEventListener('submit', ev => { ev.preventDefault(); m.$('[data-ok]').click(); });
+        m.$('[data-ok]').addEventListener('click', ev => ICM.ui.busy(ev.currentTarget, async () => {
+          if (inp.value.replace(/\D/g, '').length !== 6) return ICM.ui.toast('Digite os 6 números do aplicativo.', 'warn');
+          await ICM.ui.run(() => fator ? ICM.auth.mfa.confirmarCadastro(fator.id, inp.value) : ICM.auth.mfa.verificar(inp.value));
+          ok = true; m.close(); resolve(await ICM.auth.concluirLogin());
+        }).catch(() => { inp.value = ''; inp.focus(); }));
+        const obs = new MutationObserver(() => { if (!document.body.contains(m.el)) { obs.disconnect(); if (!ok) reject(new Error('Verificação em duas etapas cancelada.')); } });
+        obs.observe(document.body, { childList: true });
+      });
+    }
+
     form.addEventListener('submit', async e => {
       e.preventDefault();
       err.textContent = '';
       if (!email.value || !senha.value) { err.textContent = 'Preencha e-mail e senha.'; card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake'); return; }
       btn.classList.add('is-loading'); btn.disabled = true;
       try {
-        const user = await ICM.auth.login(email.value, senha.value);
-        try { form.lembrar.checked ? localStorage.setItem('icm_last_email', email.value.trim()) : localStorage.removeItem('icm_last_email'); } catch (er) { /* ignore */ }
-        btn.classList.remove('is-loading'); btn.classList.add('success');
-        btn.querySelector('.arrow').innerHTML = I('check', 22);
-        btn.querySelector(".btn-label").textContent = `Olá, ${user.nome.split(' ')[0]}!`;
-        await ICM.util.sleep(650);
-        root.querySelector('.login-screen').classList.add('login-exit');
-        await ICM.util.sleep(600);
-        onSuccess(user);
+        let user;
+        try { user = await ICM.auth.login(email.value, senha.value); }
+        catch (ex) { if (!/^MFA_/.test(ex.code || '')) throw ex; user = await duasEtapas(ex.code); }
+        await sucesso(user);
       } catch (ex) {
+        if (/^MFA_|cancelada/.test((ex.code || '') + ex.message) && ICM.store.sb) await ICM.store.sb.auth.signOut().catch(() => { });
         btn.classList.remove('is-loading'); btn.disabled = false;
         err.textContent = ex.message;
         senha.value = ''; senha.focus();

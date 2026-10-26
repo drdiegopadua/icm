@@ -38,6 +38,77 @@
     return { ...pub, ...priv };
   };
 
+  // ---------- Fotos e anexos no Storage privado ----------
+  // No banco fica só a referência "sb:<coleção>/<id>/<arquivo>". Na leitura ela vira um link
+  // temporário (1 h); na gravação, fotos/PDFs em base64 sobem para o bucket e viram referência.
+  const BUCKET = 'arquivos', REF = 'sb:', VALIDADE = 3600;
+  const INLINE = new Set(['assinaturas', 'campanhas', 'certificados']);   // usados por páginas públicas
+  const MIME_OK = /^data:(image\/(jpeg|png|webp|gif|svg\+xml)|application\/pdf|text\/xml|application\/xml)[;,]/;
+  const assinados = new Map();    // caminho → { url, ate }
+  const urlParaCaminho = new Map();
+  const ext = mime => ({ 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif', 'image/svg+xml': 'svg', 'application/pdf': 'pdf' })[mime] || 'xml';
+
+  function percorrer(v, fn) {
+    if (typeof v === 'string') return fn(v);
+    if (Array.isArray(v)) return v.map(x => percorrer(x, fn));
+    if (v && typeof v === 'object') { const o = {}; for (const k in v) o[k] = percorrer(v[k], fn); return o; }
+    return v;
+  }
+  function caminhos(v, out = new Set()) { percorrer(v, s => { if (s.startsWith(REF)) out.add(s.slice(REF.length)); return s; }); return out; }
+
+  async function assinar(lista) {
+    const falta = [...new Set(lista)].filter(p => !(assinados.get(p) && assinados.get(p).ate > Date.now() + 60000));
+    for (let i = 0; i < falta.length; i += 100) {
+      const { data, error } = await sb.storage.from(BUCKET).createSignedUrls(falta.slice(i, i + 100), VALIDADE);
+      if (error) { console.warn('storage', error.message); continue; }
+      data.forEach(d => { if (d.signedUrl) { assinados.set(d.path, { url: d.signedUrl, ate: Date.now() + VALIDADE * 1000 }); urlParaCaminho.set(d.signedUrl, d.path); } });
+    }
+  }
+  async function resolverArquivos(lista) {
+    const ps = caminhos(lista);
+    if (!ps.size) return lista;
+    await assinar([...ps]);
+    return percorrer(lista, s => s.startsWith(REF) ? ((assinados.get(s.slice(REF.length)) || {}).url || '') : s);
+  }
+  // Base64 → arquivo no bucket; link temporário → volta a ser referência
+  async function prepararArquivos(col, id, dados) {
+    const envios = [];
+    if (INLINE.has(col)) return { dados, envios };
+    const pendentes = [];
+    percorrer(dados, s => { if (s.length > 2000 && MIME_OK.test(s)) pendentes.push(s); return s; });
+    const novos = new Map();
+    for (const s of pendentes) {
+      if (novos.has(s)) continue;
+      const mime = s.slice(5, s.search(/[;,]/));
+      const hash = (await ICM.util.sha256(s)).slice(0, 24);
+      const caminho = `${col}/${id}/${hash}.${ext(mime)}`;
+      novos.set(s, caminho);
+      envios.push({ caminho, mime, s });
+    }
+    const out = percorrer(dados, s => {
+      if (novos.has(s)) return REF + novos.get(s);
+      if (urlParaCaminho.has(s)) return REF + urlParaCaminho.get(s);
+      const m = s.match(/\/storage\/v1\/object\/sign\/arquivos\/([^?]+)/);
+      return m ? REF + decodeURIComponent(m[1]) : s;
+    });
+    return { dados: out, envios };
+  }
+  async function enviarArquivos(envios) {
+    for (const e of envios) {
+      const b64 = e.s.slice(e.s.indexOf(",") + 1), bin = /;base64,/.test(e.s.slice(0, 80)) ? atob(b64) : decodeURIComponent(b64);
+      const arr = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i) & 255;
+      const blob = new Blob([arr], { type: e.mime });
+      const { error } = await sb.storage.from(BUCKET).upload(e.caminho, blob, { contentType: e.mime, upsert: false });
+      if (error && !/exists|Duplicate/i.test(error.message)) throw new Error('Não foi possível enviar o arquivo: ' + error.message);
+    }
+  }
+  // Apaga do bucket os arquivos do registro que não são mais usados
+  async function limparArquivos(col, id, manter) {
+    const { data } = await sb.storage.from(BUCKET).list(`${col}/${id}`, { limit: 1000 });
+    const sobra = (data || []).map(f => `${col}/${id}/${f.name}`).filter(p => !manter.has(p));
+    if (sobra.length) await sb.storage.from(BUCKET).remove(sobra);
+  }
+
   // ---------- Leitura ----------
   async function buscarColecao(col) {
     const out = []; let de = 0; const passo = 1000;
@@ -50,7 +121,7 @@
     return out;
   }
   async function carregar(col) {
-    if (modoPublico) return (modoPublico[col] || []).map(clone);
+    if (modoPublico) return percorrer(modoPublico[col] || [], v => v.startsWith(REF) ? '' : v);
     const c = cache.get(col);
     if (c && Date.now() - c.em < TTL) return c.dados;
     let dados;
@@ -59,6 +130,7 @@
     else {
       dados = await buscarColecao(col);
       if (PRIVADO[col]) { const priv = await buscarColecao(col + '_privado').catch(() => []); const m = new Map(priv.map(p => [p.id, p])); dados = dados.map(d => juntar(col, d, m.get(d.id))); }
+      dados = await resolverArquivos(dados);
     }
     cache.set(col, { em: Date.now(), dados });
     return dados;
@@ -68,25 +140,30 @@
     if (error) throw traduzir(error);
     const lista = data.map(p => ({ ...p, id: p.id }));
     const { data: cv } = await sb.from('convites').select('*');
-    (cv || []).forEach(c => lista.push({ id: 'convite:' + c.email, nome: c.nome, email: c.email, papel: c.papel, cargo: c.cargo, telefone: c.telefone, ativo: false, convite: true }));
+    (cv || []).forEach(c => lista.push({ id: 'convite:' + c.email, nome: c.nome, email: c.email, papel: c.papel, cargo: c.cargo, telefone: c.telefone, exige_2fa: !!c.exige_2fa, ativo: false, convite: true }));
     return lista;
   }
 
   // ---------- Gravação ----------
+  async function gravarParte(colecao, id, dadosBrutos, tinhaArquivos) {
+    const { dados, envios } = await prepararArquivos(colecao, id, dadosBrutos);
+    const { error } = await sb.from('registros').upsert({ colecao, id, dados });
+    if (error) throw traduzir(error);
+    await enviarArquivos(envios);   // depois do registro: a permissão do arquivo segue a do registro
+    const usados = caminhos(dados);
+    if (tinhaArquivos || usados.size) await limparArquivos(colecao, id, usados).catch(e => console.warn('storage', e.message));
+  }
   async function gravar(col, rec) {
     const { id, ...dados } = rec;
+    const c = cache.get(col), antigo = c && c.dados.find(x => x.id === id);
+    const tinha = !!antigo && JSON.stringify(antigo).includes('/object/sign/arquivos/');
     if (PRIVADO[col]) {
       const [pub, priv] = PRIVADO[col](dados);
-      const { error } = await sb.from('registros').upsert({ colecao: col, id, dados: pub });
-      if (error) throw traduzir(error);
+      await gravarParte(col, id, pub, tinha);
       // Conta bancária e salário da equipe: só a direção grava
       const podePriv = col !== 'equipe' || (ICM.auth && ICM.auth.can('equipe.salarios'));
-      if (podePriv && Object.keys(priv).length) { const r2 = await sb.from('registros').upsert({ colecao: col + '_privado', id, dados: priv }); if (r2.error) throw traduzir(r2.error); }
-    } else {
-      const { error } = await sb.from('registros').upsert({ colecao: col, id, dados });
-      if (error) throw traduzir(error);
-    }
-    const c = cache.get(col);
+      if (podePriv && Object.keys(priv).length) await gravarParte(col + '_privado', id, priv, tinha);
+    } else await gravarParte(col, id, dados, tinha);
     if (c) { const i = c.dados.findIndex(x => x.id === id); if (i >= 0) c.dados[i] = rec; else c.dados.push(rec); }
   }
   function traduzir(e) {
@@ -100,15 +177,15 @@
   // ---------- Usuários (perfis + convites) ----------
   async function gravarUsuario(u, novo) {
     if (novo) {
-      const { error } = await sb.from('convites').upsert({ email: String(u.email).toLowerCase().trim(), nome: u.nome, papel: u.papel, cargo: u.cargo || '', telefone: u.telefone || '' });
+      const { error } = await sb.from('convites').upsert({ email: String(u.email).toLowerCase().trim(), nome: u.nome, papel: u.papel, cargo: u.cargo || '', telefone: u.telefone || '', exige_2fa: !!u.exige_2fa });
       if (error) throw traduzir(error);
       return { ...u, id: 'convite:' + u.email, ativo: false, convite: true };
     }
     if (String(u.id).startsWith('convite:')) {
-      const { error } = await sb.from('convites').update({ nome: u.nome, papel: u.papel, cargo: u.cargo || '', telefone: u.telefone || '' }).eq('email', u.email);
+      const { error } = await sb.from('convites').update({ nome: u.nome, papel: u.papel, cargo: u.cargo || '', telefone: u.telefone || '', exige_2fa: !!u.exige_2fa }).eq('email', u.email);
       if (error) throw traduzir(error); return u;
     }
-    const { error } = await sb.from('perfis').update({ nome: u.nome, papel: u.papel, cargo: u.cargo || '', telefone: u.telefone || '', ativo: !!u.ativo }).eq('id', u.id);
+    const { error } = await sb.from('perfis').update({ nome: u.nome, papel: u.papel, cargo: u.cargo || '', telefone: u.telefone || '', ativo: !!u.ativo, exige_2fa: !!u.exige_2fa }).eq('id', u.id);
     if (error) throw traduzir(error);
     return u;
   }
@@ -142,6 +219,7 @@
     },
     async remove(col, id) {
       if (col === 'usuarios') throw new Error('Para tirar o acesso, desative o usuário.');
+      for (const cc of PRIVADO[col] ? [col, col + '_privado'] : [col]) await limparArquivos(cc, id, new Set()).catch(() => { });
       const { error } = await sb.from('registros').delete().eq('colecao', col).eq('id', id);
       if (error) throw traduzir(error);
       if (PRIVADO[col]) await sb.from('registros').delete().eq('colecao', col + '_privado').eq('id', id);

@@ -162,8 +162,10 @@
   async function verArquivo(id) {
     const a = await ICM.api.arquivos.get(id);
     if (!a) return ui().toast('Arquivo não encontrado.', 'danger');
-    const bin = atob(a.data.split(',')[1]); const arr = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-    const url = URL.createObjectURL(new Blob([arr], { type: a.mime }));
+    let blob;
+    if (a.data.startsWith('data:')) { const bin = atob(a.data.split(',')[1]); const arr = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i); blob = new Blob([arr], { type: a.mime }); }
+    else blob = await fetch(a.data).then(r => { if (!r.ok) throw new Error('Não foi possível abrir o arquivo.'); return r.blob(); }).then(b => new Blob([b], { type: a.mime }));   // link temporário do Storage
+    const url = URL.createObjectURL(blob);
     const m = ui().modal({
       title: a.nome, size: 'wide',
       body: a.mime.startsWith('image/') ? `<img src="${esc(a.data)}" alt="${esc(a.nome)}" style="max-width:100%;border-radius:12px;margin:0 auto">` : `<div class="empty">${I('fileText', 48)}<div class="mt-4"><b>${esc(a.nome)}</b> · ${Math.round(a.tamanho / 1024)} KB</div><div class="small mt-2">Enviado por ${esc(a.enviado_por || '')} em ${esc(new Date(a.criado_em).toLocaleString('pt-BR'))}</div></div>`,

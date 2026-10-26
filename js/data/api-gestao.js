@@ -118,7 +118,7 @@
   };
 
   // ======================= ARQUIVOS ANEXOS =======================
-  // Protótipo: guardados no navegador (limite ~2 MB por arquivo). Na fase Supabase vão para bucket PRIVADO com link temporário.
+  // Demonstração: guardados no navegador (até 2 MB). Com o banco: bucket PRIVADO do Storage (até 10 MB), aberto só por link temporário.
   const TIPOS_OK = /^(application\/pdf|image\/(jpeg|png|webp)|text\/xml|application\/xml)$/;
   // Quem pode anexar/abrir arquivos: RH, documentos da instituição, financeiro e compras
   const podeArquivos = () => ['equipe.gerir', 'docinst.gerir', 'financeiro.lancar', 'compras.cotar'].some(p => can(p));
@@ -130,7 +130,8 @@
       let data;
       if (file.type.startsWith('image/')) data = await u().compressImage(file, 1600, .82);
       else {
-        if (file.size > 2 * 1024 * 1024) throw new Error('PDF acima de 2 MB. Reduza o arquivo (ex.: ilovepdf.com/pt/comprimir_pdf) ou fotografe o documento.');
+        const lim = S().modo === 'supabase' ? 10 : 2;
+        if (file.size > lim * 1024 * 1024) throw new Error(`PDF acima de ${lim} MB. Reduza o arquivo (ex.: ilovepdf.com/pt/comprimir_pdf) ou fotografe o documento.`);
         data = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(r.error); r.readAsDataURL(file); });
       }
       const x = await S().insert('arquivos', { nome: file.name, mime: file.type.startsWith('image/') ? 'image/jpeg' : (file.type || 'application/xml'), tamanho: Math.round(data.length * 0.75), data, dono, enviado_por: me().nome });

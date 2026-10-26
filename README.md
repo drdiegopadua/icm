@@ -126,6 +126,7 @@ js/data/store.js        Armazenamento local (modo demonstração)
 js/data/store-supabase.js Armazenamento no Supabase (mesma interface)
 js/core/auth-supabase.js Login real: convite, primeiro acesso, esqueci a senha
 supabase/icm_banco.sql  ⭐ Banco usado pelo sistema (rodar este no SQL Editor)
+supabase/icm_v2_arquivos_2fa.sql  Atualização 2: pasta privada de arquivos + duas etapas obrigatórias
 js/data/api.js          Regras de negócio + controle de acesso (as telas só usam isto)
 js/pages/               Telas
 js/reports/reports.js   Motor de relatórios
@@ -139,7 +140,7 @@ tools/serve.ps1         Servidor local para testes
 
 ## Ligar o banco (uma vez só)
 
-1. Supabase → **SQL Editor** → colar e rodar `supabase/icm_banco.sql`.
+1. Supabase → **SQL Editor** → colar e rodar `supabase/icm_banco.sql` e, depois, `supabase/icm_v2_arquivos_2fa.sql`.
 2. Supabase → **Authentication → URL Configuration**: Site URL e Redirect URLs = `https://drdiegopadua.github.io/icm/`.
 3. Supabase → **Project Settings → API**: copiar a chave **anon public** para `supabaseKey` em `js/config.js`. **Nunca** a `service_role`.
 4. Abrir o sistema → **Primeiro acesso? Criar minha senha** com o e-mail convidado no fim do SQL (o administrador).
@@ -147,8 +148,17 @@ tools/serve.ps1         Servidor local para testes
 
 Dados sensíveis (CPF, NIS, renda, saúde completa, endereço, conta bancária e salário) ficam em registros separados (`*_privado`), que o banco só entrega a quem tem permissão. Professor só vê alunos das próprias turmas.
 
+## Fotos e anexos
+
+Ficam no bucket **privado** `arquivos` do Supabase Storage, na pasta `<coleção>/<id do registro>/`. No banco fica só a referência; o sistema mostra cada arquivo por **link temporário de 1 hora**, e o banco só gera o link para quem pode ver o registro dono (o laudo de saúde segue a regra dos dados privados do aluno). Apagar o registro apaga os arquivos. Limite: 10 MB por arquivo.
+
+## Verificação em duas etapas
+
+Obrigatória para **Administrador** e para quem tiver "Exigir verificação em duas etapas" marcado em Usuários. No primeiro login aparece o QR Code para o Google/Microsoft Authenticator; depois, a cada login, pede o código de 6 dígitos. O banco só libera os dados com a sessão confirmada pelo código (não adianta burlar a tela).
+
+Cadastre **dois aparelhos** (Configurações → Verificação em duas etapas). Perdeu o celular? Supabase → Authentication → Users → abrir a pessoa → apagar o fator (MFA) → ela cadastra de novo no próximo login.
+
 ## Próximos passos
 
-1. Mover fotos e anexos para um bucket privado do Supabase Storage, com links temporários.
-2. MFA (segundo fator) para a direção.
-3. Domínio próprio com HTTPS.
+1. Domínio próprio com HTTPS.
+2. Backup automático diário.

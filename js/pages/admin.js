@@ -33,6 +33,7 @@
           ${F({ name: 'papel', label: 'Perfil de acesso', type: 'select', value: u.papel || 'professor', options: Object.entries(ICM.C.PAPEIS).map(([k, v]) => [k, v.nome]) })}
           ${F({ name: 'cargo', label: 'Cargo / função', value: u.cargo })}
           ${ICM.auth.modo === 'supabase' ? (u.id ? '' : '<p class="small span-2">A pessoa receberá acesso pelo <b>Primeiro acesso</b> na tela de login, usando este e-mail, e criará a própria senha.</p>') : F({ name: 'senha', label: u.id ? 'Nova senha (opcional)' : 'Senha inicial', type: 'password', hint: 'Mínimo 8 caracteres com letras e números. Na versão final, o usuário recebe convite por e-mail e define a própria senha.', attrs: 'autocomplete="new-password"' })}
+          ${ICM.auth.modo === 'supabase' ? F({ name: 'exige_2fa', label: 'Exigir verificação em duas etapas (código no celular)', type: 'toggle', value: u.exige_2fa, cls: 'span-2' }) + '<p class="xs muted span-2" style="margin-top:-6px">Administradores sempre usam duas etapas. Marque também para quem lida com dados sensíveis (coordenação, secretaria/social).</p>' : ''}
           ${F({ name: 'ativo', label: 'Acesso ativo', type: 'toggle', value: u.id ? u.ativo : true })}
         </form>`,
         foot: `<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" data-ok>${I('check', 18)} Salvar</button>`
@@ -70,6 +71,10 @@
         <div class="card"><div class="section-title">${I('user', 18)} Minha conta</div>
           ${ui().kv([['Nome', user.nome], ['E-mail', user.email], ['Perfil', ICM.C.PAPEIS[user.papel].nome], ['Cargo', user.cargo]])}
           <div class="row mt-4"><label class="toggle"><input type="checkbox" data-dark ${document.documentElement.dataset.theme === 'dark' ? 'checked' : ''}><span class="track"></span><span>Modo escuro</span></label></div></div>
+        ${ICM.auth.modo === 'supabase' ? `<div class="card"><div class="section-title">${I('shield', 18)} Verificação em duas etapas</div>
+          <div class="small muted">Além da senha, um código do aplicativo autenticador no celular (Google ou Microsoft Authenticator).${user.papel === 'admin' || user.exige_2fa ? ' <b>Obrigatória para o seu perfil.</b>' : ''}</div>
+          <div class="col mt-4" data-fatores><div class="small muted">Carregando…</div></div>
+          <button class="btn mt-4" data-novofator>${I('plus', 16)} Cadastrar outro aparelho</button></div>` : ''}
         <div class="card"><div class="section-title">${I('userCheck', 18)} Regra de assiduidade</div>
           <form class="grid grid-2" data-assid>
             ${ui().field({ name: 'alerta', label: 'Faltas no mês para ALERTA', type: 'number', value: cfg.assiduidade.alerta, attrs: `min="1" ${admin ? '' : 'disabled'}` })}
@@ -85,8 +90,9 @@
             ${sec('image', 'Fotos seguras', 'Imagens são reduzidas e têm metadados (GPS) removidos antes de salvar; autorização de imagem é sinalizada.')}
             ${sec('fileText', 'Relatórios autenticados', 'Cada relatório recebe um código de autenticidade e fica registrado na auditoria.')}
           </div>
-          <div class="sens-lock mt-4">${I('info', 18)} Protótipo: os dados de demonstração ficam neste navegador (${kb} KB). Na conexão com o Supabase, os dados passam para o banco com criptografia, políticas RLS e backups — nada sensível ficará no navegador.</div>
-          ${admin ? `<div class="row mt-4"><button class="btn btn-danger" data-reset>${I('refresh', 18)} Restaurar dados de demonstração</button></div>` : ''}
+          ${ICM.store.modo === 'supabase' ? `<div class="sens-lock mt-4">${I('lock', 18)} Dados no banco Supabase com regras de acesso (RLS) por perfil. Fotos e anexos ficam em pasta privada e só abrem por link temporário de 1 hora.</div>` : ''}
+          ${ICM.store.modo === 'supabase' ? '' : `<div class="sens-lock mt-4">${I('info', 18)} Demonstração: os dados fictícios ficam neste navegador (${kb} KB). Nada real deve ser lançado aqui.</div>`}
+          ${admin && ICM.store.modo !== 'supabase' ? `<div class="row mt-4"><button class="btn btn-danger" data-reset>${I('refresh', 18)} Restaurar dados de demonstração</button></div>` : ''}
         </div>
       </div></div>`;
     el.querySelector('[data-dark]').addEventListener('change', () => document.querySelector('[data-theme-toggle]').click());
@@ -97,6 +103,25 @@
       await ui().run(() => ICM.api.config.set({ assiduidade: { ...cfg.assiduidade, ...d } }), 'Regra atualizada');
       ICM.app.refreshAlerts();
     }).catch(() => { }));
+    const fat = el.querySelector('[data-fatores]');
+    if (fat) {
+      const carregar = async () => {
+        const l = (await ICM.auth.mfa.fatores()).filter(x => x.status === 'verified');
+        fat.innerHTML = l.length ? l.map(x => `<div class="list-item">${I('key', 18)}<div class="grow"><div class="bold">${esc(x.friendly_name || 'Aparelho')}</div><div class="xs muted">Ativo desde ${esc(new Date(x.created_at).toLocaleDateString('pt-BR'))}</div></div><button class="btn btn-sm btn-ghost" data-rmfator="${esc(x.id)}">${I('trash', 14)} Remover</button></div>`).join('') : '<div class="small muted">Nenhum aparelho cadastrado.</div>';
+        fat.querySelectorAll('[data-rmfator]').forEach(b => b.addEventListener('click', async () => {
+          if (!(await ui().confirm({ title: 'Remover aparelho', text: 'Este celular deixará de gerar códigos para entrar. Continuar?', ok: 'Remover', danger: true }))) return;
+          await ui().run(() => ICM.auth.mfa.remover(b.dataset.rmfator), 'Aparelho removido').catch(() => { }); carregar();
+        }));
+      };
+      carregar().catch(e => { fat.innerHTML = `<div class="small muted">${esc(e.message)}</div>`; });
+      el.querySelector('[data-novofator]').addEventListener('click', e => ui().busy(e.currentTarget, async () => {
+        const fator = await ui().run(() => ICM.auth.mfa.iniciarCadastro());
+        const m = ui().modal({ title: 'Cadastrar aparelho', size: 'sm',
+          body: `<form class="col"><p class="small">No aplicativo autenticador do novo celular, toque em <b>+</b> e escaneie:</p><div style="background:#fff;border-radius:14px;padding:10px;width:200px;margin:0 auto"><img src="${esc(fator.qr)}" alt="QR Code" width="180" height="180"></div><details class="small"><summary>Digitar a chave</summary><code style="word-break:break-all">${esc(fator.segredo)}</code></details>${ui().field({ name: 'codigo', label: 'Código de 6 dígitos', attrs: 'inputmode="numeric" maxlength="7"' })}</form>`,
+          foot: `<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" data-ok>${I('check', 18)} Confirmar</button>` });
+        m.$('[data-ok]').addEventListener('click', ev => ui().busy(ev.currentTarget, async () => { await ui().run(() => ICM.auth.mfa.confirmarCadastro(fator.id, m.$('[name=codigo]').value), 'Aparelho cadastrado'); m.close(); carregar(); }).catch(() => { }));
+      }).catch(() => { }));
+    }
     const rs = el.querySelector('[data-reset]');
     if (rs) rs.addEventListener('click', async () => {
       if (!(await ui().confirm({ title: 'Restaurar demonstração', text: 'Todos os dados deste navegador serão substituídos pelos dados fictícios de demonstração. Continuar?', ok: 'Restaurar', danger: true }))) return;

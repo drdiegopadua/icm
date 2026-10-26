@@ -347,7 +347,7 @@
     const { e, item, pessoa, signer } = await ctxEmp(emprestimo_id);
     const valor = item.valor_unitario ? U().money(item.valor_unitario * e.quantidade) : null;
     let html = head('Termo de Empréstimo de Bem', `${e.numero} — ${ICM.C.TIPOS_TOMADOR[e.tipo_tomador]}`);
-    html += sec(`<h2>1. Partes</h2><p><b>COMODANTE:</b> ${esc(ICM.C.ORG.razao)}, CNPJ ${esc(ICM.C.ORG.cnpj)}, ${esc(ICM.C.ORG.cidade)}.</p>`) + meta(pessoa);
+    html += sec(`<h2>1. Partes</h2><p><b>COMODANTE:</b> ${esc(ICM.C.ORG.razao)}, CNPJ ${esc(ICM.C.ORG.cnpj)}, com sede na ${esc(ICM.C.ORG.endereco || ICM.C.ORG.cidade)}.</p>`) + meta(pessoa);
     html += sec(`<h2>2. Bem emprestado</h2>${table([{ t: 'Tombo' }, { t: 'Descrição' }, { t: 'Marca / modelo' }, { t: 'Nº série' }, { t: 'Qtd.', c: 1 }, { t: 'Estado na saída' }], [[item.tombo, item.nome, [item.marca, item.modelo].filter(Boolean).join(' '), item.numero_serie || '—', e.quantidade, ICM.C.ESTADOS_PAT[e.estado_saida] || '']])}
       ${meta([['Data de entrega', U().fmtDateLong(e.data_saida)], ['Devolução prevista', U().fmtDateLong(e.previsao_devolucao)], ['Finalidade', e.finalidade], ['Valor de referência', valor || '—']])}`);
     html += sec(`<h2>3. Condições</h2><ol style="padding-left:18px;font-size:11.5px">

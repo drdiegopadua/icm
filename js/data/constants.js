@@ -5,9 +5,11 @@
   ICM.C = {
     ORG: {
       nome: 'Instituto Cultural das Montanhas',
-      razao: 'Instituto Cultural das Montanhas (ICM)',
-      cnpj: '00.000.000/0001-00',
-      cidade: 'Sua Cidade — UF'
+      razao: 'Instituto Três Pontões de Ação Social e Cultural — Instituto Cultural das Montanhas',
+      cnpj: '51.892.817/0001-52',
+      cidade: 'Afonso Cláudio — ES',
+      endereco: 'Rua Alcino Martins de Souza, nº 110, João Valim, Afonso Cláudio — ES, CEP 29600-000',
+      email: 'institutoculturaldasmontanhas@gmail.com'
     },
 
     AREAS: {

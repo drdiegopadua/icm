@@ -30,7 +30,7 @@
     const areas = Object.values(ICM.C.AREAS).map(a => a.nome.toLowerCase());
     const lista = areas.slice(0, -1).join(', ') + ' e ' + areas.slice(-1);
     return {
-      nome: ICM.C.ORG.nome, razao: ICM.C.ORG.razao, cnpj: ICM.C.ORG.cnpj, cidade: ICM.C.ORG.cidade, site: '', instagram: '', email: '', telefone: '', endereco: '',
+      nome: ICM.C.ORG.nome, razao: ICM.C.ORG.razao, cnpj: ICM.C.ORG.cnpj, cidade: ICM.C.ORG.cidade, site: '', instagram: '', email: ICM.C.ORG.email || '', telefone: '', endereco: ICM.C.ORG.endereco || '',
       apresentacao: `O ${ICM.C.ORG.nome} é uma organização da sociedade civil sem fins lucrativos que atua nas áreas de ${lista}. Nosso trabalho oferece, gratuitamente, atividades regulares a crianças, adolescentes e jovens, acompanhando cada um deles e suas famílias.\n\nEm ${d.ano}, foram ${N(d.alunos.length)} pessoas atendidas em ${N(d.turmas.length)} turmas de ${N(d.projetos.length)} projetos, somando ${N(d.horas)} horas de atividades e ${N(d.aulas.length)} aulas realizadas. Cada aula tem plano, chamada, relatório e fotos registrados no ICM Sistema, o que garante transparência a famílias, parceiros e financiadores.`,
       missao: 'Promover o desenvolvimento integral de crianças, adolescentes e jovens por meio da cultura, do esporte, do meio ambiente, da educação e da saúde, fortalecendo vínculos familiares e comunitários.',
       visao: 'Ser referência regional em transformação social, ampliando oportunidades e reduzindo desigualdades nos territórios onde atuamos.',

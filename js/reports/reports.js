@@ -450,7 +450,7 @@
   async function generate(kind, params) {
     try {
       const r = await animate(TITLES[kind], STEPS[kind], () => B[kind](params));
-      await view(r.title, r.html, r.file);
+      if (r.viewer) await r.viewer(r); else await view(r.title, r.html, r.file);
     } catch (e) { console.error(e); ICM.ui.toast(e.message || 'Falha ao gerar relatório', 'danger'); }
   }
 
@@ -472,7 +472,7 @@
       pat_emprestimos: `<div class="grid grid-2">${F({ name: 'de', label: 'De', type: 'date', value: `${ano}-01-01` })}${F({ name: 'ate', label: 'Até', type: 'date', value: U().today() })}</div>`,
       pat_por_projeto: F({ name: 'projeto_id', label: 'Projeto', type: 'select', options: [['', 'Todos os projetos'], ...optsP], value: preset.projeto_id || '' })
     };
-    if (!forms[kind] && FORMS_EXTRA[kind]) forms[kind] = await FORMS_EXTRA[kind](F, { ano, ym, anos, optsT, optsP, preset });
+    if (FORMS_EXTRA[kind]) forms[kind] = await FORMS_EXTRA[kind](F, { ano, ym, anos, optsT, optsP, preset });
     const m = ICM.ui.modal({
       title: TITLES[kind], size: 'sm',
       body: `<form class="col">${forms[kind]}</form>`,

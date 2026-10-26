@@ -1,9 +1,9 @@
 /* Service worker: guarda o app no aparelho para abrir e fazer chamada sem internet.
    Estratégia: tenta a rede primeiro (pega atualizações); sem rede, usa a cópia guardada. */
-const CACHE = 'icm-app-v5';
+const CACHE = 'icm-app-v7';
 const ARQUIVOS = [
-  './', 'index.html', 'manifest.webmanifest', 'assets/favicon.svg', 'assets/icon-192.png', 'assets/icon-512.png', 'assets/favicon.png', 'assets/apple-touch-icon.png', 'assets/icm-marca.png',
-  'css/design-system.css', 'css/app.css', 'css/report.css',
+  './', 'index.html', 'manifest.webmanifest', 'assets/favicon.svg', 'assets/icon-192.png', 'assets/icon-512.png', 'assets/favicon.png', 'assets/apple-touch-icon.png', 'assets/icm-marca.png', 'assets/icm-logo-branca.png', 'assets/icm-logo-escura.png',
+  'css/design-system.css', 'css/app.css', 'css/report.css', 'css/revista.css',
   'js/config.js', 'js/vendor/supabase.js', 'js/vendor/qrcode.min.js', 'js/vendor/jsQR.js',
   'js/core/util.js', 'js/core/icons.js', 'js/core/marca.js', 'js/core/auth.js', 'js/core/auth-supabase.js', 'js/core/ui.js',
   'js/data/constants.js', 'js/data/seed.js', 'js/data/seed-comunidade.js', 'js/data/seed-gestao.js', 'js/data/store.js', 'js/data/store-supabase.js',
@@ -13,7 +13,7 @@ const ARQUIVOS = [
   'js/pages/voluntarios.js', 'js/pages/espera.js', 'js/pages/reunioes.js', 'js/pages/certificados.js', 'js/pages/doadores.js',
   'js/pages/associados.js', 'js/pages/pesquisas.js', 'js/pages/agenda.js', 'js/pages/estoque.js', 'js/pages/equipe.js',
   'js/pages/avisos.js', 'js/pages/portal.js', 'js/pages/assinaturas.js', 'js/pages/rotina.js', 'js/pages/chamada.js',
-  'js/pages/dados.js', 'js/pages/admin.js', 'js/pages/chat.js', 'js/pages/financeiro.js', 'js/pages/compras.js', 'js/pages/campanhas.js', 'js/pages/social.js', 'js/reports/reports-financeiro.js', 'js/reports/reports.js', 'js/reports/reports-comunidade.js', 'js/app.js'
+  'js/pages/dados.js', 'js/pages/admin.js', 'js/pages/chat.js', 'js/pages/financeiro.js', 'js/pages/compras.js', 'js/pages/campanhas.js', 'js/pages/social.js', 'js/reports/reports-financeiro.js', 'js/reports/reports.js', 'js/reports/reports-comunidade.js', 'js/reports/relatorio-anual.js', 'js/app.js'
 ];
 
 self.addEventListener('install', e => {

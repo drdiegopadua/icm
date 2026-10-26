@@ -1,0 +1,146 @@
+/* =========================================================
+   ICM SISTEMA — Relatório anual em formato revista (A4 paisagem)
+   ========================================================= */
+.rv-viewer .report-scroll { padding: 28px 12px 80px; background: #5d6683; }
+.rv-wrap { width: 297mm; margin: 0 auto; }
+.rv-page {
+  --c: #2563eb; --c2: #22c3ee; --tx: #1c2440; --mut: #5b6788;
+  position: relative; width: 297mm; height: 210mm; overflow: hidden; background: #fff; color: var(--tx);
+  font-family: Inter, 'Segoe UI', Arial, sans-serif; font-size: 10.5pt; line-height: 1.5;
+  margin: 0 auto 26px; box-shadow: 0 24px 60px rgba(10, 18, 50, .35); break-after: page; page-break-after: always;
+  animation: rvIn .7s cubic-bezier(.2, .8, .2, 1) both;
+}
+@keyframes rvIn { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: none; } }
+.rv-page * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.rv-page p { margin: 0 0 3mm; text-align: justify; hyphens: auto; }
+.rv-page b, .rv-page strong { font-weight: 800; }
+
+/* Arcos decorativos (linhas finas), como no relatório de referência */
+.rv-arc { position: absolute; border: 1.2px solid color-mix(in srgb, var(--c) 22%, transparent); border-radius: 50%; pointer-events: none; }
+.rv-blob { position: absolute; border-radius: 50%; background: color-mix(in srgb, var(--c) 7%, #fff); pointer-events: none; }
+
+/* Cabeçalho das páginas internas */
+.rv-crumb { position: absolute; left: 14mm; top: 6mm; font-size: 7.5pt; font-weight: 700; color: color-mix(in srgb, var(--c) 70%, #fff); letter-spacing: .02em; }
+.rv-num { position: absolute; right: 9mm; bottom: 6mm; display: flex; flex-direction: column; align-items: center; gap: 1mm; font-size: 7pt; font-weight: 700; color: var(--mut); }
+.rv-num i { width: 7mm; height: 7mm; border-radius: 50%; background: var(--c); display: grid; place-items: center; }
+.rv-num i::before { content: ''; width: 3.4mm; height: 2.4mm; background: linear-gradient(#fff 0 0) top/100% .45mm no-repeat, linear-gradient(#fff 0 0) center/100% .45mm no-repeat, linear-gradient(#fff 0 0) bottom/100% .45mm no-repeat; }
+.rv-in { position: absolute; inset: 16mm 16mm 14mm 16mm; }
+.rv-h { font-size: 21pt; font-weight: 800; color: var(--c); letter-spacing: -.02em; line-height: 1.1; margin: 0 0 5mm; }
+.rv-h2 { font-size: 11.5pt; font-weight: 800; color: var(--c); margin: 0 0 2mm; }
+.rv-lead { font-size: 11pt; font-weight: 700; color: var(--tx); margin-bottom: 3mm; }
+.rv-mut { color: var(--mut); }
+.rv-small { font-size: 8.5pt; }
+.rv-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 10mm; }
+.rv-cols-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8mm; }
+.rv-cols-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6mm; }
+.rv-col { columns: 2; column-gap: 9mm; }
+.rv-col p { break-inside: avoid-column; }
+
+/* Fotos */
+.rv-ph { margin: 0; position: relative; overflow: hidden; border-radius: 4mm; background: linear-gradient(135deg, color-mix(in srgb, var(--c) 30%, #fff), color-mix(in srgb, var(--c2) 30%, #fff)); }
+.rv-ph img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.rv-ph figcaption { position: absolute; left: 0; right: 0; bottom: 0; padding: 6mm 3mm 2mm; font-size: 7.5pt; font-weight: 700; color: #fff; background: linear-gradient(transparent, rgba(0, 0, 0, .6)); }
+.rv-ph.vazio::after { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, .55), transparent 40%); }
+
+/* Capa */
+.rv-capa { background: linear-gradient(120deg, #1636a8 0%, #2563eb 45%, #3b82f6 70%, #22c3ee 100%); color: #fff; }
+.rv-capa .rv-ph { position: absolute; right: 0; top: 0; bottom: 0; width: 62%; border-radius: 0; background: transparent; }
+.rv-capa .rv-ph::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, #2563eb 0%, rgba(37, 99, 235, .55) 26%, rgba(37, 99, 235, 0) 60%); }
+.rv-capa .tit { position: absolute; left: 16mm; top: 64mm; z-index: 2; }
+.rv-capa .tit .a { font-size: 25pt; font-weight: 800; line-height: 1.12; }
+.rv-capa .tit .b { font-size: 74pt; font-weight: 900; line-height: 1; letter-spacing: -.03em; margin-top: 4mm; }
+.rv-capa .marca { position: absolute; right: 14mm; bottom: 14mm; z-index: 2; display: flex; align-items: center; gap: 4mm; font-weight: 800; font-size: 13pt; text-shadow: 0 2px 8px rgba(0, 0, 0, .3); }
+.rv-capa .orb { position: absolute; border-radius: 50%; background: rgba(255, 255, 255, .12); }
+
+/* Divisória de seção */
+.rv-div { color: #fff; background: linear-gradient(130deg, var(--c), var(--c2)); }
+.rv-div .rv-ph { position: absolute; inset: 0; border-radius: 0; background: transparent; opacity: .5; mix-blend-mode: luminosity; }
+.rv-div::after { content: ''; position: absolute; inset: 0; background: linear-gradient(130deg, color-mix(in srgb, var(--c) 70%, transparent), color-mix(in srgb, var(--c2) 65%, transparent)); }
+.rv-div .t { position: absolute; right: 16mm; bottom: 48mm; z-index: 2; font-size: 46pt; font-weight: 900; letter-spacing: -.02em; line-height: 1.02; text-align: right; text-shadow: 0 4px 20px rgba(0, 0, 0, .18); }
+.rv-div .s { position: absolute; right: 16mm; bottom: 39mm; z-index: 2; font-size: 11pt; font-weight: 700; opacity: .9; }
+.rv-div .rv-num { right: auto; left: 9mm; }
+.rv-div .rv-crumb, .rv-div .rv-num { z-index: 3; color: rgba(255, 255, 255, .8); }
+.rv-div .rv-num i { background: rgba(255, 255, 255, .25); }
+
+/* Página colorida (números) */
+.rv-cor { background: linear-gradient(135deg, var(--c), color-mix(in srgb, var(--c) 75%, #000)); color: #fff; }
+.rv-cor .rv-h, .rv-cor .rv-h2 { color: #fff; }
+.rv-cor .rv-crumb { color: rgba(255, 255, 255, .7); }
+.rv-cor .rv-num { color: rgba(255, 255, 255, .8); }
+.rv-cor .rv-num i { background: rgba(255, 255, 255, .25); }
+.rv-cor .rv-mut { color: rgba(255, 255, 255, .75); }
+
+/* Índice */
+.rv-indice { display: grid; grid-template-columns: 1fr 1fr; gap: 6mm 16mm; margin: 12mm 0 0 30mm; width: 190mm; }
+.rv-indice .g b { display: block; font-size: 9pt; color: var(--gc, var(--c)); margin-bottom: 1.5mm; }
+.rv-indice .g div { font-size: 9pt; color: var(--mut); line-height: 1.75; }
+
+/* Números grandes */
+.rv-big { font-size: 26pt; font-weight: 900; color: var(--c); line-height: 1; letter-spacing: -.02em; }
+.rv-kpi .n { font-size: 15pt; font-weight: 900; color: var(--c); line-height: 1.1; text-transform: uppercase; }
+.rv-kpi .l { font-size: 8.5pt; font-weight: 800; color: var(--c); text-transform: uppercase; margin: 1mm 0 1.5mm; line-height: 1.25; }
+.rv-kpi .d { font-size: 7.5pt; font-weight: 700; color: color-mix(in srgb, var(--c) 65%, #fff); text-transform: uppercase; line-height: 1.3; margin-bottom: 2mm; }
+.rv-kpi p { font-size: 8.5pt; }
+.rv-lista-num div { font-size: 10pt; padding: 1mm 0; }
+.rv-lista-num div b { color: var(--c); font-weight: 900; margin-right: 1.5mm; }
+.rv-cor .rv-lista-num div b { color: #fff; }
+
+/* Cartões */
+.rv-card { border-radius: 4mm; padding: 5mm; background: color-mix(in srgb, var(--c) 6%, #fff); }
+.rv-card.solid { background: var(--c); color: #fff; }
+.rv-card.solid .rv-h2 { color: #fff; }
+.rv-area { border-radius: 4mm; padding: 4mm; color: #fff; background: linear-gradient(140deg, var(--ac), color-mix(in srgb, var(--ac) 70%, #000)); }
+.rv-area .n { font-size: 17pt; font-weight: 900; line-height: 1; }
+.rv-area .t { font-weight: 800; font-size: 10.5pt; margin: 2mm 0 1mm; }
+.rv-area .d { font-size: 8pt; opacity: .9; line-height: 1.35; }
+.rv-area svg { width: 8mm; height: 8mm; }
+
+/* Gráficos */
+.rv-donut { display: flex; align-items: center; gap: 6mm; }
+.rv-leg div { font-size: 8.5pt; font-weight: 700; display: flex; align-items: center; gap: 2mm; margin: 1mm 0; }
+.rv-leg i { width: 3mm; height: 3mm; border-radius: 1mm; flex: none; }
+.rv-barras .b { display: grid; grid-template-columns: 40mm 1fr 24mm; align-items: center; gap: 2mm; font-size: 8.5pt; margin: 1.4mm 0; }
+.rv-barras .b span:first-child { color: var(--mut); font-weight: 700; }
+.rv-barras .b i { height: 4.2mm; border-radius: 1mm; background: var(--c); display: block; }
+.rv-barras .b b { font-weight: 900; }
+.rv-cor .rv-barras .b span:first-child { color: rgba(255, 255, 255, .8); }
+.rv-cor .rv-barras .b i { background: #fff; }
+
+/* ODS */
+.rv-ods { display: grid; grid-template-columns: repeat(4, 24mm); gap: 2.5mm; }
+.rv-ods div { height: 24mm; border-radius: 1.2mm; color: #fff; padding: 1.4mm; display: flex; flex-direction: column; }
+.rv-ods b { font-size: 18pt; font-weight: 900; line-height: 1; }
+.rv-ods span { font-size: 5.6pt; font-weight: 800; text-transform: uppercase; line-height: 1.15; margin-top: 1mm; }
+
+/* Linha do tempo / listas */
+.rv-rec { display: grid; grid-template-columns: 26mm 1fr; gap: 5mm; margin-bottom: 4.5mm; align-items: start; }
+.rv-rec .rv-ph { height: 19mm; border-radius: 2mm; }
+.rv-rec b { color: var(--c); display: block; font-size: 9.5pt; margin-bottom: 1mm; }
+.rv-rec p { font-size: 8.5pt; margin: 0; }
+.rv-bul { margin: 0; padding-left: 4mm; }
+.rv-bul li { margin: 0 0 2.6mm; font-size: 9.5pt; }
+.rv-bul li::marker { color: var(--c); }
+.rv-tab { width: 100%; border-collapse: collapse; font-size: 8.5pt; }
+.rv-tab th { background: var(--c); color: #fff; font-weight: 800; padding: 1.6mm 2mm; text-align: left; }
+.rv-tab td { padding: 1.3mm 2mm; border-bottom: .3mm solid #e3e8f4; }
+.rv-tab tr:nth-child(even) td { background: #f5f7fc; }
+.rv-tab .c { text-align: center; }
+.rv-tab tfoot td { background: var(--c); color: #fff; font-weight: 900; }
+.rv-logos { display: flex; flex-wrap: wrap; gap: 2.5mm; }
+.rv-logos span { padding: 2mm 3.5mm; border-radius: 10mm; background: #f1f4fb; font-size: 8.5pt; font-weight: 700; color: #2c375c; }
+.rv-mes b { display: block; color: var(--c); font-size: 9pt; margin-top: 2.5mm; }
+.rv-mes div { font-size: 8.5pt; }
+.rv-assin { display: grid; grid-template-columns: 1fr 1fr; gap: 20mm; margin-top: 14mm; }
+.rv-assin div { border-top: .3mm solid #1c2440; padding-top: 1.5mm; font-size: 8.5pt; text-align: center; }
+.rv-cod { font-family: ui-monospace, Consolas, monospace; font-weight: 800; letter-spacing: .05em; }
+
+/* Contracapa */
+.rv-fim { background: linear-gradient(120deg, #1636a8, #2563eb 55%, #3b82f6); color: #fff; display: grid; place-items: center; text-align: center; }
+.rv-fim .orb { position: absolute; border-radius: 50%; background: rgba(255, 255, 255, .07); }
+
+@page rv { size: A4 landscape; margin: 0; }
+@media print {
+  .rv-viewer .report-scroll { padding: 0; background: #fff; }
+  .rv-wrap { zoom: 1 !important; width: auto; }
+  .rv-page { margin: 0; box-shadow: none; animation: none; page: rv; }
+}

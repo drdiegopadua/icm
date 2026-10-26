@@ -4,8 +4,8 @@
 
   ICM.C = {
     ORG: {
-      nome: 'Instituto ICM',
-      razao: 'Instituto ICM — Organização da Sociedade Civil',
+      nome: 'Instituto Cultural das Montanhas',
+      razao: 'Instituto Cultural das Montanhas (ICM)',
       cnpj: '00.000.000/0001-00',
       cidade: 'Sua Cidade — UF'
     },

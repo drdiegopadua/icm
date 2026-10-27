@@ -1,6 +1,6 @@
 /* Service worker: guarda o app no aparelho para abrir e fazer chamada sem internet.
    Estratégia: tenta a rede primeiro (pega atualizações); sem rede, usa a cópia guardada. */
-const CACHE = 'icm-app-v11';
+const CACHE = 'icm-app-v12';
 const ARQUIVOS = [
   './', 'index.html', 'manifest.webmanifest', 'assets/favicon.svg', 'assets/icon-192.png', 'assets/icon-512.png', 'assets/favicon.png', 'assets/apple-touch-icon.png', 'assets/icm-marca.png', 'assets/icm-logo-branca.png', 'assets/icm-logo-escura.png',
   'css/design-system.css', 'css/app.css', 'css/report.css', 'css/revista.css',

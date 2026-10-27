@@ -317,6 +317,8 @@ p { margin: 0; }
 /* ---------- Tabs ---------- */
 .tabs { display: flex; gap: 6px; padding: 5px; border-radius: var(--r-md); background: var(--surface-sunken); box-shadow: var(--sh-in); overflow-x: auto; scrollbar-width: none; }
 .tabs::-webkit-scrollbar { display: none; }
+/* No computador todas as abas ficam visíveis (quebram linha); no celular a barra desliza para o lado */
+@media (min-width: 760px) { .tabs { flex-wrap: wrap; overflow: visible; } }
 .tab { border: 0; background: transparent; padding: 9px 16px; border-radius: var(--r-sm); font-weight: 600; font-size: var(--fs-sm); color: var(--muted); cursor: pointer; white-space: nowrap; display: inline-flex; gap: 8px; align-items: center; transition: all var(--t) var(--ease); }
 .tab:hover { color: var(--text); }
 .tab.active { background: var(--surface-2); color: var(--primary); box-shadow: var(--sh-out-sm); }

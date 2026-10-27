@@ -61,6 +61,9 @@
           ${F({ name: 'responsavel.telefone', label: 'Telefone / WhatsApp', value: re.telefone, required: true })}
           ${F({ name: 'responsavel.cpf', label: 'CPF do responsável', value: re.cpf })}
           ${F({ name: 'responsavel.profissao', label: 'Profissão / ocupação', value: re.profissao })}
+          ${F({ name: 'responsavel.nascimento', label: 'Data de nascimento do responsável', type: 'date', value: re.nascimento })}
+          ${F({ name: 'responsavel.estado_civil', label: 'Estado civil', type: 'select', value: re.estado_civil, options: ['', 'Solteiro(a)', 'Casado(a)', 'União estável', 'Separado(a)', 'Divorciado(a)', 'Viúvo(a)'] })}
+          ${F({ name: 'responsavel.escolaridade', label: 'Escolaridade do responsável', type: 'select', value: re.escolaridade, options: ['', 'Sem escolaridade', 'Fundamental incompleto', 'Fundamental completo', 'Médio incompleto', 'Médio completo', 'Técnico', 'Superior incompleto', 'Superior completo', 'Pós-graduação'] })}
           <div class="span-all section-title mt-4">${I('pin', 18)} Endereço</div>
           ${F({ name: 'endereco.cep', label: 'CEP', value: en.cep })}
           ${F({ name: 'endereco.logradouro', label: 'Logradouro', value: en.logradouro, cls: 'span-2' })}

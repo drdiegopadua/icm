@@ -64,7 +64,7 @@
             ${ui().kv([['Nome social', a.nome_social], ['Nascimento', fmtDate(a.nascimento)], ['Sexo', { F: 'Feminino', M: 'Masculino', O: 'Outro' }[a.sexo] || ''], ['Cor/raça', a.cor_raca], ['CPF', sens ? a.cpf : a.cpf], ['RG', a.rg], ['NIS', a.nis], ['Telefone', a.telefone], ['Matriculado em', fmtDate(a.data_matricula)]])}
           </div>
           <div class="card"><div class="section-title">${I('users', 18)} Responsável e endereço</div>
-            ${ui().kv([['Responsável', r.nome], ['Parentesco', r.parentesco], ['Telefone', r.telefone], ['Profissão', r.profissao], ['Endereço', [e.logradouro, e.numero].filter(Boolean).join(', ')], ['Bairro', e.bairro], ['Cidade', e.cidade], ['CEP', e.cep]])}
+            ${ui().kv([['Responsável', r.nome], ['Parentesco', r.parentesco], ['Telefone', r.telefone], ['Profissão', r.profissao], ['Nascimento do responsável', r.nascimento ? `${fmtDate(r.nascimento)} (${age(r.nascimento)} anos)` : ''], ['Estado civil', r.estado_civil], ['Escolaridade do responsável', r.escolaridade], ['Endereço', [e.logradouro, e.numero].filter(Boolean).join(', ')], ['Bairro', e.bairro], ['Cidade', e.cidade], ['CEP', e.cep]])}
           </div>
           <div class="card span-all"><div class="section-title">${I('shield', 18)} Termos e autorizações</div>
             <div class="row wrap">

@@ -20,7 +20,12 @@
       ['cpf', 'rg', 'nis', 'social', 'financeiro', 'acesso_familia'].forEach(k => { if (k in pub) { priv[k] = pub[k]; delete pub[k]; } });
       if (a.saude) { priv.saude = a.saude; const s = a.saude; pub.saude = { alergias: s.alergias || '', medicamentos: s.medicamentos || '', condicoes: s.condicoes || '', apto_atividade_fisica: s.apto_atividade_fisica, contato_emergencia: s.contato_emergencia || '' }; }
       if (a.endereco) { priv.endereco = a.endereco; pub.endereco = { bairro: a.endereco.bairro || '', cidade: a.endereco.cidade || '' }; }
-      if (a.responsavel && a.responsavel.cpf) { priv.responsavel_cpf = a.responsavel.cpf; pub.responsavel = { ...a.responsavel }; delete pub.responsavel.cpf; }
+      // CPF, nascimento, estado civil e escolaridade do responsável: só quem vê dados sensíveis
+      if (a.responsavel) {
+        const r = a.responsavel, rp = {}; pub.responsavel = { ...r };
+        ['cpf', 'nascimento', 'estado_civil', 'escolaridade'].forEach(k => { if (r[k] !== undefined) { rp[k] = r[k]; delete pub.responsavel[k]; } });
+        if (Object.keys(rp).length) priv.responsavel_priv = rp;
+      }
       return [pub, priv];
     },
     equipe: p => {
@@ -33,7 +38,7 @@
   };
   const juntar = (col, pub, priv) => {
     if (!priv) return pub;
-    if (col === 'alunos') { const r = { ...pub, ...priv }; if (priv.responsavel_cpf) r.responsavel = { ...(pub.responsavel || {}), cpf: priv.responsavel_cpf }; delete r.responsavel_cpf; return r; }
+    if (col === 'alunos') { const r = { ...pub, ...priv }; const rp = { ...(priv.responsavel_cpf ? { cpf: priv.responsavel_cpf } : {}), ...(priv.responsavel_priv || {}) }; if (Object.keys(rp).length) r.responsavel = { ...(pub.responsavel || {}), ...rp }; delete r.responsavel_cpf; delete r.responsavel_priv; return r; }
     if (col === 'equipe') { const r = { ...pub, ...priv }; r.contrato = { ...(pub.contrato || {}), remuneracao: priv.remuneracao ?? null }; delete r.remuneracao; return r; }
     return { ...pub, ...priv };
   };

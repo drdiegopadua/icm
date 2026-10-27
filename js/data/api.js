@@ -340,7 +340,7 @@
 
     usuarios: {
       async list() { return (await S().list('usuarios')).map(({ senha_hash, ...x }) => x); },
-      async professores() { return (await api.usuarios.list()).filter(x => x.ativo && (x.papel === 'professor' || x.papel === 'coordenacao')); },
+      async professores() { return (await api.usuarios.list()).filter(x => x.ativo && (x.papel === 'professor' || x.papel === 'coordenacao' || x.da_aulas)); },
       async save(x) {
         need('usuarios.gerenciar');
         if (!x.nome || !x.email) throw new Error('Nome e e-mail são obrigatórios.');

@@ -127,6 +127,7 @@ js/data/store-supabase.js Armazenamento no Supabase (mesma interface)
 js/core/auth-supabase.js Login real: convite, primeiro acesso, esqueci a senha
 supabase/icm_banco.sql  ⭐ Banco usado pelo sistema (rodar este no SQL Editor)
 supabase/icm_v2_arquivos_2fa.sql  Atualização 2: pasta privada de arquivos + duas etapas obrigatórias
+supabase/icm_v3_professor.sql  Atualização 3: campo "Também dá aulas" nos usuários
 js/data/api.js          Regras de negócio + controle de acesso (as telas só usam isto)
 js/pages/               Telas
 js/reports/reports.js   Motor de relatórios
@@ -140,7 +141,7 @@ tools/serve.ps1         Servidor local para testes
 
 ## Ligar o banco (uma vez só)
 
-1. Supabase → **SQL Editor** → colar e rodar `supabase/icm_banco.sql` e, depois, `supabase/icm_v2_arquivos_2fa.sql`.
+1. Supabase → **SQL Editor** → colar e rodar `supabase/icm_banco.sql` e, depois, `supabase/icm_v2_arquivos_2fa.sql` e `supabase/icm_v3_professor.sql`.
 2. Supabase → **Authentication → URL Configuration**: Site URL e Redirect URLs = `https://drdiegopadua.github.io/icm/`.
 3. Supabase → **Project Settings → API**: copiar a chave **anon public** para `supabaseKey` em `js/config.js`. **Nunca** a `service_role`.
 4. Abrir o sistema → **Primeiro acesso? Criar minha senha** com o e-mail convidado no fim do SQL (o administrador).

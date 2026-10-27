@@ -260,7 +260,6 @@
       async save(t) {
         need('turmas.editar');
         if (!t.nome) throw new Error('Informe o nome da turma.');
-        if (!t.professor_id) throw new Error('Selecione o(a) professor(a).');
         if (t.espaco_id && t.status !== 'encerrada') {
           const outras = await S().list('turmas', x => x.id !== t.id && x.espaco_id === t.espaco_id && x.status !== 'encerrada');
           const choque = outras.find(x => (x.dias || []).some(d => (t.dias || []).includes(d)) && t.inicio < x.fim && x.inicio < t.fim);

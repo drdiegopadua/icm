@@ -20,7 +20,7 @@
         <div class="row between wrap">
           <div><div class="row wrap">${ui().areaChip(p.area)}<span class="badge neutral">${esc(t.modalidade || '')}</span>${t.status === 'encerrada' ? ui().badge('Encerrada', 'neutral') : ui().badge('Ativa', 'ok', true)}</div>
             <h1 class="page-title mt-2" style="font-size:28px">${esc(t.nome)}</h1>
-            <div class="meta mt-2"><span>${I('user', 15)} ${esc(prof.nome || '—')}</span><span>${I('calendar', 15)} ${esc(ICM.pages._diasTxt(t.dias))}</span><span>${I('clock', 15)} ${esc(t.inicio)}–${esc(t.fim)}</span><span>${I('pin', 15)} ${esc(t.local || '')}</span></div></div>
+            <div class="meta mt-2"><span>${I('user', 15)} ${esc(prof.nome || 'Professor(a) a definir')}</span><span>${I('calendar', 15)} ${esc(ICM.pages._diasTxt(t.dias))}</span><span>${I('clock', 15)} ${esc(t.inicio)}–${esc(t.fim)}</span><span>${I('pin', 15)} ${esc(t.local || '')}</span></div></div>
           <div class="row wrap">
             ${ICM.auth.can('turmas.editar') ? `<button class="btn" data-edit>${I('edit', 18)} Editar</button>` : ''}
             ${ICM.auth.can('aulas.registrar') ? `<button class="btn btn-primary" data-nova>${I('plus', 18)} Registrar aula</button>` : ''}

@@ -42,7 +42,7 @@
     const s = await ICM.api.projetos.stats(p.id);
     const turmas = await ICM.api.turmas.list(p.id);
     const users = await ICM.api.usuarios.list();
-    const uname = id => (users.find(x => x.id === id) || {}).nome || '—';
+    const uname = id => (users.find(x => x.id === id) || {}).nome || 'Professor(a) a definir';
     const area = ICM.C.AREAS[p.area];
     const tab0 = query.get('tab') || 'turmas';
 
@@ -191,7 +191,7 @@
         ${F({ name: 'nome', label: 'Nome da turma', value: t.nome, required: true, cls: 'span-2' })}
         ${F({ name: 'projeto_id', label: 'Projeto', type: 'select', value: t.projeto_id, options: projetos.map(p => [p.id, p.nome]) })}
         ${F({ name: 'modalidade', label: 'Modalidade / atividade', value: t.modalidade })}
-        ${F({ name: 'professor_id', label: 'Professor(a) responsável', type: 'select', value: t.professor_id, options: [['', 'Selecione'], ...profs.map(u => [u.id, u.nome])] })}
+        ${F({ name: 'professor_id', label: 'Professor(a) responsável', type: 'select', value: t.professor_id, options: [['', 'A definir'], ...profs.map(u => [u.id, u.nome])] })}
         ${F({ name: 'local', label: 'Local (descrição)', value: t.local })}
         ${F({ name: 'espaco_id', label: 'Espaço reservado na agenda', type: 'select', value: t.espaco_id, options: [['', 'Nenhum'], ...espacos.map(r => [r.id, r.nome])], hint: 'Os horários da turma bloqueiam o espaço na Agenda.' })}
         <div class="field span-2"><span class="label">Dias da semana</span><div class="row wrap">${ICM.C.DIAS_SEMANA.map(d => `<label class="check"><input type="checkbox" name="dias" value="${d.v}" data-multi ${(t.dias || []).includes(d.v) ? 'checked' : ''}> ${d.n}</label>`).join('')}</div></div>

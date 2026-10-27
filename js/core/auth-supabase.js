@@ -4,7 +4,7 @@
 (function () {
   if (!window.ICM || !ICM.store || ICM.store.modo !== 'supabase') return;
   const sb = ICM.store.sb;
-  const IDLE_MIN = 15;
+  const IDLE_MIN = 30;
   const SITE = location.origin + location.pathname;
   let current = null, idleTimer = null, recuperando = false;
 

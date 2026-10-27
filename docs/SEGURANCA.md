@@ -11,7 +11,7 @@ O sistema guarda dados de **crianças e adolescentes**, incluindo dados sensíve
 | Dados social, financeiro e de saúde completos ocultos para professor; ele vê apenas a ficha de emergência | `sanitizeAluno()` em `api.js` |
 | CPF mascarado para quem não tem permissão | `maskCPF()` |
 | Registro de auditoria: login, logout, matrícula, edições, exclusões, visualização de dado sensível e relatórios | `api.audit()`, tela **Auditoria** |
-| Logout automático após 15 min sem uso | `js/core/auth.js` |
+| Logout automático após 30 min sem uso | `js/core/auth.js` |
 | Bloqueio de 5 min após 5 senhas erradas | `auth.js` |
 | Tempo de resposta constante no login (não revela quais e-mails existem) | `auth.js` |
 | Política de Segurança de Conteúdo (CSP): só roda scripts do próprio site, nada inline e nada de terceiros | `index.html` |

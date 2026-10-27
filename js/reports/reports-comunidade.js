@@ -239,7 +239,7 @@
     const T = ICM.C.TIPOS_CERTIFICADO[c.tipo] || ICM.C.TIPOS_CERTIFICADO.outro;
     return `<div class="cert-page"><div class="cert" style="--c:${T.cor}">
       <div class="cert-corner tl"></div><div class="cert-corner br"></div>
-      <div class="cert-head">${ICM.logo(64)}<div><div class="cert-org">${esc(ICM.C.ORG.razao)}</div><div class="cert-cnpj">CNPJ ${esc(ICM.C.ORG.cnpj)}</div></div></div>
+      <div class="cert-head">${h().logoDoc(64)}<div><div class="cert-org">${esc(ICM.C.ORG.razao)}</div><div class="cert-cnpj">CNPJ ${esc(ICM.C.ORG.cnpj)}</div></div></div>
       <div class="cert-title">Certificado</div>
       <div class="cert-sub">${esc(T.nome)}</div>
       <p class="cert-text">Certificamos que <b class="cert-nome">${esc(c.nome)}</b> ${esc(c.descricao || 'participou de')} — <b>${esc(c.titulo)}</b>${c.carga_horaria ? `, com carga horária de <b>${esc(U().num(c.carga_horaria, 0))} horas</b>` : ''}.</p>

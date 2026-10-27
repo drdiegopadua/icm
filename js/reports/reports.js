@@ -86,8 +86,14 @@
 
   // ====================== Blocos de documento ======================
   const sec = (inner) => `<div class="doc-section">${inner}</div>`;
-  function head(titulo, sub) {
-    return sec(`<div class="doc-head"><div class="logo">${ICM.logo(56)}</div><div style="flex:1"><div class="org">${esc(ICM.C.ORG.razao)} · CNPJ ${esc(ICM.C.ORG.cnpj)}</div><h1>${esc(titulo)}</h1><div style="color:#3a4669;font-weight:600">${esc(sub || '')}</div></div></div>`);
+  // Logo oficial do Instituto (endereço completo: funciona também no HTML baixado)
+  const logoDoc = (h = 66) => `<img class="logo-doc" src="${esc(new URL('assets/icm-logo-escura.png', location.href).href)}" alt="${esc(ICM.C.ORG.nome)}" style="height:${h}px">`;
+  // inverter: o nome (sub) vira o título em destaque e o tipo do documento fica pequeno acima
+  function head(titulo, sub, { inverter = false, extra = '', foto = '' } = {}) {
+    const texto = inverter
+      ? `<div class="tipo">${esc(titulo)}</div><h1 class="destaque">${esc(sub || '')}</h1>${extra ? `<div class="extra">${esc(extra)}</div>` : ''}`
+      : `<h1>${esc(titulo)}</h1><div style="color:#3a4669;font-weight:600">${esc(sub || '')}</div>`;
+    return sec(`<div class="doc-head">${logoDoc()}<div class="doc-head-txt"><div class="org">${esc(ICM.C.ORG.razao)} · CNPJ ${esc(ICM.C.ORG.cnpj)}</div>${texto}</div>${foto ? `<img class="doc-foto" src="${esc(foto)}" alt="">` : ''}</div>`);
   }
   const meta = pairs => sec(`<div class="doc-meta">${pairs.filter(p => p[1] !== undefined).map(([k, v]) => `<div><b>${esc(k)}</b>${esc(v || '—')}</div>`).join('')}</div>`);
   const kpis = list => sec(`<div class="kpis">${list.map(([n, t]) => `<div class="kpi"><div class="n">${esc(n)}</div><div class="t">${esc(t)}</div></div>`).join('')}</div>`);
@@ -315,7 +321,7 @@
     const freq = await api().alunos.frequencia(aluno_id);
     const ocs = await api().ocorrencias.list(aluno_id);
     const r = a.responsavel || {}, en = a.endereco || {}, sa = a.saude || {}, es = a.escolaridade || {}, so = a.social, fi = a.financeiro;
-    let html = head('Ficha do Aluno', `${a.nome} — ${a.matricula}`);
+    let html = head('Ficha do Aluno', a.nome, { inverter: true, extra: `Matrícula ${a.matricula}`, foto: a.foto });
     html += meta([['Nascimento', `${U().fmtDate(a.nascimento)} (${U().age(a.nascimento)} anos)`], ['Situação', ICM.C.STATUS_ALUNO[a.status].nome], ['CPF', a.cpf], ['NIS', a.nis], ['Responsável', `${r.nome || ''} (${r.parentesco || ''})`], ['Telefone', r.telefone], ['Endereço', [en.logradouro, en.numero, en.bairro, en.cidade].filter(Boolean).join(', ')], ['Escola', `${es.escola || ''} ${es.serie ? '· ' + es.serie : ''}`]]);
     html += sec(`<h2>Saúde</h2><p><b>Alergias:</b> ${esc(sa.alergias || 'Nenhuma')} · <b>Medicamentos:</b> ${esc(sa.medicamentos || 'Nenhum')} · <b>Condições:</b> ${esc(sa.condicoes || 'Nenhuma')}${sa.tipo_sanguineo ? ` · <b>Tipo sanguíneo:</b> ${esc(sa.tipo_sanguineo)}` : ''}</p>`);
     if (so && fi) html += sec(`<h2>Social e financeiro</h2><p>${esc(so.pessoas_casa || '—')} pessoas na residência · moradia ${esc(so.moradia || '—')} · renda familiar ${fi.renda_familiar != null ? esc(U().money(fi.renda_familiar)) : '—'} · per capita ${fi.renda_per_capita != null ? esc(U().money(fi.renda_per_capita)) : '—'} · benefícios: ${esc((so.beneficios || []).join(', ') || 'nenhum')}</p>`);
@@ -493,6 +499,6 @@
 
   ICM.reports = {
     generate, openDialog, register, fichaAluno: id => generate('ficha_aluno', { aluno_id: id }),
-    h: { sec, head, meta, kpis, table, photos, barChart, signs, declaracao, esc, view, animate }, _formsExtra: FORMS_EXTRA
+    h: { sec, head, logoDoc, meta, kpis, table, photos, barChart, signs, declaracao, esc, view, animate }, _formsExtra: FORMS_EXTRA
   };
 })();

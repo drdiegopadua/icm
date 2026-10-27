@@ -5,7 +5,7 @@
   window.ICM = window.ICM || {};
   const SKEY = 'icm_session';
   const LKEY = 'icm_lock';
-  const IDLE_MIN = 15;        // logout automático por inatividade
+  const IDLE_MIN = 30;        // logout automático por inatividade
   const MAX_TENTATIVAS = 5;   // bloqueio temporário após tentativas erradas
   const BLOQUEIO_MIN = 5;
 

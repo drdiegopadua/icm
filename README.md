@@ -32,7 +32,7 @@ Senha de todos: `icm@2026`. Também dá para entrar clicando nos botões de demo
 - **Menu no topo** com menus suspensos (Alunos, Pedagógico, Comunidade, Documentos, Gestão) e Chat. No celular vira um menu em lista. Os pontos vermelhos indicam pendências (faltas, empréstimos atrasados, documentos vencendo, mensagens não lidas).
 - **Marca ICM animada** (letras-montanha que sobem e um brilho que percorre os picos), usada no login, no topo, nos relatórios e nos ícones do app. Original em `icone/`.
 - **Chat da equipe**: grupos (Geral, Professores, Coordenação e secretaria; a coordenação cria e edita grupos) e mensagens diretas entre colegas, com contador de não lidas. Só usuários do sistema; famílias e alunos não têm acesso.
-- **Login animado**: tema claro/escuro, bloqueio após tentativas erradas e logout automático após 15 min sem uso.
+- **Login animado**: tema claro/escuro, bloqueio após tentativas erradas e logout automático após 30 min sem uso.
 - **Matrícula em 6 etapas**: dados do aluno, responsável e endereço, social e financeiro, saúde, escolaridade, turmas e termos (LGPD e uso de imagem). O número de matrícula é gerado automaticamente.
 - **Ficha do aluno** com as abas:
   - visão geral;

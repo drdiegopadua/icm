@@ -35,6 +35,9 @@
     return { chat_canais, chat_mensagens, chat_lidos: [] };
   };
 
+  // Com o banco: sempre busca as mensagens mais recentes (sem esperar o cache de 20 s)
+  const fresco = () => { if (S().invalidar) ['chat_mensagens', 'chat_canais', 'chat_lidos'].forEach(c => S().invalidar(c)); };
+
   async function lidosDe(uid) { return (await S().get('chat_lidos', uid)) || { id: uid, canais: {} }; }
 
   async function podeVer(cid) {
@@ -49,6 +52,7 @@
 
     // Grupos do usuário + uma conversa direta com cada colega ativo
     async conversas() {
+      fresco();
       const u = me();
       const [canais, msgs, usuarios, lidos] = [await S().list('chat_canais', c => (c.membros || []).includes(u.id)), await S().list('chat_mensagens'), await S().list('usuarios', x => x.ativo), await lidosDe(u.id)];
       const resumo = cid => {
@@ -68,6 +72,7 @@
 
     async mensagens(cid) {
       if (!(await podeVer(cid))) { const e = new Error('Você não participa desta conversa.'); e.code = 403; throw e; }
+      fresco();
       const usuarios = await S().list('usuarios');
       return (await S().list('chat_mensagens', m => m.canal_id === cid)).sort((a, b) => a.em.localeCompare(b.em))
         .map(m => { const a = usuarios.find(x => x.id === m.autor_id) || { nome: 'Usuário removido' }; return { ...m, autor: { id: a.id, nome: a.nome, foto: a.foto } }; });
@@ -90,6 +95,17 @@
       l.canais[cid] = ult;
       if (await S().get('chat_lidos', u.id)) await S().update('chat_lidos', u.id, { canais: l.canais });
       else await S().insert('chat_lidos', { id: u.id, canais: l.canais });
+    },
+
+    // Total de não lidas + a mensagem não lida mais recente (para o aviso na tela)
+    async novidades() {
+      const u = me(); const { grupos, diretos } = await chat.conversas();
+      const convs = [...grupos, ...diretos].filter(c => c.naoLidas && c.ultima && c.ultima.autor_id !== u.id);
+      const total = [...grupos, ...diretos].reduce((s, c) => s + c.naoLidas, 0);
+      const c = convs.sort((a, b) => b.ultima.em.localeCompare(a.ultima.em))[0];
+      if (!c) return { total, ultima: null };
+      const autor = (await S().list('usuarios')).find(x => x.id === c.ultima.autor_id) || {};
+      return { total, ultima: { id: c.ultima.id, cid: c.id, texto: c.ultima.texto, autor: autor.nome || 'Alguém', conversa: c.tipo === 'direto' ? '' : c.nome } };
     },
 
     async naoLidas() {

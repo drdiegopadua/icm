@@ -179,7 +179,7 @@
     const abertoLbl = aberto ? aberto.dataset.lbl : null;
     const badge = c => contagem(c) ? `<span class="count" title="${esc(DICA[c])}">${contagem(c)}</span>` : '';
     nav.innerHTML = NAV().map(n => {
-      if (!n.itens) return `<a class="tn-item ${n.match.test(path) ? 'active' : ''}" href="${n.href}">${I(n.icon, 18)}<span>${esc(n.label)}</span>${n.count && contagem(n.count) ? `<span class="tn-ponto" title="${esc(DICA[n.count])}"></span>` : ''}</a>`;
+      if (!n.itens) return `<a class="tn-item ${n.match.test(path) ? 'active' : ''}" href="${n.href}">${I(n.icon, 18)}<span>${esc(n.label)}</span>${n.count && contagem(n.count) ? (n.count === 'chat' ? `<span class="tn-cont" title="${esc(DICA[n.count])}">${contagem(n.count) > 99 ? '99+' : contagem(n.count)}</span>` : `<span class="tn-ponto" title="${esc(DICA[n.count])}"></span>`) : ''}</a>`;
       if (!n.itens.length) return '';
       const ativo = n.itens.some(x => x.match.test(path));
       const pend = n.itens.some(x => x.count && contagem(x.count));
@@ -206,7 +206,7 @@
     const bb = root.querySelector('[data-back]');
     if (bb) bb.hidden = items.length < 2;
     el.innerHTML = items.map((c, i) => i === items.length - 1 ? `<span class="cur">${esc(c[0])}</span>` : `<a href="${c[1]}">${esc(c[0])}</a>${I('chevronRight', 14)}`).join('');
-    document.title = `${items[items.length - 1][0]} · ICM Sistema`;
+    document.title = `${chatCount ? `(${chatCount}) ` : ''}${items[items.length - 1][0]} · ICM Sistema`;
   }
 
   function setupSearch() {
@@ -269,14 +269,36 @@
     window.addEventListener('hashchange', route);
     await route();
     refreshAlerts();
-    setInterval(() => { if (!document.hidden) refreshChat(); }, 15000);
+    refreshChat();
+    setInterval(() => { if (!document.hidden) refreshChat(); }, 10000);
     ICM.pages._rotinaAutomatica().catch(() => { });
   }
 
+  // Mensagens novas do chat: número no menu, no título da aba e aviso clicável
+  let chatAvisada = null, chatPrimeira = true;
   async function refreshChat() {
-    try { chatCount = await ICM.api.chat.naoLidas(); } catch (e) { chatCount = 0; }
+    try {
+      const n = await ICM.api.chat.novidades(); chatCount = n.total;
+      if (n.ultima && n.ultima.id !== chatAvisada) {
+        if (!chatPrimeira && !/^#\/chat/.test(location.hash)) avisarMensagem(n.ultima);
+        chatAvisada = n.ultima.id;
+      }
+      chatPrimeira = false;
+    } catch (e) { chatCount = 0; }
+    document.title = (chatCount ? `(${chatCount}) ` : '') + document.title.replace(/^\(\d+\)\s*/, '');
     const path = (location.hash || '#/').slice(1).split('?')[0];
     if (root.querySelector('.tn-menu')) renderNav(path);
+  }
+
+  function avisarMensagem(m) {
+    let box = document.querySelector('.toasts');
+    if (!box) { box = document.createElement('div'); box.className = 'toasts'; box.setAttribute('role', 'status'); document.body.appendChild(box); }
+    const t = document.createElement('button');
+    t.type = 'button'; t.className = 'toast info toast-chat';
+    t.innerHTML = `<div class="ic">${I('chat', 18)}</div><div><b>${esc(m.autor)}${m.conversa ? ' · ' + esc(m.conversa) : ''}</b><div class="small">${esc(String(m.texto).slice(0, 90))}${String(m.texto).length > 90 ? '…' : ''}</div></div>`;
+    const sair = () => { t.classList.add('out'); setTimeout(() => t.remove(), 300); };
+    t.addEventListener('click', () => { location.hash = '#/chat/' + m.cid; sair(); });
+    box.appendChild(t); setTimeout(sair, 8000);
   }
 
   ICM.app = { setCrumbs, refreshAlerts, refreshChat, go: h => { location.hash = h; }, reload: route };

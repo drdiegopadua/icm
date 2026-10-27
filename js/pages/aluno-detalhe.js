@@ -20,7 +20,7 @@
     const TABS = [
       ['geral', 'Visão geral', 'user'], ['timeline', 'Linha do tempo', 'history'], ['turmas', 'Turmas e frequência', 'layers'],
       ['agenda', 'Calendário', 'calendar'], ['ocorrencias', 'Advertências e ocorrências', 'alert'], ['emprestimos', 'Empréstimos', 'download'], ['evolucao', 'Evolução', 'chart'], ['social', 'Acompanhamento social', 'heart'],
-      ['social', 'Social e financeiro', 'wallet'], ['saude', 'Saúde', 'heartPulse'], ['escola', 'Escolaridade', 'school']
+      ['socio', 'Dados socioeconômicos', 'wallet'], ['saude', 'Saúde', 'heartPulse'], ['escola', 'Escolaridade', 'school']
     ];
 
     el.innerHTML = `<div class="page">
@@ -140,7 +140,7 @@
         }));
       },
 
-      async social() {
+      async socio() {
         if (!sens) { panel.innerHTML = restricted(); return; }
         const s = a.social || {}, f = a.financeiro || {};
         panel.innerHTML = `<div class="grid grid-2 tab-panel">

@@ -293,6 +293,15 @@
         await audit('incluir_turma', 'matriculas', r.id, `${a.nome} incluído(a) em ${t.nome}`);
         return r;
       },
+      // Corrige a data em que o aluno entrou na turma (ex.: incluído no sistema depois das primeiras aulas)
+      async alterarEntrada(matId, entrada) {
+        need('turmas.alunos');
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(entrada || '')) throw new Error('Informe a data de entrada.');
+        const r = await S().update('matriculas', matId, { entrada });
+        const a = await S().get('alunos', r.aluno_id);
+        await audit('editar', 'matriculas', matId, `Data de entrada de ${a ? a.nome : 'aluno'} alterada para ${u().fmtDate(entrada)}`);
+        return r;
+      },
       async retirarAluno(matId, motivo, saida, obs) {
         need('turmas.alunos');
         if (!motivo) throw new Error('Informe o motivo da saída.');

@@ -81,7 +81,7 @@
             ${ativos.length ? `<div class="table-wrap"><table class="table"><thead><tr><th>Aluno</th><th>Entrada</th><th>Faltas no mês</th><th>Saúde</th><th></th></tr></thead><tbody>
             ${ativos.map(m => { const l = linhas.find(x => x.aluno_id === m.aluno_id) || { F: 0, nivel: 'ok' }; const sa = m.aluno.saude || {}; return `<tr>
               <td><a class="row" href="#/alunos/${esc(m.aluno_id)}" style="color:inherit">${ICM.util.avatar(m.aluno.nome, m.aluno.foto, 'sm')}<div><b>${esc(m.aluno.nome)}</b><div class="xs muted">${esc(m.aluno.matricula)}</div></div></a></td>
-              <td class="small">${esc(fmtDate(m.entrada))}</td>
+              <td class="small">${canMng ? `<button class="btn btn-sm btn-ghost" data-entrada="${esc(m.id)}" data-dt="${esc(m.entrada)}" title="Corrigir data de entrada">${esc(fmtDate(m.entrada))} ${I('edit', 13)}</button>` : esc(fmtDate(m.entrada))}</td>
               <td>${l.nivel !== 'ok' ? ui().nivelPill(l.nivel, l.F) : `<span class="badge ok">${l.F}</span>`}</td>
               <td class="small">${[sa.alergias && `Alergia: ${sa.alergias}`, sa.condicoes, sa.medicamentos].filter(Boolean).map(x => `<span class="badge danger">${esc(x)}</span>`).join(' ') || '<span class="muted">—</span>'}</td>
               <td style="text-align:right">${canMng ? `<button class="btn btn-sm btn-danger" data-out="${esc(m.id)}" data-nome="${esc(m.aluno.nome)}">${I('userX', 16)} Retirar</button>` : ''}</td></tr>`; }).join('')}
@@ -94,6 +94,10 @@
         panel.querySelector('[data-cart]').addEventListener('click', () => ICM.pages._carteirinhas(ativos.map(m => m.aluno)));
         const av = panel.querySelector('[data-aval]'); if (av) av.addEventListener('click', () => ICM.pages._avaliarTurma(t.id));
         panel.querySelectorAll('[data-out]').forEach(b => b.addEventListener('click', () => retirarAluno(b.dataset.out, b.dataset.nome)));
+        panel.querySelectorAll('[data-entrada]').forEach(b => b.addEventListener('click', () => {
+          const md = ui().modal({ title: 'Data de entrada na turma', size: 'sm', body: `<form class="col"><p class="small">O aluno só aparece na chamada das aulas a partir desta data.</p>${ui().field({ name: 'entrada', label: 'Entrou na turma em', type: 'date', value: b.dataset.dt })}</form>`, foot: `<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" data-ok>${I('check', 18)} Salvar</button>` });
+          md.$('[data-ok]').addEventListener('click', e => ui().busy(e.currentTarget, async () => { await ui().run(() => ICM.api.turmas.alterarEntrada(b.dataset.entrada, md.$('[name=entrada]').value), 'Data de entrada corrigida'); md.close(); ICM.app.reload(); }).catch(() => { }));
+        }));
       },
 
       async frequencia() {
@@ -144,7 +148,10 @@
     async function aulaModal(aulaId) {
       const isNew = !aulaId;
       const a = isNew ? { turma_id: t.id, data: ICM.util.today(), inicio: t.inicio, fim: t.fim, plano: {}, relatorio: {}, presencas: {}, fotos: [], status: 'planejada' } : await ICM.api.aulas.get(aulaId);
-      const mats = (await ICM.api.turmas.alunos(t.id)).filter(m => m.entrada <= a.data && (!m.saida || m.saida > a.data));
+      const todosMats = await ICM.api.turmas.alunos(t.id);
+      const mats = todosMats.filter(m => m.entrada <= a.data && (!m.saida || m.saida > a.data));
+      // Alunos ativos que entraram na turma depois da data desta aula (não aparecem na chamada)
+      let depois = todosMats.filter(m => m.status === 'ativo' && m.entrada > a.data);
       const pres = { ...(a.presencas || {}) };
       const fotos = (a.fotos || []).map(f => ({ ...f }));
       const canEdit = ICM.auth.can('aulas.registrar');
@@ -170,6 +177,7 @@
           <section data-s="chamada" hidden>
             <div class="row between mb-4"><div class="small muted">${mats.length} aluno(s) na turma nesta data</div>
               ${canEdit ? `<div class="row"><button type="button" class="btn btn-sm" data-all="P">${I('check', 16)} Todos presentes</button></div>` : ''}</div>
+            <div data-depois></div>
             <div data-chamada></div>
           </section>
           <section data-s="relatorio" class="col" hidden>
@@ -189,6 +197,18 @@
         box.querySelectorAll('.att-opt').forEach(b => b.addEventListener('click', () => { pres[b.dataset.a] = pres[b.dataset.a] === b.dataset.v ? undefined : b.dataset.v; if (!pres[b.dataset.a]) delete pres[b.dataset.a]; drawChamada(); }));
       };
       drawChamada();
+      const drawDepois = () => {
+        const box = m.$('[data-depois]');
+        box.innerHTML = depois.length ? `<div class="sens-lock mb-4" style="display:block">${I('info', 18)} ${depois.length === 1 ? '1 aluno entrou' : depois.length + ' alunos entraram'} na turma depois desta aula: ${depois.map(x => `<b>${esc(x.aluno.nome)}</b> (${esc(fmtDate(x.entrada))})`).join(', ')}.${ICM.auth.can('turmas.alunos') && !isNew ? `<div class="mt-2"><button type="button" class="btn btn-sm btn-primary" data-incluir-depois>${I('userPlus', 16)} Incluir na chamada (entrada em ${esc(fmtDate(a.data))})</button></div>` : ''}</div>` : '';
+        const bt = box.querySelector('[data-incluir-depois]');
+        if (bt) bt.addEventListener('click', e => ui().busy(e.currentTarget, async () => {
+          await ui().run(async () => { for (const x of depois) { await ICM.api.turmas.alterarEntrada(x.id, a.data); x.entrada = a.data; mats.push(x); } }, 'Alunos incluídos na chamada');
+          mats.sort((p, q) => p.aluno.nome.localeCompare(q.aluno.nome)); depois = [];
+          m.$('[data-s="chamada"] .small.muted').textContent = `${mats.length} aluno(s) na turma nesta data`;
+          drawDepois(); drawChamada();
+        }).catch(() => { }));
+      };
+      drawDepois();
       const all = m.$('[data-all]'); if (all) all.addEventListener('click', () => { mats.forEach(x => { pres[x.aluno_id] = 'P'; }); drawChamada(); });
       ui().photoPicker(m.$('[data-fotos]'), fotos, () => { }, { editable: canEdit });
       if (semImg.size) m.$('[data-s="fotos"]').insertAdjacentHTML('afterbegin', `<div class="sens-lock mb-4">${I('camera', 18)} Sem autorização de imagem: ${esc([...semImg].join(', '))}. Não publique fotos em que apareçam.</div>`);

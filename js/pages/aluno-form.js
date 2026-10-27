@@ -8,7 +8,7 @@
   const STEPS = [
     { k: 'pessoal', t: 'Dados do aluno', icon: 'user' },
     { k: 'familia', t: 'Responsável e endereço', icon: 'home' },
-    { k: 'social', t: 'Social e financeiro', icon: 'wallet' },
+    { k: 'social', t: 'Dados socioeconômicos', icon: 'wallet' },
     { k: 'saude', t: 'Saúde', icon: 'heartPulse' },
     { k: 'escola', t: 'Escolaridade', icon: 'school' },
     { k: 'final', t: 'Turmas e termos', icon: 'clipboardCheck' }

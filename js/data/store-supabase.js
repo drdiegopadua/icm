@@ -125,10 +125,53 @@
     }
     return out;
   }
+  // ---------- Sem internet (chamada no celular) ----------
+  // Guarda no aparelho uma cópia ENXUTA só do que a chamada precisa (sem CPF, renda, endereço…)
+  // e uma fila das chamadas feitas sem conexão, enviada ao banco quando a internet volta.
+  const OFF = 'icm_off_', FILA_SB = 'icm_fila_sb';
+  const janelaAulas = () => { const d = new Date(); const a = new Date(d); a.setDate(a.getDate() - 60); const b = new Date(d); b.setDate(b.getDate() + 30); return [a.toISOString().slice(0, 10), b.toISOString().slice(0, 10)]; };
+  const OFF_COLS = {
+    turmas: l => l,
+    matriculas: l => l.filter(m => m.status === 'ativo' || !m.saida),
+    projetos: l => l.map(p => ({ id: p.id, nome: p.nome, area: p.area, cor: p.cor, status: p.status, inicio: p.inicio, fim: p.fim })),
+    alunos: l => l.filter(a => a.status !== 'desligado').map(a => ({ id: a.id, nome: a.nome, matricula: a.matricula, status: a.status, saude: { alergias: (a.saude || {}).alergias || '' }, autorizacoes: { imagem: (a.autorizacoes || {}).imagem } })),
+    aulas: l => { const [de, ate] = janelaAulas(); return l.filter(x => x.data >= de && x.data <= ate).map(x => ({ ...x, fotos: [], _semFotos: true })); },
+    usuarios: l => l.filter(u => !u.convite).map(u => ({ id: u.id, nome: u.nome, papel: u.papel, ativo: u.ativo, da_aulas: u.da_aulas }))
+  };
+  const lerLocal = k => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } };
+  const gravarLocal = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* aparelho sem espaço: segue sem cópia */ } };
+  const erroDeRede = e => !navigator.onLine || /Failed to fetch|NetworkError|Sem conexão|Load failed|network/i.test(String(e && e.message || e));
+  const fila = () => lerLocal(FILA_SB) || [];
+  function avisarFila() { document.dispatchEvent(new CustomEvent('icm:fila')); }
+  function enfileirar(op) {
+    const f = fila(); const i = f.findIndex(x => x.col === op.col && x.id === op.id);
+    if (i >= 0) f[i] = { ...f[i], ...op, patch: { ...(f[i].patch || {}), ...(op.patch || {}) } }; else f.push({ ...op, em: new Date().toISOString() });
+    gravarLocal(FILA_SB, f); avisarFila();
+    // Atualiza a cópia do aparelho para a tela já mostrar a chamada feita
+    const loc = lerLocal(OFF + op.col) || []; const j = loc.findIndex(x => x.id === op.id);
+    const rec = j >= 0 ? { ...loc[j], ...(op.patch || op.rec) } : { ...(op.rec || op.patch), id: op.id };
+    if (j >= 0) loc[j] = rec; else loc.push(rec); gravarLocal(OFF + op.col, loc);
+    const c = cache.get(op.col); if (c) { const k = c.dados.findIndex(x => x.id === op.id); if (k >= 0) c.dados[k] = rec; else c.dados.push(rec); }
+    return rec;
+  }
+
   async function carregar(col) {
     if (modoPublico) return percorrer(modoPublico[col] || [], v => v.startsWith(REF) ? '' : v);
     const c = cache.get(col);
     if (c && Date.now() - c.em < TTL) return c.dados;
+    try {
+      const dados = await carregarDoBanco(col);
+      if (OFF_COLS[col]) gravarLocal(OFF + col, OFF_COLS[col](dados));
+      return dados;
+    } catch (e) {
+      const loc = OFF_COLS[col] && erroDeRede(e) ? lerLocal(OFF + col) : null;
+      if (loc) return loc;
+      if (erroDeRede(e)) { if (c) return c.dados; return []; }
+      throw e;
+    }
+  }
+  async function carregarDoBanco(col) {
+    const c = cache.get(col);
     let dados;
     if (col === 'usuarios') dados = await usuarios();
     else if (col === 'auditoria') { const { data, error } = await sb.from('auditoria').select('*').order('em', { ascending: false }).limit(2000); if (error) throw traduzir(error); dados = data.map(x => ({ ...x, id: String(x.id) })); }
@@ -214,15 +257,52 @@
         cache.delete('auditoria'); return obj;
       }
       const rec = { ...obj, id: obj.id || novoId(col), criado_em: obj.criado_em || new Date().toISOString() };
-      await gravar(col, rec); return clone(rec);
+      try { if (!navigator.onLine) throw new Error('Failed to fetch'); await gravar(col, rec); }
+      catch (e) { if (col === 'aulas' && erroDeRede(e)) return clone(enfileirar({ tipo: 'insert', col, id: rec.id, rec })); throw erroDeRede(e) ? new Error('Sem internet: esta ação precisa de conexão. Só a chamada funciona sem internet.') : e; }
+      return clone(rec);
     },
     async update(col, id, patch) {
       if (col === 'usuarios') { const atual = (await carregar('usuarios')).find(u => u.id === id) || {}; const r = await gravarUsuario({ ...atual, ...patch, id }, false); cache.delete('usuarios'); return r; }
-      const atual = (await carregar(col)).find(r => r.id === id) || (await buscarColecao(col)).find(r => r.id === id);
+      let atual = (await carregar(col)).find(r => r.id === id) || (await buscarColecao(col).catch(() => [])).find(r => r.id === id);
       if (!atual) throw new Error('Registro não encontrado');
+      // Cópia do aparelho (sem fotos): com internet, busca a versão do banco antes de gravar
+      if (atual._semFotos && navigator.onLine) { const srv = (await buscarColecao(col).catch(() => [])).find(r => r.id === id); if (srv) atual = srv; }
       const rec = { ...atual, ...patch, id, atualizado_em: new Date().toISOString() };
-      await gravar(col, rec); return clone(rec);
+      delete rec._semFotos;
+      try { if (!navigator.onLine || atual._semFotos) throw new Error('Failed to fetch'); await gravar(col, rec); }
+      catch (e) {
+        if (col === 'aulas' && erroDeRede(e)) { const p = { ...patch, atualizado_em: rec.atualizado_em }; if (atual._semFotos) delete p.fotos; delete p._semFotos; return clone(enfileirar({ tipo: 'update', col, id, patch: p })); }
+        throw erroDeRede(e) ? new Error('Sem internet: esta ação precisa de conexão. Só a chamada funciona sem internet.') : e;
+      }
+      return clone(rec);
     },
+    // Chamadas feitas sem internet: quantas faltam enviar e envio ao banco
+    fila: () => fila(),
+    async sincronizar() {
+      if (!navigator.onLine) return 0;
+      let f = fila(), n = 0;
+      for (const op of [...f]) {
+        try {
+          const srv = (await buscarColecao(op.col)).find(r => r.id === op.id);
+          const base = srv || { ...(op.rec || {}) };
+          const rec = { ...base, ...(op.patch || {}), id: op.id }; delete rec._semFotos;
+          await gravar(op.col, rec);
+          f = fila().filter(x => !(x.col === op.col && x.id === op.id)); gravarLocal(FILA_SB, f); n++;
+        } catch (e) { if (erroDeRede(e)) break; console.warn('sincronizar', e.message); }
+      }
+      if (n) { ['aulas'].forEach(c => cache.delete(c)); avisarFila(); }
+      return n;
+    },
+    // Tempo real (Supabase Realtime): avisa quando um registro da coleção muda — usado pelo chat.
+    // Só chegam avisos de registros que a pessoa pode ler (o RLS vale também aqui).
+    aoMudar(colecao, cb) {
+      const canal = sb.channel('icm-' + colecao + '-' + Math.random().toString(36).slice(2, 8))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'registros', filter: `colecao=eq.${colecao}` }, p => { cache.delete(colecao); cb(p); })
+        .subscribe();
+      return () => sb.removeChannel(canal);
+    },
+    // Ao sair: apaga as cópias do aparelho (a fila de chamadas não enviadas é mantida)
+    limparCopias() { Object.keys(OFF_COLS).forEach(c => { try { localStorage.removeItem(OFF + c); } catch (e) { /* */ } }); },
     async remove(col, id) {
       if (col === 'usuarios') throw new Error('Para tirar o acesso, desative o usuário.');
       for (const cc of PRIVADO[col] ? [col, col + '_privado'] : [col]) await limparArquivos(cc, id, new Set()).catch(() => { });

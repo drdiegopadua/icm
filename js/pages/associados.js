@@ -63,12 +63,16 @@
     const ms = await ICM.api.associados.mensalidades(a.id);
     const s = ICM.api.associados.situacao(ms);
     const aluno = a.aluno_id ? await ICM.api.alunos.get(a.aluno_id) : null;
+    // Cobrança amigável pelo WhatsApp (mensalidade vencida mais antiga)
+    let cobrar = '';
+    const venc = ms.filter(m => m.status === 'aberta' && m.vencimento < ICM.util.today()).sort((x, y) => x.vencimento.localeCompare(y.vencimento))[0];
+    if (venc && ICM.wa && ICM.auth.can('avisos.enviar')) cobrar = ICM.wa.btn(await ICM.api.avisos.montar('mensalidade', { id: (aluno || a).id, nome: aluno ? aluno.nome : a.titular, matricula: aluno ? aluno.matricula : a.numero, responsavel: { nome: a.titular, telefone: a.telefone } }, { competencia: ICM.util.fmtMonth(venc.competencia), valor: money(venc.valor), vencimento: fmtDate(venc.vencimento), key: `mens:${venc.id}` }), { label: 'Cobrar pelo WhatsApp', small: false });
     el.innerHTML = `<div class="page">
       <div class="card mb-4"><div class="profile-hero">${ICM.util.avatar(a.titular, null, 'lg')}<div class="grow"><h1 class="page-title" style="font-size:28px">${esc(a.titular)}</h1>
         <div class="meta mt-2"><span>${I('key', 15)} ${esc(a.numero)}</span><span>${I('calendar', 15)} associado desde ${esc(fmtDate(a.data_adesao))}</span><span>${I('dollar', 15)} ${esc(money(a.valor_mensal))}/mês · vence dia ${a.dia_vencimento}</span></div>
         <div class="row wrap mt-2">${sit({ ...a, ...s })}${aluno ? `<a class="badge" href="#/alunos/${esc(aluno.id)}">${I('user', 13)} ${esc(aluno.nome)}</a>` : ''}</div></div>
         <div class="row wrap"><button class="btn" data-edit>${I('edit', 18)} Editar</button></div></div></div>
-      ${!s.em_dia ? `<div class="card mb-4" style="box-shadow:0 0 0 2px rgba(239,68,68,.35),var(--sh-out)"><b>${I('alert', 16)} ${s.vencidas} mensalidade(s) vencida(s) — ${esc(money(s.divida))}</b> <span class="muted">· mais antiga há ${s.dias_atraso} dias</span></div>` : ''}
+      ${!s.em_dia ? `<div class="card mb-4 row between wrap" style="box-shadow:0 0 0 2px rgba(239,68,68,.35),var(--sh-out)"><div><b>${I('alert', 16)} ${s.vencidas} mensalidade(s) vencida(s) — ${esc(money(s.divida))}</b> <span class="muted">· mais antiga há ${s.dias_atraso} dias</span></div>${cobrar}</div>` : ''}
       <div class="card"><div class="section-title">${I('dollar', 18)} Mensalidades</div>${tabelaMens(ms, [a], false)}</div></div>`;
     bindMens(el, () => ICM.app.reload());
     el.querySelector('[data-edit]').addEventListener('click', () => form(a));

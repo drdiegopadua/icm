@@ -197,13 +197,15 @@
   // No protótipo os dados já ficam no aparelho. Com o Supabase, chamadas feitas sem internet
   // ficam nesta fila e são enviadas automaticamente quando a conexão voltar.
   const FILA = 'icm_fila_sync';
+  const banco = () => ICM.store && ICM.store.modo === 'supabase' && ICM.store.fila;
   const offline = {
-    fila() { try { return JSON.parse(localStorage.getItem(FILA) || '[]'); } catch (e) { return []; } },
-    enfileirar(op) { const f = offline.fila(); f.push({ ...op, em: new Date().toISOString() }); try { localStorage.setItem(FILA, JSON.stringify(f)); } catch (e) { /* */ } document.dispatchEvent(new CustomEvent('icm:fila')); },
+    fila() { if (banco()) return ICM.store.fila(); try { return JSON.parse(localStorage.getItem(FILA) || '[]'); } catch (e) { return []; } },
+    // Com o banco a fila é do próprio armazenamento (a aula entra nela ao salvar sem internet)
+    enfileirar(op) { if (banco()) return; const f = offline.fila(); f.push({ ...op, em: new Date().toISOString() }); try { localStorage.setItem(FILA, JSON.stringify(f)); } catch (e) { /* */ } document.dispatchEvent(new CustomEvent('icm:fila')); },
     async sincronizar() {
+      if (banco()) return ICM.store.sincronizar();
       const f = offline.fila(); if (!f.length || !navigator.onLine) return 0;
-      // Fase Supabase: enviar cada operação ao banco aqui. No protótipo já estão salvas localmente.
-      try { localStorage.setItem(FILA, '[]'); } catch (e) { /* */ }
+      try { localStorage.setItem(FILA, '[]'); } catch (e) { /* */ }   // demonstração: os dados já estão no aparelho
       document.dispatchEvent(new CustomEvent('icm:fila'));
       return f.length;
     }

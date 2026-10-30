@@ -55,8 +55,11 @@
         </div>
       </div></div>`;
 
+    // Convite pelo WhatsApp para cada família (só para reuniões que ainda vão acontecer)
+    const convite = {};
+    if (ICM.auth.can('avisos.enviar') && r.data >= ICM.util.today() && ICM.wa) for (const c of conv) convite[c.id] = ICM.wa.btn(await ICM.api.avisos.montar('reuniao', c, { titulo: r.titulo, data: ICM.util.fmtDate(r.data), hora: r.horario || '', local: r.local || '', key: `reuniao:${r.id}:${c.id}` }), { icone: true });
     const drawLista = () => {
-      el.querySelector('[data-lista]').innerHTML = conv.map(c => `<label class="list-item clickable"><span class="check"><input type="checkbox" data-a="${esc(c.id)}" ${pres[c.id] ? 'checked' : ''} ${dis}></span><div class="grow"><b>${esc(c.responsavel.nome || '—')}</b><div class="xs muted">responsável por ${esc(c.nome)} · ${esc(c.responsavel.telefone || '')}</div></div></label>`).join('') || ui().empty('Nenhuma família no público desta reunião', 'users');
+      el.querySelector('[data-lista]').innerHTML = conv.map(c => `<label class="list-item clickable"><span class="check"><input type="checkbox" data-a="${esc(c.id)}" ${pres[c.id] ? 'checked' : ''} ${dis}></span><div class="grow"><b>${esc(c.responsavel.nome || '—')}</b><div class="xs muted">responsável por ${esc(c.nome)} · ${esc(c.responsavel.telefone || '')}</div></div>${convite[c.id] || ''}</label>`).join('') || ui().empty('Nenhuma família no público desta reunião', 'users');
       el.querySelectorAll('[data-a]').forEach(cb => cb.addEventListener('change', () => { pres[cb.dataset.a] = cb.checked; cnt(); }));
       cnt();
     };

@@ -33,6 +33,7 @@
       ${gerais ? `<div class="section-title">${I('folder', 18)} Projetos e instituição</div>
       <div class="grid grid-3 stagger">
         ${card('Relatório do projeto (prestação de contas)', 'Identificação completa, metas x resultados, turmas, horas, perfil dos beneficiários, eventos e fotos — por período.', 'fileText', '#0891b2', 'projeto')}
+        ${card('Execução do objeto (MROSC)', 'Prestação de contas de termo de fomento/colaboração (Lei 13.019): ações, metas x resultados, listas de presença, fotos, satisfação e resumo financeiro.', 'clipboardCheck', '#1d4ed8', 'execucao_objeto')}
         ${card('Relatório anual do projeto', 'O mesmo relatório consolidado para o ano civil escolhido.', 'folder', '#10b981', 'projeto_anual')}
         ${card('Relatório anual de atividades da OSC', 'Todos os números de impacto do Instituto: atendidos, famílias, horas, áreas, conquistas e origem dos recursos.', 'sparkles', '#ec4899', 'osc_anual')}
       </div>` : ''}

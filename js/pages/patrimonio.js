@@ -160,12 +160,14 @@
         <td>${empStatus(e)}${e.termo_assinado ? '' : `<div class="xs" style="color:var(--danger)">Termo não assinado</div>`}</td>
         <td style="text-align:right;white-space:nowrap">
           <button class="btn btn-sm btn-ghost" data-termo="${esc(e.id)}" title="Termo de empréstimo">${I('fileText', 15)} Termo</button>
+          ${e.tipo_tomador === 'aluno' && e.status === 'ativo' && !e.termo_assinado && ICM.auth.can('assinaturas.solicitar') ? `<button class="btn btn-sm btn-wa" data-assemp="${esc(e.id)}" title="Enviar o termo para o responsável assinar pelo celular">${ICM.waIcon ? ICM.waIcon(15) : ''} Assinar</button>` : ''}
           ${e.status !== 'ativo' ? `<button class="btn btn-sm btn-ghost" data-recibo="${esc(e.id)}" title="Termo de devolução">${I('clipboardCheck', 15)} Recebimento</button>` : pode ? `<button class="btn btn-sm" data-dev="${esc(e.id)}">${I('upload', 15)} Devolver</button>` : ''}
         </td></tr>`).join('')}
     </tbody></table></div>`;
   }
   function bindEmpTable(root, after) {
     root.querySelectorAll('[data-termo]').forEach(b => b.addEventListener('click', () => ICM.reports.generate('termo_emprestimo', { emprestimo_id: b.dataset.termo })));
+    root.querySelectorAll('[data-assemp]').forEach(b => b.addEventListener('click', async () => { const emp = (await ICM.api.emprestimos.list()).find(x => x.id === b.dataset.assemp); if (emp) await ICM.pages._assinarEmprestimo(emp).catch(() => { }); }));
     root.querySelectorAll('[data-recibo]').forEach(b => b.addEventListener('click', () => ICM.reports.generate('termo_devolucao', { emprestimo_id: b.dataset.recibo })));
     root.querySelectorAll('[data-dev]').forEach(b => b.addEventListener('click', () => devolverModal(b.dataset.dev, after)));
   }

@@ -35,6 +35,8 @@
     { re: /^\/chamada$/, page: 'chamada' },
     { re: /^\/aniversariantes$/, page: 'aniversariantes' },
     { re: /^\/documentos$/, page: 'documentos', perm: 'docinst.ver' },
+    { re: /^\/governanca$/, page: 'governanca', perm: 'governanca.ver' },
+    { re: /^\/importar$/, page: 'importar', perm: 'importar.dados' },
     { re: /^\/dados$/, page: 'dados', perm: 'backup.exportar' },
     { re: /^\/estoque$/, page: 'estoque' },
     { re: /^\/equipe$/, page: 'equipe', perm: 'equipe.gerir' },
@@ -94,7 +96,8 @@
     { label: 'Documentos', icon: 'fileText', itens: [
       { href: '#/relatorios', icon: 'fileText', label: 'Relatórios', desc: 'Turma, projeto, prestação de contas e anual', match: /^\/relatorios/, count: 'alertas' },
       { href: '#/certificados', icon: 'award', label: 'Certificados', match: /^\/certificados/ },
-      ICM.auth.can('docinst.ver') && { href: '#/documentos', icon: 'shield', label: 'Docs da instituição', match: /^\/documentos/, count: 'docs' }
+      ICM.auth.can('docinst.ver') && { href: '#/documentos', icon: 'shield', label: 'Docs da instituição', match: /^\/documentos/, count: 'docs' },
+      ICM.auth.can('governanca.ver') && { href: '#/governanca', icon: 'users', label: 'Governança', desc: 'Diretoria, conselhos, atas e estatuto', match: /^\/governanca/, count: 'gov' }
     ] },
     { label: 'Gestão', icon: 'building', itens: [
       ICM.auth.can('financeiro.ver') && { href: '#/financeiro', icon: 'dollar', label: 'Financeiro', desc: 'Pagar e receber, orçamento por projeto, conciliação', match: /^\/financeiro/ },
@@ -104,15 +107,16 @@
       ICM.auth.can('equipe.gerir') && { href: '#/equipe', icon: 'users', label: 'Equipe (RH)', desc: 'Professores e colaboradores', match: /^\/equipe/ },
       ICM.auth.can('usuarios.gerenciar') && { href: '#/usuarios', icon: 'key', label: 'Usuários e acessos', match: /^\/usuarios/ },
       ICM.auth.can('auditoria.ver') && { href: '#/auditoria', icon: 'shield', label: 'Auditoria', match: /^\/auditoria/ },
+      ICM.auth.can('importar.dados') && { href: '#/importar', icon: 'upload', label: 'Importar planilhas', desc: 'Alunos, turmas, equipe e mais a partir do Excel', match: /^\/importar/ },
       ICM.auth.can('backup.exportar') && { href: '#/dados', icon: 'download', label: 'Backup e privacidade', match: /^\/dados/ },
       { href: '#/config', icon: 'settings', label: 'Configurações', match: /^\/config/ }
     ] },
     { href: '#/chat', icon: 'chat', label: 'Chat', match: /^\/chat/, count: 'chat' }
   ].map(n => n.itens ? { ...n, itens: n.itens.filter(Boolean) } : n);
 
-  let alertCount = 0, atrasoCount = 0, inadCount = 0, docsCount = 0, chatCount = 0;
-  const contagem = c => ({ alertas: alertCount, atrasos: atrasoCount, inadimplentes: inadCount, docs: docsCount, chat: chatCount }[c] || 0);
-  const DICA = { alertas: 'Alunos em alerta de faltas', atrasos: 'Empréstimos atrasados', inadimplentes: 'Associados inadimplentes', docs: 'Documentos vencidos ou vencendo', chat: 'Mensagens não lidas' };
+  let alertCount = 0, atrasoCount = 0, inadCount = 0, docsCount = 0, chatCount = 0, govCount = 0;
+  const contagem = c => ({ alertas: alertCount, atrasos: atrasoCount, inadimplentes: inadCount, docs: docsCount, chat: chatCount, gov: govCount }[c] || 0);
+  const DICA = { alertas: 'Alunos em alerta de faltas', atrasos: 'Empréstimos atrasados', inadimplentes: 'Associados inadimplentes', docs: 'Documentos vencidos ou vencendo', gov: 'Mandatos vencendo ou encerrados', chat: 'Mensagens não lidas' };
 
   function shell(user) {
     root.innerHTML = `
@@ -259,6 +263,7 @@
     try { atrasoCount = (await ICM.api.emprestimos.list({ status: 'atrasado' })).length; } catch (e) { atrasoCount = 0; }
     try { docsCount = ICM.auth.can('docinst.ver') ? (await ICM.api.docsInst.list()).filter(d => d.status.nivel === 'danger').length : 0; } catch (e) { docsCount = 0; }
     try { inadCount = ICM.auth.can('associados.gerir') ? (await ICM.api.associados.list()).filter(a => a.status === 'ativo' && !a.em_dia).length : 0; } catch (e) { inadCount = 0; }
+    try { govCount = ICM.auth.can('governanca.ver') ? (await ICM.api.governanca.mandatos()).filter(m => m.status === 'a_vencer').length : 0; } catch (e) { govCount = 0; }
     try { chatCount = await ICM.api.chat.naoLidas(); } catch (e) { chatCount = 0; }
     const path = (location.hash || '#/').slice(1).split('?')[0];
     if (root.querySelector('.tn-menu')) renderNav(path);
@@ -270,6 +275,8 @@
     await route();
     refreshAlerts();
     refreshChat();
+    // Com o banco: mensagem nova chega na hora (tempo real); a verificação a cada 10 s continua como reserva
+    if (ICM.store.aoMudar) ICM.store.aoMudar('chat_mensagens', () => { refreshChat(); document.dispatchEvent(new CustomEvent('icm:chat')); });
     setInterval(() => { if (!document.hidden) refreshChat(); }, 10000);
     ICM.pages._rotinaAutomatica().catch(() => { });
   }

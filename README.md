@@ -128,6 +128,9 @@ js/core/auth-supabase.js Login real: convite, primeiro acesso, esqueci a senha
 supabase/icm_banco.sql  ⭐ Banco usado pelo sistema (rodar este no SQL Editor)
 supabase/icm_v2_arquivos_2fa.sql  Atualização 2: pasta privada de arquivos + duas etapas obrigatórias
 supabase/icm_v3_professor.sql  Atualização 3: campo "Também dá aulas" nos usuários
+supabase/icm_v4_chat_tempo_real.sql  Atualização 4: chat instantâneo (Realtime)
+automacoes/ICM-Automacoes.gs  Apps Script: backup diário no Drive + e-mail de avisos
+docs/ROTEIRO-DE-TESTE.md  Roteiro para testar com a equipe
 js/data/api.js          Regras de negócio + controle de acesso (as telas só usam isto)
 js/pages/               Telas
 js/reports/reports.js   Motor de relatórios
@@ -141,7 +144,7 @@ tools/serve.ps1         Servidor local para testes
 
 ## Ligar o banco (uma vez só)
 
-1. Supabase → **SQL Editor** → colar e rodar `supabase/icm_banco.sql` e, depois, `supabase/icm_v2_arquivos_2fa.sql` e `supabase/icm_v3_professor.sql`.
+1. Supabase → **SQL Editor** → colar e rodar `supabase/icm_banco.sql` e, depois, `supabase/icm_v2_arquivos_2fa.sql` `supabase/icm_v3_professor.sql` e `supabase/icm_v4_chat_tempo_real.sql`.
 2. Supabase → **Authentication → URL Configuration**: Site URL e Redirect URLs = `https://drdiegopadua.github.io/icm/`.
 3. Supabase → **Project Settings → API**: copiar a chave **anon public** para `supabaseKey` em `js/config.js`. **Nunca** a `service_role`.
 4. Abrir o sistema → **Primeiro acesso? Criar minha senha** com o e-mail convidado no fim do SQL (o administrador).
@@ -158,6 +161,20 @@ Ficam no bucket **privado** `arquivos` do Supabase Storage, na pasta `<coleção
 Obrigatória para **Administrador** e para quem tiver "Exigir verificação em duas etapas" marcado em Usuários. No primeiro login aparece o QR Code para o Google/Microsoft Authenticator; depois, a cada login, pede o código de 6 dígitos. O banco só libera os dados com a sessão confirmada pelo código (não adianta burlar a tela).
 
 Cadastre **dois aparelhos** (Configurações → Verificação em duas etapas). Perdeu o celular? Supabase → Authentication → Users → abrir a pessoa → apagar o fator (MFA) → ela cadastra de novo no próximo login.
+
+## Chamada sem internet
+
+No celular do professor, a chamada funciona sem conexão: o sistema guarda no aparelho uma cópia enxuta das turmas e alunos (sem CPF, renda, endereço ou diagnósticos). A chamada feita sem internet fica numa fila e é enviada sozinha quando a conexão volta. O professor precisa ter entrado **uma vez com internet** naquele celular. Sem conexão, o logout por inatividade espera a internet voltar (senão não daria para entrar de novo). Ao sair, a cópia é apagada do aparelho.
+
+## Automações diárias (Apps Script)
+
+O arquivo `automacoes/ICM-Automacoes.gs` faz o backup diário do banco no Google Drive (2h, guarda 30 dias) e manda às 7h um e-mail para a direção/coordenação com: certidões vencendo, alunos no limite de faltas, PIAs para revisar, encaminhamentos sem retorno, mandatos e contratos vencendo e empréstimos atrasados.
+
+1. Entre em **script.google.com** com a conta Google do Instituto → **Novo projeto** → cole o arquivo inteiro → Salvar.
+2. **Configurações do projeto → Propriedades do script**: `SUPABASE_URL`, `SUPABASE_SECRET_KEY` (chave secreta do Supabase), `PASTA_BACKUP_ID` (ID da pasta do Drive) e, se quiser, `EMAILS_AVISOS`.
+3. Execute a função **instalar** e autorize. Para testar na hora: **backupDiario** e **avisosDiarios**.
+
+A chave secreta fica **só** nas Propriedades do script — nunca no código nem no site.
 
 ## Próximos passos
 

@@ -8,7 +8,9 @@
   const SITE = location.origin + location.pathname;
   let current = null, idleTimer = null, recuperando = false;
   // Hora da última atividade (fica no aparelho): vale mesmo com a aba fechada ou o computador hibernado
-  const AKEY = 'icm_ultima_atividade';
+  const AKEY = 'icm_ultima_atividade', PKEY = 'icm_perfil';
+  // Chamadas feitas sem internet: envia assim que houver conexão
+  const sincronizarFila = () => { if (!navigator.onLine || !ICM.store.sincronizar) return; setTimeout(() => ICM.store.sincronizar().then(n => { if (n && ICM.ui) ICM.ui.toast(`${n} chamada(s) feita(s) sem internet enviada(s) ao sistema`, 'ok', 4500); }).catch(() => { }), 1500); };
   const ultima = () => { try { return Number(localStorage.getItem(AKEY)) || 0; } catch (e) { return 0; } };
   const marcar = () => { try { localStorage.setItem(AKEY, String(Date.now())); } catch (e) { /* ignore */ } };
   const expirou = () => Date.now() - ultima() > IDLE_MIN * 60000;
@@ -18,8 +20,13 @@
   async function carregarPerfil() {
     const { data: { session } } = await sb.auth.getSession();
     if (!session) return null;
-    const { data: p, error } = await sb.from('perfis').select('*').eq('id', session.user.id).maybeSingle();
-    if (error) throw new Error(error.message);
+    let { data: p, error } = await sb.from('perfis').select('*').eq('id', session.user.id).maybeSingle();
+    if (error) {
+      // Sem internet: usa o perfil guardado neste aparelho no último acesso (chamada offline)
+      const loc = (() => { try { return JSON.parse(localStorage.getItem(PKEY) || 'null'); } catch (e) { return null; } })();
+      if (!navigator.onLine || /fetch|network/i.test(error.message)) { if (loc && loc.id === session.user.id) p = loc; else throw new Error('Sem internet. Entre uma vez com internet neste aparelho para poder usar a chamada sem conexão.'); }
+      else throw new Error(error.message);
+    } else if (p) { try { localStorage.setItem(PKEY, JSON.stringify({ id: p.id, nome: p.nome, email: p.email, papel: p.papel, cargo: p.cargo, ativo: p.ativo, exige_2fa: p.exige_2fa, da_aulas: p.da_aulas })); } catch (e) { /* */ } }
     if (!p) { await sb.auth.signOut(); throw new Error('Seu acesso ainda não foi liberado. Peça à direção um convite com este e-mail.'); }
     if (!p.ativo) { await sb.auth.signOut(); throw new Error('Seu acesso está desativado. Fale com a direção.'); }
     // Direção (admin) e quem tiver "exige_2fa": só entra depois do código do celular
@@ -28,7 +35,8 @@
       const e = new Error(n.nextLevel === 'aal2' ? 'Digite o código do aplicativo autenticador.' : 'Seu perfil exige verificação em duas etapas. Vamos configurar agora.');
       e.code = n.nextLevel === 'aal2' ? 'MFA_VERIFICAR' : 'MFA_CADASTRAR'; throw e;
     }
-    current = { id: p.id, nome: p.nome, email: p.email, papel: p.papel, cargo: p.cargo, telefone: p.telefone, ativo: p.ativo, exige_2fa: !!p.exige_2fa };
+    current = { id: p.id, nome: p.nome, email: p.email, papel: p.papel, cargo: p.cargo, telefone: p.telefone, ativo: p.ativo, exige_2fa: !!p.exige_2fa, da_aulas: !!p.da_aulas };
+    sincronizarFila();
     return current;
   }
 
@@ -107,7 +115,7 @@
       try {
         const { data: { session } } = await sb.auth.getSession(); if (recuperando) return null;
         // Voltou depois de 30 min sem uso (aba fechada, computador desligado…): pede login de novo
-        if (session && expirou()) { await sb.auth.signOut().catch(() => { }); sessionStorage.setItem('icm_logout_msg', 'Sessão encerrada por inatividade.'); return null; }
+        if (session && expirou() && navigator.onLine) { await sb.auth.signOut().catch(() => { }); sessionStorage.setItem('icm_logout_msg', 'Sessão encerrada por inatividade.'); return null; }
         const u = await carregarPerfil(); if (u) { marcar(); startIdle(); } return u;
       }
       catch (e) {
@@ -117,6 +125,8 @@
     },
     async logout(motivo) {
       clearTimeout(idleTimer); current = null;
+      try { localStorage.removeItem(PKEY); } catch (e) { /* */ }
+      if (ICM.store.limparCopias) ICM.store.limparCopias();   // não deixa dados de alunos no aparelho
       await sb.auth.signOut().catch(() => { });
       if (motivo) sessionStorage.setItem('icm_logout_msg', motivo);
       location.hash = ''; location.reload();
@@ -125,10 +135,14 @@
     user: () => current
   };
 
-  function touch() { if (!current) return; marcar(); clearTimeout(idleTimer); idleTimer = setTimeout(() => auth.logout('Sessão encerrada por inatividade.'), IDLE_MIN * 60000); }
+  function touch() { if (!current) return; marcar(); clearTimeout(idleTimer); idleTimer = setTimeout(() => { if (navigator.onLine) auth.logout('Sessão encerrada por inatividade.'); }, IDLE_MIN * 60000); }
   // Confere a cada 30 s (o relógio do navegador para quando o computador hiberna) e entre abas abertas
-  setInterval(() => { if (current && expirou()) auth.logout('Sessão encerrada por inatividade.'); }, 30000);
-  document.addEventListener('visibilitychange', () => { if (!document.hidden && current && expirou()) auth.logout('Sessão encerrada por inatividade.'); });
+  // Sem internet a desconexão espera a conexão voltar (senão o professor não consegue entrar de novo
+  // nem fazer a chamada offline); quando volta, primeiro envia as chamadas pendentes e depois desconecta.
+  const sairSeInativo = async () => { if (!current || !expirou() || !navigator.onLine) return; if (ICM.store.sincronizar) await ICM.store.sincronizar().catch(() => { }); auth.logout('Sessão encerrada por inatividade.'); };
+  setInterval(sairSeInativo, 30000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) sairSeInativo(); });
+  window.addEventListener('online', () => setTimeout(sairSeInativo, 3000));
   function startIdle() { ['click', 'keydown', 'mousemove', 'touchstart'].forEach(ev => document.addEventListener(ev, ICM.util.debounce(touch, 1000), { passive: true })); touch(); }
 
   ICM.auth = auth;

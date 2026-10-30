@@ -138,5 +138,8 @@
     await atualizar(true);
     // Sem banco ainda: verifica mensagens novas a cada 4 s (no Supabase vira Realtime)
     timer = setInterval(() => atualizar(false).catch(() => { }), 4000);
+    // Tempo real: atualiza a conversa assim que a mensagem chega (sem esperar os 4 s)
+    const aoChegar = () => { if (!document.body.contains(raiz)) { document.removeEventListener('icm:chat', aoChegar); return; } atualizar(false).catch(() => { }); };
+    document.addEventListener('icm:chat', aoChegar);
   };
 })();

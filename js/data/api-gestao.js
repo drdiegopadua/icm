@@ -401,6 +401,18 @@
             const { turma, ...dados } = l;
             const al = await ICM.api.alunos.save({ status: 'ativo', autorizacoes: { lgpd: false, imagem: false }, ...dados, social: { ...(dados.social || {}) } });
             if (turma) { const t = turmas.find(x => norm(x.nome) === norm(turma) || norm(x.modalidade) === norm(turma)); if (t) await ICM.api.turmas.incluirAluno(t.id, al.id, al.data_matricula); else res.erros.push({ linha: i + 2, msg: `Turma "${turma}" não encontrada (aluno importado sem turma)` }); }
+          } else if (tipo === 'turmas') {
+            // Projeto e professor pelo nome (ou e-mail); dias como "seg, qua" ou "segunda e quarta"
+            const projetos = await S().list('projetos'); const usuarios = await S().list('usuarios');
+            const p = projetos.find(x => norm(x.nome) === norm(l.projeto));
+            if (!p) throw new Error(`Projeto "${l.projeto || ''}" não encontrado — cadastre o projeto antes`);
+            const prof = l.professor ? usuarios.find(x => norm(x.nome) === norm(l.professor) || norm(x.email) === norm(l.professor)) : null;
+            if (l.professor && !prof) res.erros.push({ linha: i + 2, msg: `Professor(a) "${l.professor}" não encontrado(a) — turma importada como "a definir"` });
+            const DIA = { dom: 0, seg: 1, ter: 2, qua: 3, qui: 4, sex: 5, sab: 6 };
+            const dias = [...new Set(String(l.dias || '').replace(/\be\b/gi, ' ').split(/[,;/\s]+/).map(x => DIA[norm(x).slice(0, 3)]).filter(x => x !== undefined))];
+            if (turmas.some(t => norm(t.nome) === norm(l.nome) && t.projeto_id === p.id) && !opts.duplicar) { res.duplicados++; continue; }
+            const t = await ICM.api.turmas.save({ status: 'ativa', nome: l.nome, projeto_id: p.id, modalidade: l.modalidade || '', professor_id: prof ? prof.id : '', dias, inicio: l.inicio || '', fim: l.fim || '', local: l.local || '', vagas: Number(l.vagas) || null, faixa: l.faixa || '' });
+            turmas.push(t);
           } else if (tipo === 'patrimonio') await ICM.api.patrimonio.save({ quantidade: 1, categoria: 'outro', ...l });
           else if (tipo === 'estoque') { const { saldo_inicial, ...it } = l; const x = await estoque.salvarItem({ categoria: 'outro', unidade: 'un', ...it }); if (Number(saldo_inicial) > 0) await estoque.movimentar({ item_id: x.id, tipo: 'entrada', data: u().today(), quantidade: Number(saldo_inicial), valor_unitario: Number(l.valor_unitario) || 0, origem: 'saldo inicial', obs: 'Importação de planilha' }); }
           else if (tipo === 'equipe') await equipe.save({ vinculo: 'clt', ...l, contrato: { inicio: l.admissao, fim: l.contrato_fim || '', carga_semanal: l.carga_semanal || null } });

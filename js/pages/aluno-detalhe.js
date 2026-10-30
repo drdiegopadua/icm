@@ -45,6 +45,8 @@
           <div class="row wrap">
             ${ICM.auth.can('ocorrencias.registrar') ? `<button class="btn" data-oco>${I('plus', 18)} Registrar ocorrência</button>` : ''}
             ${ICM.auth.can('alunos.editar') ? `<a class="btn btn-primary" href="#/alunos/${esc(a.id)}/editar">${I('edit', 18)} Editar</a>` : ''}
+            ${ICM.auth.can('avisos.enviar') ? `<button class="btn btn-wa" data-wa-familia title="Mensagem para a família pelo WhatsApp">${ICM.waIcon ? ICM.waIcon(18) : ''} WhatsApp</button>` : ''}
+            ${ICM.auth.can('assinaturas.solicitar') ? `<button class="btn" data-docs title="Pedir assinatura dos termos e enviar o acesso ao Portal da Família">${I('edit', 18)} Assinaturas e portal</button>` : ''}
             <button class="btn" data-ficha>${I('printer', 18)} Ficha</button>
           </div>
         </div>
@@ -206,6 +208,8 @@
 
     el.querySelectorAll('[data-oco]').forEach(b => b.addEventListener('click', novaOcorrencia));
     el.querySelector('[data-ficha]').addEventListener('click', () => ICM.reports.fichaAluno(a.id));
+    const bWa = el.querySelector('[data-wa-familia]'); if (bWa) bWa.addEventListener('click', () => ICM.pages._mensagemLivre(a.id));
+    const bDocs = el.querySelector('[data-docs]'); if (bDocs) bDocs.addEventListener('click', () => ICM.pages._documentosAluno(a.id));
     ui().tabs(el.querySelector('.tabs'), k => renderers[k]());
     await renderers[tab0]();
   };

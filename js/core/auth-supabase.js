@@ -7,6 +7,11 @@
   const IDLE_MIN = 30;
   const SITE = location.origin + location.pathname;
   let current = null, idleTimer = null, recuperando = false;
+  // Hora da última atividade (fica no aparelho): vale mesmo com a aba fechada ou o computador hibernado
+  const AKEY = 'icm_ultima_atividade';
+  const ultima = () => { try { return Number(localStorage.getItem(AKEY)) || 0; } catch (e) { return 0; } };
+  const marcar = () => { try { localStorage.setItem(AKEY, String(Date.now())); } catch (e) { /* ignore */ } };
+  const expirou = () => Date.now() - ultima() > IDLE_MIN * 60000;
 
   sb.auth.onAuthStateChange(ev => { if (ev === 'PASSWORD_RECOVERY') recuperando = true; });
 
@@ -43,6 +48,7 @@
     async login(email, senha) {
       const { error } = await sb.auth.signInWithPassword({ email: String(email).trim().toLowerCase(), password: senha });
       if (error) throw new Error(msgErro(error));
+      marcar();
       return auth.concluirLogin();
     },
     // Chamado de novo depois do código de 2 etapas (lança MFA_* enquanto faltar)
@@ -98,7 +104,12 @@
       recuperando = false;
     },
     async restore() {
-      try { await sb.auth.getSession(); if (recuperando) return null; const u = await carregarPerfil(); if (u) startIdle(); return u; }
+      try {
+        const { data: { session } } = await sb.auth.getSession(); if (recuperando) return null;
+        // Voltou depois de 30 min sem uso (aba fechada, computador desligado…): pede login de novo
+        if (session && expirou()) { await sb.auth.signOut().catch(() => { }); sessionStorage.setItem('icm_logout_msg', 'Sessão encerrada por inatividade.'); return null; }
+        const u = await carregarPerfil(); if (u) { marcar(); startIdle(); } return u;
+      }
       catch (e) {
         if (/^MFA_/.test(e.code || '')) { await sb.auth.signOut().catch(() => { }); return null; }   // pede senha + código de novo
         sessionStorage.setItem('icm_logout_msg', e.message); return null;
@@ -114,7 +125,10 @@
     user: () => current
   };
 
-  function touch() { if (!current) return; clearTimeout(idleTimer); idleTimer = setTimeout(() => auth.logout('Sessão encerrada por inatividade.'), IDLE_MIN * 60000); }
+  function touch() { if (!current) return; marcar(); clearTimeout(idleTimer); idleTimer = setTimeout(() => auth.logout('Sessão encerrada por inatividade.'), IDLE_MIN * 60000); }
+  // Confere a cada 30 s (o relógio do navegador para quando o computador hiberna) e entre abas abertas
+  setInterval(() => { if (current && expirou()) auth.logout('Sessão encerrada por inatividade.'); }, 30000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && current && expirou()) auth.logout('Sessão encerrada por inatividade.'); });
   function startIdle() { ['click', 'keydown', 'mousemove', 'touchstart'].forEach(ev => document.addEventListener(ev, ICM.util.debounce(touch, 1000), { passive: true })); touch(); }
 
   ICM.auth = auth;

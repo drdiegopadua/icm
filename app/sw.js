@@ -1,6 +1,6 @@
 // Cache do "esqueleto" do app; notícias e imagens vêm sempre da rede.
-const CACHE = "icmapp-v2";
-const ARQUIVOS = ["./", "index.html", "css/app.css?v=7", "js/config.js?v=8", "js/data.js?v=4", "js/rota.js?v=4", "js/db.js?v=12", "js/app.js?v=13", "manifest.json", "icons/logo-transparente.png", "icons/icon-192.png", "icons/favicon.ico"];
+const CACHE = "icmapp-v3";
+const ARQUIVOS = ["./", "index.html", "css/app.css?v=7", "js/config.js?v=8", "js/data.js?v=4", "js/rota.js?v=4", "js/db.js?v=12", "js/app.js?v=13", "manifest.json", "icons/logo-transparente.png", "icons/icon-192.png", "icons/icon-512.png", "icons/icon-maskable-192.png", "icons/icon-maskable-512.png", "icons/apple-touch-icon.png", "icons/favicon.ico"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ARQUIVOS)).then(() => self.skipWaiting()));

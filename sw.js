@@ -1,8 +1,8 @@
 /* Service worker: guarda o app no aparelho para abrir e fazer chamada sem internet.
    Estratégia: tenta a rede primeiro (pega atualizações); sem rede, usa a cópia guardada. */
-const CACHE = 'icm-app-v17';
+const CACHE = 'icm-app-v18';
 const ARQUIVOS = [
-  './', 'index.html', 'manifest.webmanifest', 'assets/favicon.svg', 'assets/icon-192.png', 'assets/icon-512.png', 'assets/favicon.png', 'assets/apple-touch-icon.png', 'assets/icm-marca.png', 'assets/icm-logo-branca.png', 'assets/icm-logo-escura.png',
+  './', 'index.html', 'manifest.webmanifest', 'assets/favicon.ico', 'assets/icon-192.png', 'assets/icon-512.png', 'assets/apple-touch-icon.png', 'assets/icm-marca.png', 'assets/icm-logo-branca.png', 'assets/icm-logo-escura.png',
   'css/design-system.css', 'css/app.css', 'css/report.css', 'css/revista.css',
   'js/config.js', 'js/vendor/supabase.js', 'js/vendor/qrcode.min.js', 'js/vendor/jsQR.js',
   'js/core/util.js', 'js/core/icons.js', 'js/core/marca.js', 'js/core/auth.js', 'js/core/auth-supabase.js', 'js/core/ui.js',

@@ -35,6 +35,7 @@
           ${ICM.auth.modo === 'supabase' ? (u.id ? '' : '<p class="small span-2">A pessoa receberá acesso pelo <b>Primeiro acesso</b> na tela de login, usando este e-mail, e criará a própria senha.</p>') : F({ name: 'senha', label: u.id ? 'Nova senha (opcional)' : 'Senha inicial', type: 'password', hint: 'Mínimo 8 caracteres com letras e números. Na versão final, o usuário recebe convite por e-mail e define a própria senha.', attrs: 'autocomplete="new-password"' })}
           ${ICM.auth.modo === 'supabase' ? F({ name: 'exige_2fa', label: 'Exigir verificação em duas etapas (código no celular)', type: 'toggle', value: u.exige_2fa, cls: 'span-2' }) + '<p class="xs muted span-2" style="margin-top:-6px">Administradores sempre usam duas etapas. Marque também para quem lida com dados sensíveis (coordenação, secretaria/social).</p>' : ''}
           ${F({ name: 'da_aulas', label: 'Também dá aulas (aparece na lista de professores ao cadastrar turmas)', type: 'toggle', value: u.da_aulas, cls: 'span-2' })}
+          ${F({ name: 'opera_van', label: 'Opera a van (inicia e encerra rotas no App do Instituto)', type: 'toggle', value: u.opera_van, cls: 'span-2' })}
           ${F({ name: 'ativo', label: 'Acesso ativo', type: 'toggle', value: u.id ? u.ativo : true })}
         </form>`,
         foot: `<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" data-ok>${I('check', 18)} Salvar</button>`

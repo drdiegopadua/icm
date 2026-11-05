@@ -1,0 +1,16 @@
+{
+  "name": "Instituto Cultural das Montanhas",
+  "short_name": "Instituto",
+  "description": "Projetos, agenda, notícias, área do aluno e doações do Instituto Cultural das Montanhas.",
+  "lang": "pt-BR",
+  "start_url": "./#/inicio",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#23262b",
+  "theme_color": "#23262b",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

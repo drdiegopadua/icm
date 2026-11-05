@@ -142,6 +142,10 @@ docs/SEGURANCA.md       Plano de segurança e LGPD
 tools/serve.ps1         Servidor local para testes
 ```
 
+## App do Instituto (pasta `app/`)
+
+O app das famílias fica em `app/` e lê deste mesmo banco. Rode `supabase/icm_v5_app.sql` no SQL Editor. Detalhes em `app/README.md`; a van, em `app/VAN.md`.
+
 ## Ligar o banco (uma vez só)
 
 1. Supabase → **SQL Editor** → colar e rodar `supabase/icm_banco.sql` e, depois, `supabase/icm_v2_arquivos_2fa.sql` `supabase/icm_v3_professor.sql` e `supabase/icm_v4_chat_tempo_real.sql`.

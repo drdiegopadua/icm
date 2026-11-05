@@ -188,7 +188,7 @@
     if (error) throw traduzir(error);
     const lista = data.map(p => ({ ...p, id: p.id }));
     const { data: cv } = await sb.from('convites').select('*');
-    (cv || []).forEach(c => lista.push({ id: 'convite:' + c.email, nome: c.nome, email: c.email, papel: c.papel, cargo: c.cargo, telefone: c.telefone, exige_2fa: !!c.exige_2fa, da_aulas: !!c.da_aulas, ativo: false, convite: true }));
+    (cv || []).forEach(c => lista.push({ id: 'convite:' + c.email, nome: c.nome, email: c.email, papel: c.papel, cargo: c.cargo, telefone: c.telefone, exige_2fa: !!c.exige_2fa, da_aulas: !!c.da_aulas, opera_van: !!c.opera_van, ativo: false, convite: true }));
     return lista;
   }
 
@@ -216,6 +216,7 @@
   }
   function traduzir(e) {
     const m = String(e.message || e);
+    if (/opera_van/.test(m) && /column|schema cache/i.test(m)) return new Error('O banco precisa de uma atualização: rode o arquivo supabase/icm_v5_app.sql no SQL Editor do Supabase.');
     if (/da_aulas|exige_2fa/.test(m) && /column|schema cache/i.test(m)) return new Error('O banco precisa de uma atualização: rode o arquivo supabase/icm_v3_professor.sql no SQL Editor do Supabase.');
     if (/row-level security|permission denied|violates row-level/i.test(m)) { const x = new Error('Você não tem permissão para esta ação.'); x.code = 403; return x; }
     if (/JWT|token/i.test(m)) return new Error('Sua sessão expirou. Entre novamente.');
@@ -226,15 +227,15 @@
   // ---------- Usuários (perfis + convites) ----------
   async function gravarUsuario(u, novo) {
     if (novo) {
-      const { error } = await sb.from('convites').upsert({ email: String(u.email).toLowerCase().trim(), nome: u.nome, papel: u.papel, cargo: u.cargo || '', telefone: u.telefone || '', exige_2fa: !!u.exige_2fa, da_aulas: !!u.da_aulas });
+      const { error } = await sb.from('convites').upsert({ email: String(u.email).toLowerCase().trim(), nome: u.nome, papel: u.papel, cargo: u.cargo || '', telefone: u.telefone || '', exige_2fa: !!u.exige_2fa, da_aulas: !!u.da_aulas, opera_van: !!u.opera_van });
       if (error) throw traduzir(error);
       return { ...u, id: 'convite:' + u.email, ativo: false, convite: true };
     }
     if (String(u.id).startsWith('convite:')) {
-      const { error } = await sb.from('convites').update({ nome: u.nome, papel: u.papel, cargo: u.cargo || '', telefone: u.telefone || '', exige_2fa: !!u.exige_2fa, da_aulas: !!u.da_aulas }).eq('email', u.email);
+      const { error } = await sb.from('convites').update({ nome: u.nome, papel: u.papel, cargo: u.cargo || '', telefone: u.telefone || '', exige_2fa: !!u.exige_2fa, da_aulas: !!u.da_aulas, opera_van: !!u.opera_van }).eq('email', u.email);
       if (error) throw traduzir(error); return u;
     }
-    const { error } = await sb.from('perfis').update({ nome: u.nome, papel: u.papel, cargo: u.cargo || '', telefone: u.telefone || '', ativo: !!u.ativo, exige_2fa: !!u.exige_2fa, da_aulas: !!u.da_aulas }).eq('id', u.id);
+    const { error } = await sb.from('perfis').update({ nome: u.nome, papel: u.papel, cargo: u.cargo || '', telefone: u.telefone || '', ativo: !!u.ativo, exige_2fa: !!u.exige_2fa, da_aulas: !!u.da_aulas, opera_van: !!u.opera_van }).eq('id', u.id);
     if (error) throw traduzir(error);
     return u;
   }

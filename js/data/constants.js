@@ -31,6 +31,7 @@
 
     // Matriz de permissões (espelhada nas políticas RLS do Supabase — ver supabase/schema.sql)
     PERMISSOES: {
+      'calendario.editar': ['admin', 'coordenacao', 'secretaria'],
       'chat.grupos': ['admin', 'coordenacao'],
       'alunos.ver_todos': ['admin', 'coordenacao', 'secretaria'],
       'alunos.editar': ['admin', 'coordenacao', 'secretaria'],
@@ -268,6 +269,16 @@
       inativo: { nome: 'Inativo', cls: 'warn' },
       desligado: { nome: 'Desligado', cls: 'danger' }
     },
+
+    TIPOS_CALENDARIO: {
+      feriado: { nome: 'Feriado', cor: '#ef4444' },
+      recesso: { nome: 'Recesso', cor: '#f59e0b' },
+      marco: { nome: 'Marco', cor: '#2563eb' },
+      reuniao: { nome: 'Reunião', cor: '#8b5cf6' }
+    },
+
+    // Paradas da van (as mesmas do mapa do app)
+    PONTOS_VAN: ['João Valim', 'Campo Vinte', 'Bela Vista', 'São Vicente', 'Vila Nova', 'Centro', 'Boa Fé', 'Colina do Cruzeiro', 'Grama', 'Sede (Campo 21)'],
 
     CORES_PROJETO: ['#8b5cf6', '#2563eb', '#0891b2', '#10b981', '#65a30d', '#eab308', '#f97316', '#ef4444', '#ec4899', '#9f1239', '#92400e', '#475569'],
 

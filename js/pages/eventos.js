@@ -87,6 +87,7 @@
         ${F({ name: 'publico', label: 'Público estimado', type: 'number', value: e.publico, attrs: 'min="0"' })}
         ${F({ name: 'resultado', label: 'Resultado / premiação', value: e.resultado })}
         ${F({ name: 'descricao', label: 'Descrição', type: 'textarea', value: e.descricao, cls: 'span-all', rows: 3 })}
+        ${F({ name: 'app_oculto', label: 'Não mostrar este evento no App do Instituto', type: 'toggle', value: e.app_oculto, cls: 'span-all' })}
         <div class="span-all"><div class="row between wrap"><div class="section-title" style="margin:0">${I('users', 18)} Alunos participantes <span class="badge" data-cnt>${sel.size}</span></div>
           <div class="row"><select class="select" data-turma style="width:240px"><option value="">Adicionar turma inteira…</option>${turmas.map(t => `<option value="${esc(t.id)}">${esc(t.nome)}</option>`).join('')}</select></div></div>
           <div class="grid grid-3 mt-4" data-alunos style="max-height:260px;overflow:auto;gap:8px"></div></div>

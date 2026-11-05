@@ -158,6 +158,11 @@
         ${F({ name: 'objetivos_txt', label: 'Objetivos específicos (um por linha)', type: 'textarea', value: (p.objetivos_especificos || []).join('\n'), cls: 'span-all', rows: 4 })}
         ${F({ name: 'metodologia', label: 'Metodologia', type: 'textarea', value: p.metodologia, cls: 'span-all', rows: 4 })}
         ${F({ name: 'contrapartidas', label: 'Contrapartidas', type: 'textarea', value: p.contrapartidas, cls: 'span-all', rows: 2 })}
+        <div class="span-all section-title" style="margin-bottom:0">${I('eye', 18)} No App do Instituto</div>
+        ${F({ name: 'app_resumo', label: 'Resumo para as famílias', value: p.app_resumo, cls: 'span-all', hint: 'Uma frase. Em branco, o app usa o objetivo geral.' })}
+        ${F({ name: 'app_foto', label: 'Endereço da foto', value: p.app_foto, cls: 'span-all', placeholder: 'https://www.institutoculturaldasmontanhas.org/assets/img/...', hint: 'Use uma foto publicada no site do Instituto.' })}
+        ${F({ name: 'app_inscricoes', label: 'Destacar como "Inscrições abertas"', type: 'toggle', value: p.app_inscricoes })}
+        ${F({ name: 'app_oculto', label: 'Não mostrar este projeto no app', type: 'toggle', value: p.app_oculto })}
         <div class="span-all"><div class="row between"><div class="section-title">${I('target', 18)} Metas</div><button type="button" class="btn btn-sm" data-addmeta>${I('plus', 16)} Meta</button></div><div data-metas class="col"></div>
           <div class="xs muted mt-2">Indicadores com as palavras "alunos", "horas", "presença" ou "apresentações/eventos" são calculados automaticamente.</div></div>
       </form>`,

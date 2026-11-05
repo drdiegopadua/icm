@@ -66,7 +66,7 @@
       const c = await S().get('espera', id);
       const aluno = await ICM.api.alunos.save({
         nome: c.nome, nascimento: c.nascimento, status: 'ativo', data_matricula: u().today(),
-        responsavel: { ...c.responsavel }, endereco: { bairro: c.bairro },
+        responsavel: { ...c.responsavel }, endereco: { bairro: c.bairro }, van: c.van || { usa: false, ponto: '' },
         social: { pessoas_casa: c.pessoas_casa, cadunico: !!c.cadunico, beneficios: c.beneficio ? ['Outro'] : [], vulnerabilidades: (c.vulnerabilidades || []).map(k => ICM.C.TRIAGEM.vulnerabilidades[k].txt).join('; '), cras: c.encaminhamento === 'CRAS' ? 'Sim' : '' },
         financeiro: { renda_familiar: c.renda_familiar, renda_per_capita: c.pessoas_casa ? Math.round(c.renda_familiar / c.pessoas_casa) : null, isencao: true },
         saude: { apto_atividade_fisica: true }, escolaridade: { escola: c.escola, rede: c.rede }, autorizacoes: { lgpd: false, imagem: false }

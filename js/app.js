@@ -55,6 +55,7 @@
     { re: /^\/pesquisas$/, page: 'pesquisas' },
     { re: /^\/pesquisas\/([\w-]+)$/, page: 'pesquisa', keys: ['id'] },
     { re: /^\/agenda$/, page: 'agenda' },
+    { re: /^\/calendario-letivo$/, page: 'calendarioLetivo' },
     { re: /^\/patrimonio$/, page: 'patrimonio' },
     { re: /^\/patrimonio\/([\w-]+)$/, page: 'patrimonioItem', keys: ['id'] },
     { re: /^\/usuarios$/, page: 'usuarios', perm: 'usuarios.gerenciar' },
@@ -82,7 +83,8 @@
       { href: '#/rotina', icon: 'sun', label: 'Rotina do dia', desc: 'Aulas, pendências e avisos de hoje', match: /^\/rotina/ },
       { href: '#/projetos', icon: 'folder', label: 'Projetos e turmas', desc: 'Planos de aula, chamadas e relatórios de aula', match: /^\/(projetos|turmas)/ },
       { href: '#/eventos', icon: 'star', label: 'Eventos e ações', desc: 'Apresentações, campeonatos e participantes', match: /^\/eventos/ },
-      { href: '#/agenda', icon: 'calendar', label: 'Agenda de espaços', match: /^\/agenda/ }
+      { href: '#/agenda', icon: 'calendar', label: 'Agenda de espaços', match: /^\/agenda/ },
+      { href: '#/calendario-letivo', icon: 'calendar', label: 'Calendário letivo', desc: 'Feriados e recessos (vão para o app)', match: /^\/calendario-letivo/ }
     ] },
     { label: 'Comunidade', icon: 'heart', itens: [
       { href: '#/avisos', icon: 'bell', label: 'Avisos (WhatsApp)', match: /^\/avisos/ },

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <!-- Segurança: só carrega código/dados de origens conhecidas; bloqueia scripts inline, plugins e envio de formulários para fora. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://www.institutoculturaldasmontanhas.org https://institutoculturaldasmontanhas.org https://assets.zyrosite.com https://tile.openstreetmap.org; connect-src 'self' https://www.institutoculturaldasmontanhas.org https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>Instituto das Montanhas</title>
+  <meta name="description" content="App do Instituto Cultural das Montanhas — matrícula, aulas, calendário letivo e de apresentações, van em tempo real e notícias.">
+  <meta name="theme-color" content="#23262b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Instituto">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Mulish:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/app.css?v=7">
+</head>
+<body>
+  <div class="app" id="app">
+    <div class="splash" id="splash" aria-hidden="true">
+      <div class="splash-logo">
+        <img class="splash-img" src="icons/logo-transparente.png" alt="Instituto Cultural das Montanhas">
+        <p class="splash-frase" id="splash-frase">Transformando vidas em <b id="contagem">3</b></p>
+      </div>
+      <svg class="serra" viewBox="0 0 400 90" preserveAspectRatio="none"><path d="M0 62 L38 40 L62 52 L96 22 L128 46 L150 36 L188 58 L222 30 L246 18 L262 26 L300 52 L332 40 L364 56 L400 44 V90 H0Z" fill="currentColor" opacity=".5"/><path d="M0 74 L30 60 L70 70 L112 48 L150 66 L196 52 L232 70 L270 58 L314 72 L352 60 L400 70 V90 H0Z" fill="currentColor" opacity=".8"/><path d="M0 84 L48 76 L96 82 L150 74 L210 84 L262 76 L318 84 L370 78 L400 82 V90 H0Z" fill="currentColor"/></svg>
+    </div>
+
+    <header class="topbar" id="topbar">
+      <button class="icon-btn" id="btn-voltar" aria-label="Voltar" hidden></button>
+      <a class="brand" href="#/inicio" id="brand" aria-label="Início">
+        <img class="brand-logo" src="icons/logo-transparente.png" alt="Instituto Cultural das Montanhas">
+      </a>
+      <h1 class="topbar-title" id="topbar-title" hidden></h1>
+      <button class="icon-btn" id="btn-avisos" aria-label="Avisos"></button>
+    </header>
+
+    <main id="view" class="view" tabindex="-1"></main>
+
+    <nav class="tabbar" id="tabbar" aria-label="Navegação principal">
+      <a href="#/inicio" data-tab="inicio"><i data-icon="home"></i><span>Início</span></a>
+      <a href="#/aulas" data-tab="aulas"><i data-icon="music"></i><span>Aulas</span></a>
+      <a href="#/calendario" data-tab="calendario"><i data-icon="calendar"></i><span>Calendário</span></a>
+      <a href="#/van" data-tab="van"><i data-icon="bus"></i><span>Van</span></a>
+      <a href="#/perfil" data-tab="perfil"><i data-icon="user"></i><span>Perfil</span></a>
+    </nav>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </div>
+
+  <script src="js/config.js?v=8"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o" crossorigin="anonymous"></script>
+  <script src="js/data.js?v=4"></script>
+  <script src="js/rota.js?v=4"></script>
+  <script src="js/db.js?v=12"></script>
+  <script src="js/app.js?v=13"></script>
+</body>
+</html>

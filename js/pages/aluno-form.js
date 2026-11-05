@@ -70,6 +70,10 @@
           ${F({ name: 'endereco.numero', label: 'Número', value: en.numero })}
           ${F({ name: 'endereco.bairro', label: 'Bairro', value: en.bairro })}
           ${F({ name: 'endereco.cidade', label: 'Cidade', value: en.cidade })}
+          <div class="span-all section-title" style="margin-bottom:0">${I('pin', 18)} Transporte</div>
+          ${F({ name: 'van.usa', label: 'Usa a van do Instituto', type: 'toggle', value: (a.van || {}).usa })}
+          ${F({ name: 'van.ponto', label: 'Ponto de embarque e desembarque', value: (a.van || {}).ponto, attrs: 'list="pontos-van"', cls: 'span-2', hint: 'Com a van marcada, a família acompanha a van no app.' })}
+          <datalist id="pontos-van">${ICM.C.PONTOS_VAN.map(p => `<option value="${esc(p)}"></option>`).join('')}</datalist>
         </section>
 
         <section data-sec="2" class="grid grid-3" hidden>
@@ -200,7 +204,7 @@
     // Preserva subcampos não presentes no formulário
     function mergeFull(orig, data) {
       const out = { ...orig, ...data };
-      ['endereco', 'responsavel', 'social', 'financeiro', 'saude', 'escolaridade', 'autorizacoes'].forEach(k => { out[k] = { ...(orig[k] || {}), ...(data[k] || {}) }; });
+      ['endereco', 'responsavel', 'social', 'financeiro', 'saude', 'escolaridade', 'autorizacoes', 'van'].forEach(k => { out[k] = { ...(orig[k] || {}), ...(data[k] || {}) }; });
       delete out._restrito; return out;
     }
 

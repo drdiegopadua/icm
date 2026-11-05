@@ -165,7 +165,7 @@ function avisosDiarios() {
   const html = '<div style="font-family:Arial,sans-serif;max-width:640px;color:#1c2440">' +
     '<h2 style="color:#1d4ed8;margin:0 0 4px">ICM Sistema — avisos do dia</h2><div style="color:#5b6788;margin-bottom:16px">' + br(hoje) + ' · ' + total + ' pendência(s)</div>' +
     blocos.map(function (b) { return '<h3 style="margin:18px 0 6px;font-size:15px">' + esc(b.titulo) + ' (' + b.itens.length + ')</h3><ul style="margin:0;padding-left:18px">' + b.itens.slice(0, 40).map(function (i) { return '<li style="margin:3px 0">' + esc(i) + '</li>'; }).join('') + '</ul>'; }).join('') +
-    '<p style="margin-top:22px"><a href="https://drdiegopadua.github.io/icm/" style="background:#2563eb;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none">Abrir o ICM Sistema</a></p>' +
+    '<p style="margin-top:22px"><a href="https://institutodasmontanhas.vercel.app/" style="background:#2563eb;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none">Abrir o ICM Sistema</a></p>' +
     '<p style="color:#8a94b0;font-size:11px">E-mail automático do ICM Sistema. Contém dados pessoais de alunos: não encaminhe para fora da equipe.</p></div>';
   MailApp.sendEmail({ to: para, subject: 'ICM Sistema — ' + total + ' aviso(s) para hoje', htmlBody: html, name: 'ICM Sistema' });
   Logger.log('Avisos enviados para ' + para + ': ' + total + ' pendência(s).');

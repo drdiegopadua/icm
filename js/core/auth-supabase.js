@@ -4,7 +4,7 @@
 (function () {
   if (!window.ICM || !ICM.store || ICM.store.modo !== 'supabase') return;
   const sb = ICM.store.sb;
-  const IDLE_MIN = 30;
+  const IDLE_MIN = 60;
   const SITE = location.origin + location.pathname;
   let current = null, idleTimer = null, recuperando = false;
   // Hora da última atividade (fica no aparelho): vale mesmo com a aba fechada ou o computador hibernado
@@ -114,7 +114,7 @@
     async restore() {
       try {
         const { data: { session } } = await sb.auth.getSession(); if (recuperando) return null;
-        // Voltou depois de 30 min sem uso (aba fechada, computador desligado…): pede login de novo
+        // Voltou depois de 1 hora sem uso (aba fechada, computador desligado…): pede login de novo
         if (session && expirou() && navigator.onLine) { await sb.auth.signOut().catch(() => { }); sessionStorage.setItem('icm_logout_msg', 'Sessão encerrada por inatividade.'); return null; }
         const u = await carregarPerfil(); if (u) { marcar(); startIdle(); } return u;
       }

@@ -31,6 +31,7 @@
     async function lista() {
       el.querySelector('[data-data]').value = data;
       const turmas = await ICM.api.turmas.list();
+      const projetos = await ICM.api.projetos.list();
       const ds = ICM.util.parseD(data).getDay();
       const out = [];
       for (const t of turmas.filter(t => t.status !== 'encerrada')) {
@@ -38,7 +39,7 @@
         if (aulas.length) aulas.forEach(a => out.push({ t, a }));
         else if ((t.dias || []).includes(ds)) out.push({ t, a: null });
       }
-      el.querySelector('[data-l]').innerHTML = out.length ? `<div class="col stagger">${out.map(({ t, a }) => { const n = a ? Object.keys(a.presencas || {}).length : 0; return `<div class="card hoverable chamada-card" data-t="${esc(t.id)}" data-a="${esc(a ? a.id : '')}"><div class="row between"><div><b style="font-size:17px">${esc(t.nome)}</b><div class="small muted">${esc(t.inicio)}–${esc(t.fim)} · ${esc(t.local || '')}</div></div>${a && a.status === 'realizada' ? ui().badge(`Feita · ${n} marcados`, 'ok', true) : ui().badge('Fazer chamada', 'warn', true)}</div></div>`; }).join('')}</div>` : ui().empty(`Nenhuma aula sua em ${fmtDate(data)}`, 'calendar');
+      el.querySelector('[data-l]').innerHTML = out.length ? `<div class="col stagger">${out.map(({ t, a }) => { const n = a ? Object.keys(a.presencas || {}).length : 0; return `<div class="card hoverable chamada-card" style="--c:${(projetos.find(p => p.id === t.projeto_id) || {}).cor || '#2563eb'}" data-t="${esc(t.id)}" data-a="${esc(a ? a.id : '')}"><div class="row between"><div><b style="font-size:17px">${esc(t.nome)}</b><div class="small muted">${esc(t.inicio)}–${esc(t.fim)} · ${esc(t.local || '')}</div></div>${a && a.status === 'realizada' ? ui().badge(`Feita · ${n} marcados`, 'ok', true) : ui().badge('Fazer chamada', 'warn', true)}</div></div>`; }).join('')}</div>` : ui().empty(`Nenhuma aula sua em ${fmtDate(data)}`, 'calendar');
       el.querySelectorAll('.chamada-card').forEach(c => c.addEventListener('click', () => abrirChamada(c.dataset.t, c.dataset.a)));
     }
     el.querySelector('[data-data]').addEventListener('change', e => { data = e.target.value; lista(); });

@@ -99,7 +99,7 @@
           </div>`).join('')}</div>` : ''}
           <div class="card"><div class="section-title">${I('history', 18)} Histórico de participação em turmas</div>
             ${mats.length ? `<div class="table-wrap"><table class="table"><thead><tr><th>Turma</th><th>Projeto</th><th>Entrada</th><th>Saída</th><th>Motivo</th><th>Situação</th></tr></thead><tbody>
-            ${mats.map(m => `<tr class="clickable" data-href="#/turmas/${esc(m.turma_id)}"><td class="bold">${esc(m.turma.nome)}</td><td>${ui().areaChip(m.projeto.area)} <span class="small">${esc(m.projeto.nome)}</span></td><td>${esc(fmtDate(m.entrada))}</td><td>${esc(m.saida ? fmtDate(m.saida) : '—')}</td><td class="small">${esc(m.motivo_saida || '')}</td><td>${m.status === 'ativo' ? ui().badge('Ativo', 'ok', true) : ui().badge('Saiu', 'neutral', true)}</td></tr>`).join('')}
+            ${mats.map(m => `<tr class="clickable" data-href="#/turmas/${esc(m.turma_id)}"><td class="bold">${esc(m.turma.nome)}</td><td>${ui().areaChip(m.projeto.area)} <span class="cor-ponto" style="--c:${m.projeto.cor || '#2563eb'}"></span> <span class="small">${esc(m.projeto.nome)}</span></td><td>${esc(fmtDate(m.entrada))}</td><td>${esc(m.saida ? fmtDate(m.saida) : '—')}</td><td class="small">${esc(m.motivo_saida || '')}</td><td>${m.status === 'ativo' ? ui().badge('Ativo', 'ok', true) : ui().badge('Saiu', 'neutral', true)}</td></tr>`).join('')}
             </tbody></table></div>` : ui().empty('Ainda não participa de turmas', 'layers')}
           </div></div>`;
         panel.querySelectorAll('tr[data-href]').forEach(tr => tr.addEventListener('click', () => { location.hash = tr.dataset.href; }));
@@ -119,7 +119,7 @@
             <div class="cal">${ICM.util.DIAS_C.map(d => `<div class="dow">${d}</div>`).join('')}
               ${cells.map(d => { const k = ICM.util.iso(d); const es = evs.filter(e => e.data === k); return `<div class="day ${d.getMonth() !== m ? 'other' : ''} ${k === hoje ? 'today' : ''}"><span class="n">${d.getDate()}</span>${es.map(e => `<span class="ev" style="--c:${e.cor}" title="${esc(e.titulo)}">${esc(e.hora || '')} ${esc(e.titulo)}</span>`).join('')}</div>`; }).join('')}
             </div>
-            <div class="row wrap mt-4 xs muted"><span class="ev" style="--c:#2563eb">Aula</span>${Object.values(ICM.C.TIPOS_EVENTO).map(t => `<span class="ev" style="--c:${t.cor}">${esc(t.nome)}</span>`).join('')}</div>
+            <div class="row wrap mt-4 xs muted"><span class="ev" style="--c:var(--muted)">Aula (na cor do projeto)</span>${Object.values(ICM.C.TIPOS_EVENTO).map(t => `<span class="ev" style="--c:${t.cor}">${esc(t.nome)}</span>`).join('')}</div>
           </div>`;
           panel.querySelectorAll('[data-m]').forEach(b => b.addEventListener('click', () => { const v = +b.dataset.m; if (v === 0) { ref = new Date(); ref.setDate(1); } else ref.setMonth(ref.getMonth() + v); draw(); }));
         };

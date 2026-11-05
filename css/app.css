@@ -589,3 +589,14 @@ span.ag-chip { display: inline-block; }
 .toast-chat { cursor: pointer; text-align: left; font: inherit; color: inherit; border: 0; }
 .toast-chat .small { opacity: .85; margin-top: 2px; }
 @media (max-width: 1240px) { .tn-menu .tn-cont { position: static; margin-left: 4px; } }
+
+
+/* Cor do projeto */
+.cor-opcoes { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.cor-opcao { width: 32px; height: 32px; border-radius: 50%; border: 0; padding: 0; cursor: pointer; background: var(--c); box-shadow: var(--sh-out-sm); transition: transform var(--t) var(--ease); }
+.cor-opcao:hover { transform: scale(1.1); }
+.cor-opcao.on { outline: 3px solid var(--c); outline-offset: 3px; }
+.cor-opcao:focus-visible { outline: 3px solid var(--primary); outline-offset: 3px; }
+.cor-livre { width: 44px; height: 32px; padding: 2px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--surface-2); cursor: pointer; }
+.cor-ponto { display: inline-block; width: 10px; height: 10px; flex: none; border-radius: 50%; background: var(--c); }
+.chamada-card { border-left: 5px solid var(--c, transparent); }

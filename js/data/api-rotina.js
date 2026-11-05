@@ -97,7 +97,8 @@
     r.estoque = (await tentar(() => ICM.api.estoque.itens()) || []).filter(i => i.abaixo);
     r.mandatos = await tentar(() => ICM.api.governanca.alertas()) || [];
     const tids = await H().minhasTurmasIds(); const turmas = await S().list('turmas');
-    r.aulasHoje = (await S().list('aulas', a => a.data === hoje && tids.includes(a.turma_id) && a.status !== 'cancelada')).map(a => ({ ...a, turma: (turmas.find(t => t.id === a.turma_id) || {}).nome }));
+    const projetosCor = await S().list('projetos');
+    r.aulasHoje = (await S().list('aulas', a => a.data === hoje && tids.includes(a.turma_id) && a.status !== 'cancelada')).map(a => { const t = turmas.find(x => x.id === a.turma_id) || {}; return { ...a, turma: t.nome, cor: (projetosCor.find(p => p.id === t.projeto_id) || {}).cor }; });
     r.semRegistro = (await S().list('aulas', a => a.data < hoje && a.status === 'planejada' && tids.includes(a.turma_id))).length;
     r.agenda = [...(await S().list('reunioes', x => x.data === hoje || x.data === amanha)).map(x => ({ tipo: 'Reunião de pais', titulo: x.titulo, data: x.data, hora: x.horario, href: `#/reunioes/${x.id}` })),
       ...(await S().list('eventos', x => x.data === hoje || x.data === amanha)).map(x => ({ tipo: ICM.C.TIPOS_EVENTO[x.tipo].nome, titulo: x.titulo, data: x.data, hora: x.horario, href: `#/eventos/${x.id}` }))];

@@ -12,6 +12,7 @@
     const saud = h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
     const maxH = Math.max(1, ...d.meses.map(m => m.h));
     const areaData = Object.entries(d.porArea).map(([k, v]) => ({ l: ICM.C.AREAS[k].nome, v, c: ICM.C.AREAS[k].cor }));
+    const corDaTurma = id => { const t = d.turmasList.find(x => x.id === id) || {}; return (d.projetosList.find(p => p.id === t.projeto_id) || {}).cor || '#2563eb'; };
     const turmaNome = id => (d.turmasList.find(t => t.id === id) || {}).nome || '';
 
     el.innerHTML = `<div class="page">
@@ -55,7 +56,7 @@
           <div class="card-head"><div class="card-title">${I('calendar', 18)} Próximas aulas</div></div>
           ${d.proximas.length ? d.proximas.map(a => `
             <a class="list-item" href="#/turmas/${esc(a.turma_id)}?aula=${esc(a.id)}">
-              <div class="avatar sm" style="--c:#2563eb">${esc(fmtDateShort(a.data).split(' ')[0])}</div>
+              <div class="avatar sm" style="--c:${corDaTurma(a.turma_id)}">${esc(fmtDateShort(a.data).split(' ')[0])}</div>
               <div class="grow"><div class="bold truncate">${esc(turmaNome(a.turma_id))}</div><div class="xs muted">${esc(fmtDate(a.data))} · ${esc(a.inicio)}–${esc(a.fim)}</div></div>${I('chevronRight', 16)}</a>`).join('')
             : ICM.ui.empty('Nenhuma aula agendada', 'calendar')}
         </div>

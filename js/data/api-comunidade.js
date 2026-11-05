@@ -307,10 +307,11 @@
       const res = (await S().list('reservas', x => x.data >= de && x.data <= ate)).map(x => ({ ...x, origem: 'reserva' }));
       const turmas = await S().list('turmas', t => t.status !== 'encerrada' && t.espaco_id);
       const aulasCanc = await S().list('aulas', a => a.status === 'cancelada');
+      const projetos = await S().list('projetos');
       const out = [...res];
       for (let d = u().parseD(de); u().iso(d) <= ate; d.setDate(d.getDate() + 1)) {
         const k = u().iso(d);
-        turmas.forEach(t => { if (t.dias.includes(d.getDay()) && !aulasCanc.some(a => a.turma_id === t.id && a.data === k)) out.push({ id: `fixo_${t.id}_${k}`, origem: 'turma', recurso_id: t.espaco_id, data: k, inicio: t.inicio, fim: t.fim, titulo: t.nome, turma_id: t.id, responsavel_id: t.professor_id }); });
+        turmas.forEach(t => { if (t.dias.includes(d.getDay()) && !aulasCanc.some(a => a.turma_id === t.id && a.data === k)) out.push({ id: `fixo_${t.id}_${k}`, origem: 'turma', cor: (projetos.find(p => p.id === t.projeto_id) || {}).cor, recurso_id: t.espaco_id, data: k, inicio: t.inicio, fim: t.fim, titulo: t.nome, turma_id: t.id, responsavel_id: t.professor_id }); });
       }
       return out.sort((a, b) => a.data.localeCompare(b.data) || a.inicio.localeCompare(b.inicio));
     },

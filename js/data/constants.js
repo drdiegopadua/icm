@@ -269,6 +269,8 @@
       desligado: { nome: 'Desligado', cls: 'danger' }
     },
 
+    CORES_PROJETO: ['#8b5cf6', '#2563eb', '#0891b2', '#10b981', '#65a30d', '#eab308', '#f97316', '#ef4444', '#ec4899', '#9f1239', '#92400e', '#475569'],
+
     STATUS_PROJETO: {
       planejamento: { nome: 'Em planejamento', cls: 'neutral' },
       execucao: { nome: 'Em execução', cls: 'ok' },

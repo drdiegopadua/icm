@@ -191,7 +191,9 @@
       async agenda(alunoId) {
         const mats = (await S().list('matriculas', m => m.aluno_id === alunoId && m.status === 'ativo')).map(m => m.turma_id);
         const turmas = await S().list('turmas');
-        const aulas = (await S().list('aulas', a => mats.includes(a.turma_id))).map(a => ({ data: a.data, titulo: (turmas.find(t => t.id === a.turma_id) || {}).modalidade, hora: a.inicio, cor: '#2563eb', tipo: 'aula' }));
+        const projetos = await S().list('projetos');
+        const corTurma = t => (projetos.find(p => p.id === (t || {}).projeto_id) || {}).cor || '#2563eb';
+        const aulas = (await S().list('aulas', a => mats.includes(a.turma_id))).map(a => { const t = turmas.find(x => x.id === a.turma_id); return { data: a.data, titulo: (t || {}).modalidade, hora: a.inicio, cor: corTurma(t), tipo: 'aula' }; });
         const evs = (await S().list('eventos', e => (e.alunos || []).includes(alunoId))).map(e => ({ data: e.data, titulo: e.titulo, hora: e.horario, cor: ICM.C.TIPOS_EVENTO[e.tipo].cor, tipo: e.tipo }));
         return aulas.concat(evs);
       }
@@ -226,6 +228,8 @@
       async save(p) {
         need('projetos.editar');
         if (!p.nome) throw new Error('Informe o nome do projeto.');
+        // A cor vai direto para o estilo das telas: só aceita o formato #rrggbb
+        if ((!p.id || p.cor !== undefined) && !/^#[0-9a-f]{6}$/i.test(p.cor || '')) p = { ...p, cor: (ICM.C.AREAS[p.area] || {}).cor || '#2563eb' };
         const r = p.id ? await S().update('projetos', p.id, p) : await S().insert('projetos', { cor: ICM.C.AREAS[p.area].cor, ...p });
         await audit(p.id ? 'editar' : 'criar', 'projetos', r.id, `Projeto ${r.nome}`);
         return r;
@@ -504,7 +508,7 @@
         alunosAtivos: alunos.filter(a => a.status === 'ativo').length, turmas: turmas.length, projetos: projetos.filter(p => p.status === 'execucao').length,
         horasMes: doMes.reduce((s, a) => s + a.horas, 0), aulasMes: doMes.length, freqMes: T ? Math.round(P / T * 100) : 0,
         proximas, pendentes, eventos, meses, porArea: Object.fromEntries(Object.entries(porArea).map(([k, v]) => [k, v.size])),
-        alertas: await alertasAssiduidade(ym), turmasList: turmas
+        alertas: await alertasAssiduidade(ym), turmasList: turmas, projetosList: projetos
       };
     },
 

@@ -11,14 +11,20 @@
     const list = await ICM.api.projetos.list();
     const stats = {}; for (const p of list) stats[p.id] = await ICM.api.projetos.stats(p.id);
     let area = '';
+    let situacao = 'ativos'; // padrão: só projetos ativos
+    const ehEncerrado = p => p.status === 'encerrado';
+    const nEncerrados = list.filter(ehEncerrado).length;
     el.innerHTML = `<div class="page">
       <div class="page-head"><div><h1 class="page-title">Projetos</h1><div class="page-sub">Projetos, turmas e atividades em cada área de atuação</div></div>
         ${ICM.auth.can('projetos.editar') ? `<button class="btn btn-primary" data-new>${I('plus', 18)} Novo projeto</button>` : ''}</div>
-      <div class="segmented mb-4" data-area><button data-v="" class="active">Todas as áreas</button>${Object.entries(ICM.C.AREAS).map(([k, v]) => `<button data-v="${k}">${esc(v.nome)}</button>`).join('')}</div>
+      <div class="row wrap mb-4">
+        <div class="segmented" data-situacao><button data-v="ativos" class="active">Ativos (${list.length - nEncerrados})</button><button data-v="encerrados">Encerrados (${nEncerrados})</button></div>
+        <div class="segmented" data-area><button data-v="" class="active">Todas as áreas</button>${Object.entries(ICM.C.AREAS).map(([k, v]) => `<button data-v="${k}">${esc(v.nome)}</button>`).join('')}</div>
+      </div>
       <div class="grid grid-3 stagger" data-list></div>
     </div>`;
     const render = () => {
-      const l = list.filter(p => !area || p.area === area);
+      const l = list.filter(p => (!area || p.area === area) && (situacao === 'encerrados') === ehEncerrado(p));
       el.querySelector('[data-list]').innerHTML = l.length ? l.map(p => { const s = stats[p.id]; return `
         <div class="card project-card hoverable" style="--c:${p.cor}" data-href="#/projetos/${esc(p.id)}">
           <div class="row between">${ui().areaChip(p.area)}${ui().statusProjeto(p.status)}</div>
@@ -26,10 +32,11 @@
           <div class="meta"><span>${I('layers', 15)} ${s.turmas} turmas</span><span>${I('users', 15)} ${s.ativos} alunos</span><span>${I('clock', 15)} ${num(s.horas)}h</span></div>
           <div><div class="row between xs bold muted"><span>Frequência média</span><span>${s.freq}%</span></div><div class="progress mt-2 ${s.freq >= 75 ? 'ok' : 'warn'}"><span style="width:${s.freq}%"></span></div></div>
           <div class="row between xs muted"><span>${esc(fmtDate(p.inicio))} → ${esc(fmtDate(p.fim))}</span>${p.fonte && p.fonte !== 'privada' && p.fonte !== 'propria' ? ui().badge('Recurso público', 'warn') : ''}</div>
-        </div>`; }).join('') : `<div class="span-all">${ui().empty('Nenhum projeto nesta área', 'folder')}</div>`;
+        </div>`; }).join('') : `<div class="span-all">${ui().empty(situacao === 'encerrados' ? 'Nenhum projeto encerrado' + (area ? ' nesta área' : '') : 'Nenhum projeto ativo' + (area ? ' nesta área' : ''), 'folder')}</div>`;
       el.querySelectorAll('[data-href]').forEach(c => c.addEventListener('click', () => { location.hash = c.dataset.href; }));
     };
     el.querySelectorAll('[data-area] button').forEach(b => b.addEventListener('click', () => { el.querySelectorAll('[data-area] button').forEach(x => x.classList.toggle('active', x === b)); area = b.dataset.v; render(); }));
+    el.querySelectorAll('[data-situacao] button').forEach(b => b.addEventListener('click', () => { el.querySelectorAll('[data-situacao] button').forEach(x => x.classList.toggle('active', x === b)); situacao = b.dataset.v; render(); }));
     const nb = el.querySelector('[data-new]'); if (nb) nb.addEventListener('click', () => projetoForm());
     render();
   };
@@ -128,12 +135,16 @@
   function projetoForm(p = {}) {
     const F = o => ui().field(o);
     const metas = (p.metas || []).map(x => ({ ...x }));
+    const corInicial = p.cor || ICM.C.AREAS[p.area || Object.keys(ICM.C.AREAS)[0]].cor;
     const m = ui().modal({
       title: p.id ? 'Editar projeto' : 'Novo projeto', size: 'wide',
       body: `<form class="grid grid-3">
         ${F({ name: 'nome', label: 'Nome do projeto', value: p.nome, required: true, cls: 'span-2' })}
         ${F({ name: 'area', label: 'Área de atuação', type: 'select', value: p.area, options: Object.entries(ICM.C.AREAS).map(([k, v]) => [k, v.nome]) })}
         ${F({ name: 'status', label: 'Situação', type: 'select', value: p.status || 'planejamento', options: Object.entries(ICM.C.STATUS_PROJETO).map(([k, v]) => [k, v.nome]) })}
+        <div class="field span-all"><label for="f_cor">Cor do projeto</label>
+          <div class="cor-opcoes">${ICM.C.CORES_PROJETO.map(c => `<button type="button" class="cor-opcao" data-cor="${c}" style="--c:${c}" aria-label="Usar a cor ${c}"></button>`).join('')}<input class="cor-livre" id="f_cor" type="color" name="cor" value="${esc(corInicial)}" title="Escolher outra cor"></div>
+          <span class="hint">Aparece nas turmas, na chamada, na agenda, nos eventos e nos relatórios deste projeto.</span></div>
         ${F({ name: 'inicio', label: 'Início da vigência', type: 'date', value: p.inicio, required: true })}
         ${F({ name: 'fim', label: 'Fim da vigência', type: 'date', value: p.fim, required: true })}
         ${F({ name: 'fonte', label: 'Fonte de recurso', type: 'select', value: p.fonte, options: Object.entries(ICM.C.FONTES) })}
@@ -152,6 +163,14 @@
       </form>`,
       foot: `${p.id ? `<button class="btn btn-danger" data-del style="margin-right:auto">${I('trash', 18)} Excluir</button>` : ''}<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" data-ok>${I('check', 18)} Salvar projeto</button>`
     });
+    const inpCor = m.$('[name=cor]');
+    const marcaCor = () => m.el.querySelectorAll('.cor-opcao').forEach(b => { const on = b.dataset.cor.toLowerCase() === inpCor.value.toLowerCase(); b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
+    let corEscolhida = !!p.id;
+    m.el.querySelectorAll('.cor-opcao').forEach(b => b.addEventListener('click', () => { inpCor.value = b.dataset.cor; corEscolhida = true; marcaCor(); }));
+    inpCor.addEventListener('input', () => { corEscolhida = true; marcaCor(); });
+    // Projeto novo: acompanha a cor da área até a pessoa escolher uma
+    m.$('[name=area]').addEventListener('change', e => { if (!corEscolhida) { inpCor.value = ICM.C.AREAS[e.target.value].cor; marcaCor(); } });
+    marcaCor();
     const box = m.$('[data-metas]');
     const drawMetas = () => {
       box.innerHTML = metas.map((x, i) => `<div class="row wrap card flat" style="padding:12px">

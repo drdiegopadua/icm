@@ -22,7 +22,7 @@
     const render = () => {
       const l = list.filter(e => (!tipo || e.tipo === tipo) && (quando === 'todos' || (quando === 'futuros' ? e.data >= hoje : e.data < hoje)));
       el.querySelector('[data-list]').innerHTML = l.length ? l.map(e => { const t = ICM.C.TIPOS_EVENTO[e.tipo]; const p = projetos.find(x => x.id === e.projeto_id); const fut = e.data >= hoje; return `
-        <div class="card project-card hoverable" style="--c:${t.cor}" data-href="#/eventos/${esc(e.id)}">
+        <div class="card project-card hoverable" style="--c:${p ? p.cor : t.cor}" data-href="#/eventos/${esc(e.id)}">
           ${(e.fotos || [])[0] ? `<div class="photo" style="margin:-8px -8px 0;aspect-ratio:16/8"><img src="${esc(e.fotos[0].src)}" alt=""></div>` : ''}
           <div class="row between"><span class="area-chip" style="--c:${t.cor}">${esc(t.nome)}</span>${fut ? ui().badge('Programado', '', true) : ui().badge('Realizado', 'ok', true)}</div>
           <div class="name">${esc(e.titulo)}</div>
@@ -48,7 +48,7 @@
     const fotos = (e.fotos || []).map(f => ({ ...f }));
     const canEdit = ICM.auth.can('eventos.editar');
     el.innerHTML = `<div class="page">
-      <div class="card mb-4 project-card" style="--c:${t.cor};cursor:default">
+      <div class="card mb-4 project-card" style="--c:${p ? p.cor : t.cor};cursor:default">
         <div class="row between wrap"><div>
           <span class="area-chip" style="--c:${t.cor}">${esc(t.nome)}</span>
           <h1 class="page-title mt-2" style="font-size:28px">${esc(e.titulo)}</h1>

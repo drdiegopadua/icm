@@ -65,6 +65,7 @@
     { re: /^\/compras$/, page: 'compras' },
     { re: /^\/campanhas$/, page: 'campanhas', perm: 'campanhas.gerir' },
     { re: /^\/social$/, page: 'social', perm: 'social.gerir' },
+    { re: /^\/grade-semanal$/, page: 'gradeSemanal' },
     { re: /^\/chat$/, page: 'chat' },
     { re: /^\/chat\/([\w-]+)$/, page: 'chat', keys: ['id'] }
   ];
@@ -82,6 +83,7 @@
     { label: 'Pedagógico', icon: 'folder', itens: [
       { href: '#/rotina', icon: 'sun', label: 'Rotina do dia', desc: 'Aulas, pendências e avisos de hoje', match: /^\/rotina/ },
       { href: '#/projetos', icon: 'folder', label: 'Projetos e turmas', desc: 'Planos de aula, chamadas e relatórios de aula', match: /^\/(projetos|turmas)/ },
+      { href: '#/grade-semanal', icon: 'calendar', label: 'Agenda da semana', desc: 'Todas as turmas e seus horários', match: /^\/grade-semanal/ },
       { href: '#/eventos', icon: 'star', label: 'Eventos e ações', desc: 'Apresentações, campeonatos e participantes', match: /^\/eventos/ },
       { href: '#/agenda', icon: 'calendar', label: 'Agenda de espaços', match: /^\/agenda/ },
       { href: '#/calendario-letivo', icon: 'calendar', label: 'Calendário letivo', desc: 'Feriados e recessos (vão para o app)', match: /^\/calendario-letivo/ }

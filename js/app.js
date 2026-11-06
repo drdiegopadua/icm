@@ -285,6 +285,7 @@
     if (ICM.store.aoMudar) ICM.store.aoMudar('chat_mensagens', () => { refreshChat(); document.dispatchEvent(new CustomEvent('icm:chat')); });
     setInterval(() => { if (!document.hidden) refreshChat(); }, 10000);
     ICM.pages._rotinaAutomatica().catch(() => { });
+    if (ICM.geo) ICM.geo.iniciar();   // localiza endereços novos para o mapa dos atendidos
   }
 
   // Mensagens novas do chat: número no menu, no título da aba e aviso clicável

@@ -1,8 +1,6 @@
 /* Localização dos atendidos (mapa): onde moram os alunos, identificados só pelo número de matrícula.
    - Só quem vê dados sensíveis abre esta tela (a coordenada exata fica na parte privada da ficha).
-   - Para achar o ponto, o sistema envia ao OpenStreetMap (Nominatim) SÓ rua, número, bairro e cidade —
-     nunca nome, matrícula ou outro dado do aluno. Limite do serviço: 1 endereço por segundo.
-   - A coordenada fica guardada na ficha; só é buscada de novo se o endereço mudar. */
+   - A localização dos endereços é feita sozinha em segundo plano (js/core/geo.js). */
 (function () {
   ICM.pages = ICM.pages || {};
   const I = (n, s) => ICM.icon(n, s);
@@ -12,7 +10,6 @@
   const PARADAS_VAN = [['João Valim', [-20.09516, -41.11851]], ['Campo Vinte', [-20.08336, -41.12107]], ['Bela Vista', [-20.08525, -41.12795]], ['São Vicente', [-20.08237, -41.12579]], ['Vila Nova', [-20.08061, -41.12706]], ['Centro', [-20.07756, -41.12453]], ['Boa Fé', [-20.07044, -41.12944]], ['Colina do Cruzeiro', [-20.07456, -41.12097]], ['Grama', [-20.06295, -41.11512]]];
   const PREC = { endereco: 'Endereço exato', rua: 'Localizado pela rua (o mapa não tem o número)', bairro: 'Aproximado — centro do bairro', cidade: 'Aproximado — centro da cidade', demo: 'Demonstração' };
   const f = { situacao: 'ativo', projeto: '', turma: '', van: '', corProjeto: true, sede: true, paradas: false };
-  let busca = null; // processo de localização em andamento
 
   // ---------- Leaflet (carregado só nesta tela) ----------
   let leaflet = null;
@@ -26,38 +23,8 @@
     return leaflet;
   }
 
-  // ---------- Endereço → coordenada ----------
   const limpa = v => String(v || '').trim();
-  const temCep = c => /\d{5}-?\d{3}/.test(c || '') && !/0{5}-?0{3}/.test(c);
-  const chave = e => [e.logradouro, e.numero, e.bairro, e.cidade, e.uf, e.cep].map(x => limpa(x).toLowerCase()).join('|');
-  const geoValido = a => a.geo && a.geo.lat != null && a.geo.chave === chave(a.endereco || {});
-  const temEndereco = a => { const e = a.endereco || {}; return !!(limpa(e.cidade) && (limpa(e.logradouro) || limpa(e.bairro))); };
-  const cacheBusca = new Map();
-  const espera = ms => new Promise(r => setTimeout(r, ms));
-  let ultimaChamada = 0;
-
-  async function nominatim(params) {
-    const k = JSON.stringify(params);
-    if (cacheBusca.has(k)) return cacheBusca.get(k);
-    const falta = 1100 - (Date.now() - ultimaChamada); if (falta > 0) await espera(falta);
-    ultimaChamada = Date.now();
-    const q = new URLSearchParams({ format: 'jsonv2', limit: '1', countrycodes: 'br', 'accept-language': 'pt-BR', ...params });
-    const r = await fetch('https://nominatim.openstreetmap.org/search?' + q, { referrerPolicy: 'origin', credentials: 'omit' });
-    if (r.status === 429) { await espera(5000); cacheBusca.delete(k); return nominatim(params); }
-    if (!r.ok) throw new Error('Serviço de mapas indisponível (' + r.status + ').');
-    const j = await r.json(); const res = j[0] ? { lat: +j[0].lat, lng: +j[0].lon, tipo: j[0].addresstype || j[0].type || '' } : null;
-    cacheBusca.set(k, res); return res;
-  }
-  async function localizar(e) {
-    const cidade = limpa(e.cidade).replace(/\s*[—-]\s*[A-Z]{2}$/, ''), uf = limpa(e.uf) || (limpa(e.cidade).match(/[A-Z]{2}$/) || [''])[0];
-    const base = { city: cidade, ...(uf ? { state: uf } : {}), ...(temCep(e.cep) ? { postalcode: limpa(e.cep) } : {}) };
-    const rua = limpa(e.logradouro), num = limpa(e.numero).replace(/\D.*$/, '');
-    if (rua && num) { const r = await nominatim({ ...base, street: `${num} ${rua}` }); if (r) return { ...r, precisao: ['house', 'building', 'residential_building'].includes(r.tipo) ? 'endereco' : 'rua' }; }
-    if (rua) { const r = await nominatim({ ...base, street: rua }); if (r) return { ...r, precisao: 'rua' }; }
-    if (limpa(e.bairro)) { const r = await nominatim({ q: [e.bairro, cidade, uf, 'Brasil'].filter(Boolean).join(', ') }); if (r) return { ...r, precisao: 'bairro' }; }
-    if (cidade) { const r = await nominatim({ city: cidade, ...(uf ? { state: uf } : {}) }); if (r) return { ...r, precisao: 'cidade' }; }
-    return null;
-  }
+  const { geoValido, temEndereco, pendente } = ICM.geo;
 
   // Demonstração: dados fictícios ("Sua Cidade") ganham pontos inventados perto da sede
   function geoDemo(a) {
@@ -70,11 +37,10 @@
   ICM.pages.mapaAtendidos = async function (el) {
     ICM.app.setCrumbs([['Pedagógico'], ['Localização dos atendidos']]);
     el.innerHTML = `<div class="page"><div class="card" style="height:120px"></div></div>`;
-    const [alunos, mats, turmas, projetos] = await Promise.all([
+    let [alunos, mats, turmas, projetos] = await Promise.all([
       ICM.api.alunos.list({ status: '' }), ICM.api.raw('matriculas'), ICM.api.turmas.list(), ICM.api.projetos.list()
     ]);
     try { await carregarLeaflet(); } catch (e) { el.innerHTML = `<div class="page">${ICM.ui.empty(e.message, 'alert')}</div>`; return; }
-    const podeGravar = ICM.auth.can('alunos.editar');
     const proj = id => projetos.find(p => p.id === id) || {};
     const turmasDo = a => mats.filter(m => m.aluno_id === a.id && (m.status === 'ativo' || f.situacao !== 'ativo')).map(m => turmas.find(t => t.id === m.turma_id)).filter(Boolean);
     const geoDe = a => geoValido(a) ? a.geo : (DEMO ? geoDemo(a) : null);
@@ -189,45 +155,35 @@
     }
 
     function status(lista, noMapa) {
-      const box = el.querySelector('[data-status]');
-      if (busca) return; // a barra de progresso cuida do quadro
-      const pend = lista.filter(a => !geoValido(a) && temEndereco(a));
+      const box = el.querySelector('[data-status]'); if (!box) return;
+      const g = ICM.geo.estado;
+      const pend = lista.filter(pendente).length;
       const semEnd = lista.filter(a => !temEndereco(a)).length;
+      const naoAchou = lista.filter(a => temEndereco(a) && !pendente(a) && !geoValido(a)).length;
       const aprox = lista.filter(a => geoValido(a) && !['endereco', 'rua'].includes(a.geo.precisao)).length;
-      box.innerHTML = `<div class="row between wrap">
-        <div><b>${noMapa} de ${lista.length} aluno(s) no mapa</b>
-          <div class="xs muted mt-1">${DEMO ? 'Demonstração: pontos fictícios perto da sede. ' : ''}${!DEMO && pend.length ? `${pend.length} endereço(s) ainda não localizados · ` : ''}${aprox ? `${aprox} em posição aproximada (endereço incompleto ou não encontrado) · ` : ''}${semEnd ? `${semEnd} sem endereço na ficha` : ''}</div></div>
-        ${!DEMO && podeGravar && pend.length ? `<button class="btn btn-primary no-print" data-localizar>${I('pin', 18)} Localizar ${pend.length} endereço(s) · cerca de ${Math.max(1, Math.ceil(pend.length * 1.2 / 60))} min</button>` : ''}
-      </div>`;
-      const b = box.querySelector('[data-localizar]'); if (b) b.addEventListener('click', () => localizarTodos(pend));
+      const detalhes = [aprox ? `${aprox} em posição aproximada (bairro ou cidade)` : '', naoAchou ? `${naoAchou} endereço(s) não encontrados no mapa — confira a ficha` : '', semEnd ? `${semEnd} sem endereço na ficha` : ''].filter(Boolean).join(' · ');
+      let andamento = '';
+      if (DEMO) andamento = 'Demonstração: pontos fictícios perto da sede.';
+      else if (g.ativo) andamento = `Localizando os endereços sozinho, em segundo plano: ${g.feitos} de ${g.total}. Os pontos aparecem aos poucos; pode usar o sistema normalmente.`;
+      else if (pend && ICM.auth.can('alunos.editar')) andamento = `${pend} endereço(s) na fila — a localização começa sozinha em instantes.`;
+      else if (pend) andamento = `${pend} endereço(s) ainda não localizados — serão localizados automaticamente quando a secretaria ou a coordenação estiver usando o sistema.`;
+      box.innerHTML = `<div><b>${noMapa} de ${lista.length} aluno(s) no mapa</b>
+        ${andamento ? `<div class="xs mt-1" style="color:var(--primary);font-weight:600">${esc(andamento)}</div>` : ''}
+        ${detalhes ? `<div class="xs muted mt-1">${esc(detalhes)}</div>` : ''}</div>
+        ${g.ativo && g.total ? `<div class="ma-prog"><span style="width:${g.feitos / g.total * 100}%"></span></div>` : ''}`;
     }
 
-    async function localizarTodos(pend) {
-      const box = el.querySelector('[data-status]');
-      busca = { parar: false, ok: 0, aprox: 0, falha: 0 };
-      const total = pend.length;
-      const pinta = i => { box.innerHTML = `<div class="row between wrap"><div><b>Localizando endereços… ${i} de ${total}</b><div class="xs muted mt-1">${busca.ok} pela rua ou número · ${busca.aprox} pelo bairro/cidade · ${busca.falha} não encontrados. Pode continuar usando o mapa; não feche esta tela.</div></div><button class="btn no-print" data-parar>Parar</button></div><div class="ma-prog"><span style="width:${i / total * 100}%"></span></div>`; box.querySelector('[data-parar]').addEventListener('click', () => { busca.parar = true; }); };
-      pinta(0);
-      for (let i = 0; i < total && !busca.parar && document.body.contains(box); i++) {
-        const a = pend[i];
-        try {
-          const r = await localizar(a.endereco || {});
-          if (r) {
-            const geo = { lat: +r.lat.toFixed(6), lng: +r.lng.toFixed(6), precisao: r.precisao, chave: chave(a.endereco || {}), em: new Date().toISOString() };
-            await ICM.api.alunos.salvarGeo(a.id, geo); a.geo = geo;
-            ['endereco', 'rua'].includes(r.precisao) ? busca.ok++ : busca.aprox++;
-          } else busca.falha++;
-        } catch (e) {
-          if (/permiss|sess|conex|indispon/i.test(e.message)) { ICM.ui.toast(e.message, 'danger'); break; }
-          busca.falha++;
-        }
-        pinta(i + 1);
-        if ((i + 1) % 10 === 0) { const b = busca; busca = null; desenhar(); busca = b; pinta(i + 1); }
-      }
-      const fim = busca; busca = null;
-      if (fim.ok + fim.aprox) ICM.api.audit('localizar_enderecos', 'alunos', '', `Localização dos atendidos: ${fim.ok} exatos, ${fim.aprox} aproximados, ${fim.falha} não encontrados`).catch(() => { });
-      if (document.body.contains(box)) { desenhar(); ICM.ui.toast(`Pronto: ${fim.ok} pela rua, ${fim.aprox} pelo bairro ou cidade, ${fim.falha} não encontrados.`); }
-    }
+    // Acompanha o trabalho em segundo plano: atualiza a barra sempre e o mapa a cada ~8 s
+    let ultimoMapa = 0, agendado = null;
+    const aoGeo = async () => {
+      if (!document.body.contains(el.querySelector('[data-mapa]'))) { document.removeEventListener('icm:geo', aoGeo); return; }
+      alunos = await ICM.api.alunos.list({ status: '' });
+      const terminou = !ICM.geo.estado.ativo;
+      if (terminou || Date.now() - ultimoMapa > 8000) { ultimoMapa = Date.now(); desenhar(); }
+      else { status(filtrados(), filtrados().filter(a => geoDe(a)).length); clearTimeout(agendado); agendado = setTimeout(aoGeo, 8500); }
+    };
+    document.addEventListener('icm:geo', aoGeo);
+    if (!DEMO && !ICM.geo.estado.ativo && alunos.some(pendente)) ICM.geo.agora();
 
     desenhar();
     setTimeout(() => mapa.invalidateSize(), 200);

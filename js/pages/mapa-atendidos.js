@@ -55,7 +55,7 @@
     el.innerHTML = `<div class="page mapa-at">
       <div class="page-head">
         <div><h1 class="page-title">Localização dos atendidos</h1><div class="page-sub">Cada ponto é um aluno, identificado só pela matrícula.</div></div>
-        <div class="row wrap no-print"><button class="btn" data-imprimir>${I('fileText', 18)} Imprimir</button></div>
+        <div class="row wrap no-print"><button class="btn" data-cheia>${I('maximize', 18)} Tela cheia</button><button class="btn" data-imprimir>${I('fileText', 18)} Imprimir</button></div>
       </div>
       <div class="card mb-4 no-print"><div class="ma-filtros">
         <label>Situação<select class="input" data-f="situacao"><option value="ativo">Ativos</option><option value="">Todos</option><option value="inativo">Inativos</option></select></label>
@@ -70,7 +70,7 @@
       </div></div>
       <div class="card mb-4" data-status></div>
       <div class="ma-grid">
-        <div class="card ma-mapa-card"><div class="ma-mapa" data-mapa></div></div>
+        <div class="card ma-mapa-card" data-mapa-card><div class="ma-mapa" data-mapa></div><button class="ma-fs no-print" data-cheia title="Tela cheia">${I('maximize', 16)} <span>Tela cheia</span></button></div>
         <div class="card ma-lado"><div class="card-title mb-2">Por bairro</div><div data-bairros></div><div class="ma-leg mt-4" data-leg></div></div>
       </div>
       <div class="xs muted mt-2">Mapa © colaboradores do OpenStreetMap. Para localizar, só a rua, o número, o bairro e a cidade são enviados ao OpenStreetMap — nunca o nome ou a matrícula.</div>
@@ -91,6 +91,12 @@
       .mapa-at .ma-dot{display:inline-block;width:12px;height:12px;border-radius:50%;background:var(--c);border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35)}
       .mapa-at .ma-prog{height:8px;border-radius:6px;background:var(--surface-sunken);overflow:hidden;margin-top:10px}
       .mapa-at .ma-prog span{display:block;height:100%;background:var(--primary);transition:width .3s}
+      .mapa-at .ma-mapa-card{position:relative}
+      .mapa-at .ma-fs{position:absolute;z-index:500;top:14px;right:14px;display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:10px;background:#fff;color:#0e1838;font-weight:700;font-size:13px;border:0;box-shadow:0 2px 8px rgba(0,0,0,.3);cursor:pointer}
+      .mapa-at .ma-mapa-card:fullscreen,.mapa-at .ma-mapa-card.cheia{padding:0;border-radius:0;background:#000}
+      .mapa-at .ma-mapa-card:fullscreen .ma-mapa,.mapa-at .ma-mapa-card.cheia .ma-mapa{height:100vh;height:100dvh;border-radius:0}
+      .mapa-at .ma-mapa-card.cheia{position:fixed;inset:0;z-index:9999;margin:0}
+      .ma-janela{position:fixed;inset:0;z-index:9999}
       .ma-pin{width:16px;height:16px;border-radius:50%;background:var(--c);border:2.5px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.45)}
       .ma-pin.aprox{opacity:.75;border-style:dashed}
       .ma-sede{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:#1d2a5c;color:#fff;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.5)}
@@ -184,6 +190,25 @@
     };
     document.addEventListener('icm:geo', aoGeo);
     if (!DEMO && !ICM.geo.estado.ativo && alunos.some(pendente)) ICM.geo.agora();
+
+    // Tela cheia (no iPhone, que não permite, ocupa a janela toda)
+    const card = el.querySelector('[data-mapa-card]');
+    const emCheia = () => document.fullscreenElement === card || card.classList.contains('cheia');
+    const rotulo = () => [...el.querySelectorAll('[data-cheia]'), ...card.querySelectorAll('[data-cheia]')].forEach(b => { const t = emCheia() ? 'Sair da tela cheia' : 'Tela cheia'; b.innerHTML = `${I(emCheia() ? 'minimize' : 'maximize', b.classList.contains('ma-fs') ? 16 : 18)} <span>${t}</span>`; });
+    const ajustar = () => { rotulo(); setTimeout(() => mapa.invalidateSize(), 150); };
+    el.querySelectorAll('[data-cheia]').forEach(b => b.addEventListener('click', async () => {
+      if (emCheia()) { if (document.fullscreenElement) await document.exitFullscreen().catch(() => { }); sairJanela(); ajustar(); return; }
+      if (card.requestFullscreen) { try { await card.requestFullscreen(); return; } catch (e) { /* cai no modo janela */ } }
+      entrarJanela(); ajustar();
+    }));
+    // Sem tela cheia do navegador: leva o mapa para cima de tudo (fora da página) e devolve depois
+    const marca = document.createComment('mapa');
+    const entrarJanela = () => { card.parentNode.insertBefore(marca, card); const w = document.createElement('div'); w.className = 'mapa-at ma-janela'; document.body.appendChild(w); w.appendChild(card); card.classList.add('cheia'); };
+    const sairJanela = () => { if (!card.classList.contains('cheia')) return; const w = card.parentNode; card.classList.remove('cheia'); if (marca.parentNode) marca.parentNode.replaceChild(card, marca); if (w && w.classList.contains('ma-janela')) w.remove(); };
+    const aoSairPagina = () => { if (card.classList.contains('cheia')) sairJanela(); window.removeEventListener('hashchange', aoSairPagina); };
+    window.addEventListener('hashchange', aoSairPagina);
+    document.addEventListener('fullscreenchange', ajustar);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && card.classList.contains('cheia')) { sairJanela(); ajustar(); } });
 
     desenhar();
     setTimeout(() => mapa.invalidateSize(), 200);

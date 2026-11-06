@@ -1,7 +1,6 @@
 /* Proteção de tela nas páginas com dados sensíveis (alunos, social, RH, financeiro, mapa, chat…).
    Um site não consegue bloquear 100% uma captura de tela (quem manda é o sistema operacional, e
    sempre dá para fotografar a tela com outro celular). Então o sistema dificulta e deixa rastro:
-   - marca d'água com nome e e-mail de quem está logado + data e hora (a imagem vazada mostra a origem);
    - a tela embaça quando a janela perde o foco ou quando se aperta Print Screen / tecla Windows
      (Win+Shift+S abre o recorte do Windows: a tela já está embaçada quando ele captura);
    - Print Screen apaga a área de transferência e fica registrado na auditoria;
@@ -15,23 +14,10 @@
   const temRelatorio = () => !!document.querySelector('body > .report-viewer');
   const ativo = () => logado() && (SENSIVEIS.test(rota()) || temRelatorio());
   const B = () => document.body;
-  let ultimaMarca = '';
-
-  // Marca d'água em mosaico (SVG): nome · e-mail · data e hora
-  function marcaDagua() {
-    const u = ICM.auth.user() || {};
-    const quando = new Date().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
-    const txt = `${u.nome || ''} · ${u.email || ''} · ${quando} · CONFIDENCIAL`;
-    if (txt === ultimaMarca) return;
-    ultimaMarca = txt;
-    const e = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="460" height="230"><g transform="rotate(-24 230 115)" font-family="Inter,Arial,sans-serif" font-size="14" font-weight="700" fill="rgb(120,128,150)" fill-opacity="0.16"><text x="20" y="100">${e(txt)}</text><text x="-210" y="215">${e(txt)}</text></g></svg>`;
-    B().style.setProperty('--marca-dagua', `url("data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}")`);
-  }
   function aplicar() {
     const on = ativo();
     B().classList.toggle('sens-on', on);
-    if (on) marcaDagua(); else B().classList.remove('sens-blur');
+    if (!on) B().classList.remove('sens-blur');
   }
 
   // Embaça quando a janela sai de foco ou quando começa um atalho de captura
@@ -79,7 +65,7 @@
     if (ev === 'copy' || ev === 'cut') { avisar('Copiar dados desta tela não é permitido.'); registrarTentativa('Copiar'); }
   }, true));
 
-  // Acompanha mudança de tela, abertura/fechamento de relatórios e atualiza a hora da marca
+  // Acompanha mudança de tela e abertura/fechamento de relatórios
   window.addEventListener('hashchange', () => setTimeout(aplicar, 30));
   const observar = () => {
     new MutationObserver(aplicar).observe(document.body, { childList: true });            // relatório aberto/fechado

@@ -604,13 +604,10 @@ span.ag-chip { display: inline-block; }
 /* ---------- Proteção de tela (páginas com dados sensíveis) — js/core/protecao-tela.js ---------- */
 body.sens-on #root, body.sens-on .report-viewer .report-scroll, body.sens-on .modal { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 body.sens-on input, body.sens-on textarea, body.sens-on select, body.sens-on [contenteditable="true"] { -webkit-user-select: text; user-select: text; }
-/* Marca d'água com nome, e-mail, data e hora por cima de tudo (não atrapalha cliques) */
-body.sens-on::after { content: ''; position: fixed; inset: 0; z-index: 2147483000; pointer-events: none; background-image: var(--marca-dagua); background-repeat: repeat; }
 /* Fora de foco ou atalho de captura: conteúdo embaçado */
 body.sens-blur > *:not(.toasts) { filter: blur(22px) saturate(.4); transition: none !important; }
 body.sens-blur::before { content: 'Conteúdo protegido — volte para esta janela para continuar'; position: fixed; inset: 0; z-index: 2147483001; display: grid; place-items: center; padding: 24px; text-align: center; font: 800 18px Inter, Arial, sans-serif; color: var(--text, #1c2440); pointer-events: none; }
 @media print {
-  body.sens-on::after { display: none; }
   /* Sem relatório aberto, a tela sensível não imprime */
   body.sens-on:not(:has(> .report-viewer)) > * { display: none !important; }
   body.sens-on:not(:has(> .report-viewer))::before { content: 'Impressão bloqueada: tela com dados sensíveis. Use Relatórios para gerar o documento oficial.'; display: block; position: static; padding: 40px; font: 700 16px Arial, sans-serif; color: #000; filter: none; }

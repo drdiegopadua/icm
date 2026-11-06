@@ -213,5 +213,32 @@
   };
   window.addEventListener('online', async () => { const n = await offline.sincronizar(); if (n && ICM.ui) ICM.ui.toast(`Internet de volta: ${n} chamada(s) sincronizada(s)`, 'ok'); });
 
-  Object.assign(ICM.api, { docsInst, aniversarios, rotina, privacidade, backup, offline, _carregarScript: carregarScript });
+  // ======================= ESPAÇO NO SUPABASE =======================
+  // Limites dos planos (MB/GB binários, como o Supabase conta). Aviso aos 70% e alerta aos 90%.
+  const MB = 1024 * 1024, GB = 1024 * MB;
+  const PLANOS = { gratuito: { nome: 'Gratuito', banco: 500 * MB, arquivos: 1 * GB }, pro: { nome: 'Pro', banco: 8 * GB, arquivos: 100 * GB } };
+  const nivelEspaco = pct => pct >= 90 ? 'danger' : pct >= 70 ? 'warn' : 'ok';
+  const espaco = {
+    PLANOS, nivel: nivelEspaco,
+    disponivel: () => S().modo === 'supabase',
+    async medir() {
+      need('backup.exportar');
+      if (S().modo !== 'supabase') return null;
+      const m = await S().rpc('uso_armazenamento', {});
+      const cfg = await S().getConfig();
+      const plano = ((cfg && cfg.supabase) || {}).plano || 'gratuito';
+      const L = PLANOS[plano] || PLANOS.gratuito;
+      const pctBanco = m.banco_bytes / L.banco * 100, pctArquivos = m.arquivos_bytes / L.arquivos * 100;
+      return { ...m, plano, limites: L, pctBanco, pctArquivos, nivel: nivelEspaco(Math.max(pctBanco, pctArquivos)) };
+    },
+    async salvarPlano(plano) {
+      need('backup.exportar');
+      if (!PLANOS[plano]) throw new Error('Plano inválido.');
+      const cfg = await S().getConfig();
+      await S().setConfig({ supabase: { ...((cfg && cfg.supabase) || {}), plano } });
+      await audit('editar', 'config', 'supabase', `Plano do Supabase: ${PLANOS[plano].nome}`);
+    }
+  };
+
+  Object.assign(ICM.api, { docsInst, aniversarios, rotina, privacidade, backup, offline, espaco, _carregarScript: carregarScript });
 })();

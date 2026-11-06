@@ -114,15 +114,15 @@
       ICM.auth.can('usuarios.gerenciar') && { href: '#/usuarios', icon: 'key', label: 'Usuários e acessos', match: /^\/usuarios/ },
       ICM.auth.can('auditoria.ver') && { href: '#/auditoria', icon: 'shield', label: 'Auditoria', match: /^\/auditoria/ },
       ICM.auth.can('importar.dados') && { href: '#/importar', icon: 'upload', label: 'Importar planilhas', desc: 'Alunos, turmas, equipe e mais a partir do Excel', match: /^\/importar/ },
-      ICM.auth.can('backup.exportar') && { href: '#/dados', icon: 'download', label: 'Backup e privacidade', match: /^\/dados/ },
+      ICM.auth.can('backup.exportar') && { href: '#/dados', icon: 'download', label: 'Backup e privacidade', match: /^\/dados/, count: 'espaco' },
       { href: '#/config', icon: 'settings', label: 'Configurações', match: /^\/config/ }
     ] },
     { href: '#/chat', icon: 'chat', label: 'Chat', match: /^\/chat/, count: 'chat' }
   ].map(n => n.itens ? { ...n, itens: n.itens.filter(Boolean) } : n);
 
-  let alertCount = 0, atrasoCount = 0, inadCount = 0, docsCount = 0, chatCount = 0, govCount = 0;
-  const contagem = c => ({ alertas: alertCount, atrasos: atrasoCount, inadimplentes: inadCount, docs: docsCount, chat: chatCount, gov: govCount }[c] || 0);
-  const DICA = { alertas: 'Alunos em alerta de faltas', atrasos: 'Empréstimos atrasados', inadimplentes: 'Associados inadimplentes', docs: 'Documentos vencidos ou vencendo', gov: 'Mandatos vencendo ou encerrados', chat: 'Mensagens não lidas' };
+  let alertCount = 0, atrasoCount = 0, inadCount = 0, docsCount = 0, chatCount = 0, govCount = 0, espacoCount = 0;
+  const contagem = c => ({ alertas: alertCount, atrasos: atrasoCount, inadimplentes: inadCount, docs: docsCount, chat: chatCount, gov: govCount, espaco: espacoCount }[c] || 0);
+  const DICA = { espaco: 'Espaço do Supabase acima de 70%', alertas: 'Alunos em alerta de faltas', atrasos: 'Empréstimos atrasados', inadimplentes: 'Associados inadimplentes', docs: 'Documentos vencidos ou vencendo', gov: 'Mandatos vencendo ou encerrados', chat: 'Mensagens não lidas' };
 
   function shell(user) {
     root.innerHTML = `
@@ -269,6 +269,14 @@
     try { atrasoCount = (await ICM.api.emprestimos.list({ status: 'atrasado' })).length; } catch (e) { atrasoCount = 0; }
     try { docsCount = ICM.auth.can('docinst.ver') ? (await ICM.api.docsInst.list()).filter(d => d.status.nivel === 'danger').length : 0; } catch (e) { docsCount = 0; }
     try { inadCount = ICM.auth.can('associados.gerir') ? (await ICM.api.associados.list()).filter(a => a.status === 'ativo' && !a.em_dia).length : 0; } catch (e) { inadCount = 0; }
+    // Espaço do Supabase: mede no máximo 1 vez por hora por aba (só o administrador)
+    try {
+      if (ICM.auth.can('backup.exportar') && ICM.api.espaco && ICM.api.espaco.disponivel()) {
+        let c = null; try { c = JSON.parse(sessionStorage.getItem('icm_espaco') || 'null'); } catch (e) { /* */ }
+        if (!c || Date.now() - c.em > 3600000) { const m = await ICM.api.espaco.medir(); c = { em: Date.now(), pct: Math.max(m.pctBanco, m.pctArquivos) }; sessionStorage.setItem('icm_espaco', JSON.stringify(c)); }
+        espacoCount = c.pct >= 70 ? 1 : 0;
+      } else espacoCount = 0;
+    } catch (e) { espacoCount = 0; }
     try { govCount = ICM.auth.can('governanca.ver') ? (await ICM.api.governanca.mandatos()).filter(m => m.status === 'a_vencer').length : 0; } catch (e) { govCount = 0; }
     try { chatCount = await ICM.api.chat.naoLidas(); } catch (e) { chatCount = 0; }
     const path = (location.hash || '#/').slice(1).split('?')[0];

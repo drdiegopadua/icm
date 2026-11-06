@@ -156,6 +156,24 @@ function avisosDiarios() {
   bloco('Empréstimos de bens atrasados', (d.emprestimos || []).filter(function (x) { return x.status === 'ativo' && x.previsao_devolucao && x.previsao_devolucao < hoje; })
     .map(function (x) { return (x.quantidade || 1) + 'x ' + (bem[x.item_id] || 'bem') + ' — ' + (nomeAluno[x.aluno_id] || (x.terceiro && x.terceiro.nome) || 'tomador') + ' (devolução prevista ' + br(x.previsao_devolucao) + ')'; }));
 
+  // Espaço do Supabase acima de 70% (precisa do supabase/icm_v6_espaco.sql)
+  try {
+    const r = UrlFetchApp.fetch(c.url + '/rest/v1/rpc/uso_armazenamento', { method: 'post', contentType: 'application/json', payload: '{}', headers: cabecalhos_(c), muteHttpExceptions: true });
+    if (r.getResponseCode() < 300) {
+      const m = JSON.parse(r.getContentText());
+      const MB = 1024 * 1024, GB = 1024 * MB;
+      const pro = ((config.supabase || {}).plano) === 'pro';
+      const lim = pro ? { banco: 8 * GB, arquivos: 100 * GB } : { banco: 500 * MB, arquivos: 1 * GB };
+      const fmt = function (b) { return b >= GB ? (b / GB).toFixed(2) + ' GB' : Math.round(b / MB) + ' MB'; };
+      const pa = m.arquivos_bytes / lim.arquivos * 100, pb = m.banco_bytes / lim.banco * 100;
+      const itens = [];
+      if (pa >= 70) itens.push('Fotos e anexos: ' + pa.toFixed(0) + '% usado (' + fmt(m.arquivos_bytes) + ' de ' + fmt(lim.arquivos) + ')');
+      if (pb >= 70) itens.push('Banco de dados: ' + pb.toFixed(0) + '% usado (' + fmt(m.banco_bytes) + ' de ' + fmt(lim.banco) + ')');
+      if (itens.length && !pro) itens.push('Planeje passar para o plano Pro do Supabase (cerca de US$ 25/mês) antes de chegar a 100%.');
+      bloco('Espaço do Supabase acima de 70%', itens);
+    } else Logger.log('Espaço do Supabase não medido (rode o supabase/icm_v6_espaco.sql): ' + r.getResponseCode());
+  } catch (e) { Logger.log('Espaço do Supabase não medido: ' + e.message); }
+
   if (!blocos.length) { Logger.log('Nenhuma pendência hoje: e-mail não enviado.'); return 0; }
   let para = c.emails;
   if (!para) para = tabela_(c, 'perfis', 'ativo=eq.true&papel=in.(admin,coordenacao)', 'nome').map(function (p) { return p.email; }).join(',');

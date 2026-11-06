@@ -99,8 +99,17 @@
     const dias = Array.from({ length: 7 }, (_, i) => { const x = new Date(seg); x.setDate(seg.getDate() + i); return U().iso(x); });
     const evs = await tentar(() => ICM.api.eventos.list(), []);
     const reus = await tentar(() => ICM.api.reunioes.list(), []);
+    // Turmas aparecem pelo horário cadastrado (dias e horário), mesmo sem aula lançada;
+    // em feriado ou recesso do calendário letivo, a turma não aparece e o dia mostra o feriado
+    const cal = await tentar(() => ICM.api.calendario.list(), []);
+    const parada = k => cal.find(e => ['feriado', 'recesso'].includes(e.tipo) && e.inicio <= k && (e.fim || e.inicio) >= k);
+    const vigente = (t, k) => { const p = projetos.find(x => x.id === t.projeto_id) || {}; return t.status !== 'encerrada' && p.status !== 'encerrado' && (!p.inicio || p.inicio <= k) && (!p.fim || p.fim >= k); };
+    const previstas = k => parada(k) ? [] : turmas.filter(t => vigente(t, k) && (t.dias || []).includes(U().parseD(k).getDay()) && !aulas.some(a => a.turma_id === t.id && a.data === k))
+      .map(t => ({ h: t.inicio, t: t.nome, c: cor(t.id), href: `#/turmas/${t.id}`, prev: true }));
     d.semana = dias.map(k => ({
       k, itens: [
+        ...(parada(k) ? [{ h: (ICM.C.TIPOS_CALENDARIO[parada(k).tipo] || {}).nome || '', t: parada(k).titulo, c: '#ef4444', href: '#/calendario-letivo', ev: true }] : []),
+        ...previstas(k),
         ...aulas.filter(a => a.data === k && a.status !== 'cancelada').map(a => ({ h: a.inicio, t: (turmas.find(t => t.id === a.turma_id) || {}).nome || 'Aula', c: cor(a.turma_id), href: `#/turmas/${a.turma_id}?aula=${a.id}`, feita: a.status === 'realizada' })),
         ...evs.filter(e => e.data === k).map(e => ({ h: e.horario || '', t: e.titulo, c: (ICM.C.TIPOS_EVENTO[e.tipo] || {}).cor || '#8b5cf6', href: `#/eventos/${e.id}`, ev: true })),
         ...reus.filter(x => x.data === k).map(x => ({ h: x.horario || '', t: 'Reunião: ' + x.titulo, c: '#0891b2', href: `#/reunioes/${x.id}`, ev: true }))
@@ -184,7 +193,7 @@
       <div class="sec-t mt-6">${I('calendar', 18)} Agenda da semana</div>
       <div class="semana">${d.semana.map(s => `<div class="sd ${s.k === d.hoje ? 'hoje' : ''} ${s.k < d.hoje ? 'passou' : ''}">
         <div class="sd-h"><b>${esc(DIAS[U().parseD(s.k).getDay()].slice(0, 3))}</b><span>${esc(fmtDateShort(s.k))}</span></div>
-        ${s.itens.length ? s.itens.slice(0, 6).map(it => `<a class="sd-i ${it.ev ? 'ev' : ''} ${it.feita ? 'feita' : ''}" href="${it.href}" style="--c:${it.c}"><small>${esc(it.h || '')}</small>${esc(it.t)}</a>`).join('') + (s.itens.length > 6 ? `<div class="xs muted">+${s.itens.length - 6}</div>` : '') : '<div class="xs muted sd-v">Livre</div>'}
+        ${s.itens.length ? s.itens.slice(0, 6).map(it => `<a class="sd-i ${it.ev ? 'ev' : ''} ${it.feita ? 'feita' : ''} ${it.prev ? 'prev' : ''}" href="${it.href}" title="${it.prev ? 'Aula prevista pelo horário da turma (ainda não lançada)' : it.feita ? 'Aula realizada' : ''}" style="--c:${it.c}"><small>${esc(it.h || '')}</small>${esc(it.t)}</a>`).join('') + (s.itens.length > 6 ? `<div class="xs muted">+${s.itens.length - 6}</div>` : '') : '<div class="xs muted sd-v">Livre</div>'}
       </div>`).join('')}</div>
     </div>
     <style>
@@ -217,7 +226,7 @@
       .painel .sd-h{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}.painel .sd-h b{color:var(--text)}
       .painel .sd-i{display:block;font-size:12px;font-weight:600;line-height:1.25;padding:6px 8px;border-radius:9px;color:var(--text);text-decoration:none;background:color-mix(in srgb,var(--c) 14%,transparent);border-left:3px solid var(--c);overflow-wrap:anywhere}
       .painel .sd-i small{display:block;color:var(--muted);font-weight:700}
-      .painel .sd-i.ev{background:color-mix(in srgb,var(--c) 26%,transparent)}.painel .sd-i.feita{opacity:.6}
+      .painel .sd-i.ev{background:color-mix(in srgb,var(--c) 26%,transparent)}.painel .sd-i.feita{opacity:.6}.painel .sd-i.prev{background:transparent;border:1px dashed color-mix(in srgb,var(--c) 55%,transparent);border-left:3px solid var(--c)}
       .painel .sd-v{margin:auto 0;text-align:center}
       @media (max-width:900px){.painel .semana{grid-template-columns:repeat(2,minmax(0,1fr))}}
       @media print{.topnav,.subbar,.no-print,.bg-orbs{display:none!important}.painel .card{box-shadow:none;border:1px solid #ddd;break-inside:avoid}.painel a{color:inherit}}

@@ -68,7 +68,8 @@
 @page { size: A4; margin: 12mm; }
 @media print {
   body { background: #fff !important; }
-  body > *:not(.report-viewer) { display: none !important; }
+  /* Só quando há um relatório aberto: as outras telas (painel, agenda…) imprimem normalmente */
+  body:has(> .report-viewer) > *:not(.report-viewer) { display: none !important; }
   .report-viewer { position: static; background: #fff; display: block; }
   .report-toolbar { display: none !important; }
   .report-scroll { padding: 0; overflow: visible; }

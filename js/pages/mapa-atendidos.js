@@ -146,7 +146,8 @@
 
     // mapa
     const mapa = L.map(el.querySelector('[data-mapa]'), { scrollWheelZoom: true }).setView(SEDE.ll, 13);
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(mapa);
+    // O OSM exige saber de qual site vem o pedido (o sistema, por padrão, não envia o referer)
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap', referrerPolicy: 'strict-origin-when-cross-origin' }).addTo(mapa);
     const camadaExtras = L.layerGroup().addTo(mapa);
     let grupo = null, primeiraVez = true;
 
@@ -174,7 +175,10 @@
       if (primeiraVez && comPonto.length) { mapa.fitBounds(L.latLngBounds(comPonto.map(x => [x.g.lat, x.g.lng])).pad(.08), { maxZoom: 15 }); primeiraVez = false; }
 
       // por bairro
-      const bairros = Object.entries(lista.reduce((o, a) => { const b = limpa((a.endereco || {}).bairro) || 'Não informado'; o[b] = (o[b] || 0) + 1; return o; }, {})).sort((x, y) => y[1] - x[1]);
+      const norm = t => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ');
+      const grupos = {};
+      lista.forEach(a => { const b = limpa((a.endereco || {}).bairro) || 'Não informado'; const k = norm(b); const g = grupos[k] || (grupos[k] = { n: 0, nomes: {} }); g.n++; g.nomes[b] = (g.nomes[b] || 0) + 1; });
+      const bairros = Object.values(grupos).map(g => [Object.entries(g.nomes).sort((x, y) => y[1] - x[1] || /[^ -]/.test(y[0]) - /[^ -]/.test(x[0]))[0][0], g.n]).sort((x, y) => y[1] - x[1]);
       const mx = bairros.length ? bairros[0][1] : 1;
       el.querySelector('[data-bairros]').innerHTML = bairros.map(([b, n]) => `<div class="ma-b"><span class="truncate">${esc(b)}</span><b>${n}</b><i style="width:${n / mx * 100}%"></i></div>`).join('') || ICM.ui.empty('Nenhum aluno');
       const projsNoMapa = f.corProjeto ? projetos.filter(p => comPonto.some(({ a }) => { const t = turmasDo(a)[0]; return t && t.projeto_id === p.id; })) : [];

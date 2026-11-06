@@ -17,7 +17,7 @@
   const PRIVADO = {
     alunos: a => {
       const pub = { ...a }, priv = {};
-      ['cpf', 'rg', 'nis', 'social', 'financeiro', 'acesso_familia'].forEach(k => { if (k in pub) { priv[k] = pub[k]; delete pub[k]; } });
+      ['cpf', 'rg', 'nis', 'social', 'financeiro', 'acesso_familia', 'geo'].forEach(k => { if (k in pub) { priv[k] = pub[k]; delete pub[k]; } });
       if (a.saude) { priv.saude = a.saude; const s = a.saude; pub.saude = { alergias: s.alergias || '', medicamentos: s.medicamentos || '', condicoes: s.condicoes || '', apto_atividade_fisica: s.apto_atividade_fisica, contato_emergencia: s.contato_emergencia || '' }; }
       if (a.endereco) { priv.endereco = a.endereco; pub.endereco = { bairro: a.endereco.bairro || '', cidade: a.endereco.cidade || '' }; }
       // CPF, nascimento, estado civil e escolaridade do responsável: só quem vê dados sensíveis

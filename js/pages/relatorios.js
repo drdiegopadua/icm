@@ -29,6 +29,7 @@
         ${card('Relatório mensal da turma', 'Plano de aula, horas do mês, professor, fotos, relatório e chamada de cada aula com a lista de alunos.', 'calendar', '#2563eb', 'turma_mensal')}
         ${card('Relatório anual da turma', 'Aulas e horas por mês, frequência anual por aluno, movimentação, conteúdos, eventos e galeria.', 'chart', '#8b5cf6', 'turma_anual')}
         ${card('Relatório de assiduidade', 'Faltas por aluno e turma no mês, com alertas e encaminhamentos sugeridos.', 'userCheck', '#f97316', 'assiduidade')}
+        ${ICM.auth.can('alunos.sensivel') ? `<a class="card hoverable report-card" style="--c:#0891b2;color:inherit;text-decoration:none" href="#/mapa-atendidos"><div class="ic">${I('pin', 24)}</div><div class="card-title">Localização dos atendidos</div><div class="small muted">Mapa de onde moram os alunos (por matrícula, sem nomes), com filtros por projeto e turma e contagem por bairro. Imprimível para a prestação de contas.</div><div class="row" style="color:var(--primary);font-weight:700">${I('pin', 16)} Abrir mapa</div></a>` : ''}
       </div>
       ${gerais ? `<div class="section-title">${I('folder', 18)} Projetos e instituição</div>
       <div class="grid grid-3 stagger">

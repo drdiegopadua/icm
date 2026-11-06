@@ -39,7 +39,7 @@
     const s = a.saude || {};
     return {
       ...a, cpf: u().maskCPF(a.cpf), rg: '', nis: '',
-      social: null, financeiro: null,
+      social: null, financeiro: null, geo: null,
       saude: { alergias: s.alergias, medicamentos: s.medicamentos, condicoes: s.condicoes, apto_atividade_fisica: s.apto_atividade_fisica, contato_emergencia: s.contato_emergencia, _restrito: true },
       endereco: { bairro: a.endereco && a.endereco.bairro, cidade: a.endereco && a.endereco.cidade },
       _restrito: true
@@ -111,6 +111,11 @@
         if (!a) return null;
         if (A().can('alunos.sensivel')) await audit('visualizar_sensivel', 'alunos', id, `Ficha completa de ${a.nome}`);
         return sanitizeAluno(a);
+      },
+      // Coordenada do endereço (mapa dos atendidos). Só quem edita alunos grava.
+      async salvarGeo(id, geo) {
+        need('alunos.editar');
+        return S().update('alunos', id, { geo });
       },
       async save(data) {
         need('alunos.editar');

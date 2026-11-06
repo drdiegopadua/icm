@@ -149,7 +149,7 @@ O app das famílias fica em `app/` e lê deste mesmo banco. Rode `supabase/icm_v
 ## Ligar o banco (uma vez só)
 
 1. Supabase → **SQL Editor** → colar e rodar `supabase/icm_banco.sql` e, depois, `supabase/icm_v2_arquivos_2fa.sql` `supabase/icm_v3_professor.sql` e `supabase/icm_v4_chat_tempo_real.sql`.
-2. Supabase → **Authentication → URL Configuration**: Site URL e Redirect URLs = `https://drdiegopadua.github.io/icm/`.
+2. Supabase → **Authentication → URL Configuration**: Site URL e Redirect URLs = `https://institutodasmontanhas.vercel.app/` (manter também `https://drdiegopadua.github.io/icm/` enquanto o endereço antigo estiver em uso).
 3. Supabase → **Project Settings → API**: copiar a chave **anon public** para `supabaseKey` em `js/config.js`. **Nunca** a `service_role`.
 4. Abrir o sistema → **Primeiro acesso? Criar minha senha** com o e-mail convidado no fim do SQL (o administrador).
 5. Novos usuários: Administração → Novo usuário (vira convite). A pessoa entra em "Primeiro acesso" com esse e-mail.

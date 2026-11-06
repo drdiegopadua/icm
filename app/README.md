@@ -2,7 +2,7 @@
 
 PWA para as famílias, em HTML, CSS e JavaScript puros. Usa o **mesmo banco do Sistema ICM**.
 
-- Publicado em `https://drdiegopadua.github.io/icm/app/`
+- Publicado em `https://institutodasmontanhas.vercel.app/app/` (e em `https://drdiegopadua.github.io/icm/app/`)
 - Demonstração, sem banco: abra com `?demo` no endereço.
 
 ## De onde vem cada informação

@@ -110,12 +110,15 @@
   const delta = (v, ant, modo = '%') => {
     if (v == null || ant == null) return '';
     if (modo === 'pp') { const df = v - ant; return df === 0 ? '<span class="badge neutral dl">= anterior</span>' : `<span class="badge ${df > 0 ? 'ok' : 'danger'} dl">${df > 0 ? '▲' : '▼'} ${Math.abs(df)} p.p.</span>`; }
+    if (modo === 'n') { const df = v - ant; return df === 0 ? '' : `<span class="badge ${df > 0 ? 'ok' : 'danger'} dl">${df > 0 ? '+' : '−'}${Math.abs(df)} vs anterior</span>`; }
     if (!ant) return v ? '<span class="badge ok dl">novo</span>' : '';
     const pc = Math.round((v - ant) / ant * 100);
     return pc === 0 ? '<span class="badge neutral dl">= anterior</span>' : `<span class="badge ${pc > 0 ? 'ok' : 'danger'} dl">${pc > 0 ? '▲' : '▼'} ${Math.abs(pc)}%</span>`;
   };
-  const stat = (icon, color, val, label, extra = '', suffix = '') =>
-    `<div class="card stat hoverable"><div class="row between"><div class="ic" style="--c:${color}">${I(icon, 22)}</div>${extra}</div><div class="val" data-count="${val}" data-suffix="${suffix}">0</div><div class="lbl">${esc(label)}</div></div>`;
+  const stat = (icon, color, val, label, extra = '', suffix = '', href = '') => {
+    const tag = href ? 'a' : 'div';
+    return `<${tag} class="card stat hoverable"${href ? ` href="${href}" style="color:inherit;text-decoration:none"` : ''}><div class="row between"><div class="ic" style="--c:${color}">${I(icon, 22)}</div>${extra}</div><div class="val" data-count="${val}" data-suffix="${suffix}">0</div><div class="lbl">${esc(label)}</div></${tag}>`;
+  };
   const barra = (pct, cls = '') => `<div class="progress mt-2 ${cls}"><span style="width:${Math.max(0, Math.min(100, pct || 0))}%"></span></div>`;
 
   ICM.pages.dashboard = async function (el) {
@@ -144,8 +147,8 @@
       </div>` : `<div class="card atencao ok mb-4"><div class="row">${I('userCheck', 20)}<b>Tudo em dia hoje.</b><span class="muted small">Nenhuma pendência para resolver agora.</span></div></div>`}
 
       <div class="grid grid-4 stagger">
-        ${stat('users', '#2563eb', d.kpi.alunos, `Alunos ativos · ${d.kpi.novos} novo(s) ${R.rot}${d.kpi.saidas ? ` · ${d.kpi.saidas} saída(s)` : ''}`, delta(d.kpi.novos, d.kpi.novosAnt))}
-        ${stat('layers', '#8b5cf6', d.kpi.turmas, `Turmas ativas${d.ocupacao.lotadas ? ` · ${d.ocupacao.lotadas} lotada(s)` : ''}`)}
+        ${stat('users', '#2563eb', d.kpi.alunos, `Alunos ativos · ${d.kpi.novos} novo(s) ${R.rot}${d.kpi.saidas ? ` · ${d.kpi.saidas} saída(s)` : ''}`, delta(d.kpi.novos, d.kpi.novosAnt, 'n'), '', '#/alunos')}
+        ${stat('layers', '#8b5cf6', d.kpi.turmas, `Turmas ativas${d.ocupacao.lotadas ? ` · ${d.ocupacao.lotadas} lotada(s)` : ''}`, '', '', '#/projetos')}
         ${stat('clock', '#f97316', Math.round(d.kpi.horas), `Horas de aula ${R.rot} (${d.kpi.aulas} aulas)`, delta(d.kpi.horas, d.kpi.horasAnt), 'h')}
         ${stat('userCheck', '#10b981', d.kpi.freq || 0, `Frequência ${R.rot}`, delta(d.kpi.freq, d.kpi.freqAnt, 'pp'), '%')}
       </div>

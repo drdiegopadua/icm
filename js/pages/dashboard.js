@@ -74,8 +74,10 @@
     const faixas = [['Até 10', 0, 10], ['11 a 14', 11, 14], ['15 a 17', 15, 17], ['18 a 29', 18, 29], ['30+', 30, 200]];
     const CF = ['#60a5fa', '#2563eb', '#8b5cf6', '#f97316', '#10b981'];
     d.perfil = {
-      faixas: faixas.map(([l, a, b], i) => ({ l, c: CF[i], v: ativos.filter(x => { const n = U().age(x.nascimento); return n != null && n >= a && n <= b; }).length })).filter(x => x.v),
-      sexo: [['F', 'Feminino', '#ec4899'], ['M', 'Masculino', '#2563eb'], ['O', 'Outro', '#94a3b8']].map(([k, l, c]) => ({ l, c, v: ativos.filter(x => x.sexo === k).length })).filter(x => x.v),
+      faixas: faixas.map(([l, a, b], i) => ({ l, c: CF[i], v: ativos.filter(x => { const n = U().age(x.nascimento); return n != null && n >= a && n <= b; }).length }))
+        .concat([{ l: 'Sem data de nascimento', c: '#94a3b8', v: ativos.filter(x => U().age(x.nascimento) == null).length }]).filter(x => x.v),
+      sexo: [['F', 'Feminino', '#ec4899'], ['M', 'Masculino', '#2563eb'], ['O', 'Outro', '#a78bfa']].map(([k, l, c]) => ({ l, c, v: ativos.filter(x => x.sexo === k).length }))
+        .concat([{ l: 'Não informado', c: '#94a3b8', v: ativos.filter(x => !['F', 'M', 'O'].includes(x.sexo)).length }]).filter(x => x.v),
       bairros: Object.entries(ativos.reduce((o, x) => { const b = ((x.endereco || {}).bairro || '').trim() || 'Não informado'; o[b] = (o[b] || 0) + 1; return o; }, {})).sort((a, b) => b[1] - a[1]).slice(0, 6),
       cadunico: can('alunos.sensivel') ? ativos.filter(x => (x.social || {}).cadunico).length : null,
       van: ativos.filter(x => (x.van || {}).usa).length
@@ -160,7 +162,7 @@
         <div class="card"><div class="card-head"><div class="card-title">Quem atendemos</div></div>
           ${d.perfil.sexo.length ? ICM.ui.donut(d.perfil.sexo, 130) : ''}
           <div class="row wrap mt-4">
-            <span class="badge neutral">${d.perfil.van} usam a van</span>
+            <span class="badge neutral">${d.perfil.van} ${d.perfil.van === 1 ? 'usa' : 'usam'} a van</span>
             ${d.perfil.cadunico != null ? `<span class="badge neutral">${d.perfil.cadunico} no CadÚnico (${d.kpi.alunos ? Math.round(d.perfil.cadunico / d.kpi.alunos * 100) : 0}%)</span>` : ''}
             ${d.espera ? `<a class="badge info" href="#/espera">${d.espera} na lista de espera</a>` : ''}
           </div>

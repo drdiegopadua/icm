@@ -76,20 +76,37 @@
     const alunos = await ICM.api.alunos.list({ status: 'ativo' });
     const m = ui().modal({
       title: 'Emitir certificados', size: 'wide',
-      body: `<div class="segmented mb-4" data-modo><button data-v="turma" class="active">Conclusão de turma</button><button data-v="evento">Participação em evento</button><button data-v="voluntario">Voluntários</button><button data-v="avulso">Avulso</button></div>
+      body: `<div class="segmented mb-4" data-modo><button data-v="turma" class="active">Conclusão de turma</button><button data-v="evento">Participação em evento</button><button data-v="voluntario">Voluntários</button><button data-v="avulso">Avulso</button><button data-v="planilha">Planilha</button></div>
         <form class="grid grid-3" data-f></form><div class="mt-4" data-dest></div>`,
       foot: `<span class="small muted" data-n style="margin-right:auto"></span><button class="btn" data-close>Cancelar</button><button class="btn btn-primary" data-ok>${I('award', 18)} Emitir e imprimir</button>`
     });
-    let modo = 'turma', dest = [];
+    let modo = 'turma', dest = [], planilha = [];
     const sel = new Set();
     const f = m.$('[data-f]');
     const forms = {
       turma: () => `${F({ name: 'turma_id', label: 'Turma', type: 'select', options: turmas.map(t => [t.id, t.nome]), cls: 'span-2' })}${F({ name: 'freq', label: 'Frequência mínima (%)', type: 'number', value: 75 })}${F({ name: 'titulo', label: 'Título do curso', value: '', cls: 'span-2' })}${F({ name: 'carga', label: 'Carga horária (h)', type: 'number', value: '' })}`,
       evento: () => `${F({ name: 'evento_id', label: 'Evento', type: 'select', options: eventos.filter(e => e.data <= ICM.util.today()).map(e => [e.id, `${fmtDate(e.data)} — ${e.titulo}`]), cls: 'span-2' })}${F({ name: 'carga', label: 'Carga horária (h)', type: 'number', value: 3 })}`,
       voluntario: () => `<div class="span-all small muted">Gera um certificado para cada voluntário selecionado com o total de horas doadas.</div>`,
+      planilha: () => `${F({ name: 'tipo', label: 'Tipo', type: 'select', options: Object.entries(TP()).map(([k, v]) => [k, v.nome]) })}${F({ name: 'titulo', label: 'Título (se a planilha não tiver)', cls: 'span-2' })}${F({ name: 'carga', label: 'Carga horária (h)', type: 'number' })}${F({ name: 'descricao', label: 'Texto ("Certificamos que FULANO …")', value: 'participou de', cls: 'span-2' })}
+        <div class="span-all row wrap"><label class="btn">${I('upload', 16)} Escolher planilha (Excel ou CSV)<input type="file" accept=".xlsx,.xls,.csv" hidden data-arq></label><button type="button" class="btn btn-ghost" data-modelo>${I('download', 16)} Baixar modelo</button><span class="xs muted">Colunas: nome (obrigatória), titulo, carga_horaria, descricao</span></div>`,
       avulso: () => `${F({ name: 'tipo', label: 'Tipo', type: 'select', options: Object.entries(TP()).map(([k, v]) => [k, v.nome]) })}${F({ name: 'titulo', label: 'Título', cls: 'span-2' })}${F({ name: 'nome', label: 'Nome do destinatário (externo)', cls: 'span-2', hint: 'Ou selecione alunos abaixo' })}${F({ name: 'carga', label: 'Carga horária (h)', type: 'number' })}${F({ name: 'descricao', label: 'Texto ("Certificamos que FULANO …")', value: 'participou de', cls: 'span-all' })}`
     };
-    function renderForm() { f.innerHTML = forms[modo](); carregar(); }
+    function renderForm() {
+      f.innerHTML = forms[modo](); carregar();
+      const arq = f.querySelector('[data-arq]');
+      if (arq) arq.addEventListener('change', async e => {
+        const file = e.target.files[0]; if (!file) return;
+        try {
+          await ICM.api._carregarScript('js/vendor/xlsx.full.min.js'); const X = window.XLSX;
+          const wb = X.read(await file.arrayBuffer(), { type: 'array' });
+          const nk = k => String(k).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+          planilha = X.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' }).map(r => { const o = {}; Object.keys(r).forEach(k => { o[nk(k)] = String(r[k]).trim(); }); return { nome: o.nome || o.nome_completo || o.participante || '', titulo: o.titulo || o.curso || o.evento || '', carga: Number(String(o.carga_horaria || o.carga || o.horas || '').replace(',', '.')) || null, descricao: o.descricao || '' }; }).filter(l => l.nome.split(/\s+/).length >= 2);
+          ui().toast(`${planilha.length} nome(s) lidos da planilha`, 'ok'); carregar();
+        } catch (er) { ui().toast('Não consegui ler a planilha: ' + er.message, 'danger'); }
+      });
+      const mod = f.querySelector('[data-modelo]');
+      if (mod) mod.addEventListener('click', async () => { await ICM.api._carregarScript('js/vendor/xlsx.full.min.js'); const X = window.XLSX; const ws = X.utils.aoa_to_sheet([['nome', 'titulo', 'carga_horaria', 'descricao'], ['Maria Clara Souza', 'Oficina de Música', 20, 'participou da']]); ws['!cols'] = [{ wch: 36 }, { wch: 30 }, { wch: 14 }, { wch: 30 }]; const wb = X.utils.book_new(); X.utils.book_append_sheet(wb, ws, 'Certificados'); X.writeFile(wb, 'modelo-certificados.xlsx'); });
+    }
     async function carregar() {
       sel.clear();
       const d = ICM.util.formData(f);
@@ -103,6 +120,7 @@
         const e = eventos.find(x => x.id === d.evento_id);
         dest = alunos.filter(a => (e.alunos || []).includes(a.id)).map(a => ({ id: a.id, nome: a.nome, info: a.matricula, ok: true, tipo: 'aluno' }));
       } else if (modo === 'voluntario') dest = vols.map(v => ({ id: v.id, nome: v.nome, info: `${ICM.util.num(v.total_horas, 1)}h · ${v.area}`, ok: v.total_horas > 0, tipo: 'voluntario', horas: v.total_horas, area: v.area, inicio: v.inicio }));
+      else if (modo === 'planilha') dest = planilha.map((l, i) => ({ id: 'pl' + i, nome: l.nome, info: [l.titulo, l.carga ? l.carga + 'h' : ''].filter(Boolean).join(' · ') || 'da planilha', ok: true, tipo: 'externo', linha: l }));
       else dest = alunos.map(a => ({ id: a.id, nome: a.nome, info: a.matricula, ok: false, tipo: 'aluno' }));
       dest.forEach(x => { if (x.ok) sel.add(x.id); });
       drawDest();
@@ -121,6 +139,8 @@
       if (modo === 'turma') escolhidos.forEach(x => lista.push({ tipo: 'conclusao', destinatario_tipo: 'aluno', destinatario_id: x.id, nome: x.nome, titulo: d.titulo, descricao: 'concluiu com aproveitamento a turma/curso', carga_horaria: Number(d.carga) || null, referencia: { turma_id: d.turma_id } }));
       if (modo === 'evento') { const ev = eventos.find(x => x.id === d.evento_id); escolhidos.forEach(x => lista.push({ tipo: 'participacao', destinatario_tipo: 'aluno', destinatario_id: x.id, nome: x.nome, titulo: ev.titulo, descricao: `participou do evento (${ICM.C.TIPOS_EVENTO[ev.tipo].nome.toLowerCase()}) realizado em ${fmtDate(ev.data)}`, carga_horaria: Number(d.carga) || null, referencia: { evento_id: ev.id } })); }
       if (modo === 'voluntario') escolhidos.forEach(x => lista.push({ tipo: 'voluntariado', destinatario_tipo: 'voluntario', destinatario_id: x.id, nome: x.nome, titulo: `Trabalho voluntário — ${x.area || ICM.C.ORG.nome}`, descricao: `atuou como voluntário(a) em ${x.area || 'atividades da instituição'}, desde ${fmtDate(x.inicio)}`, carga_horaria: x.horas }));
+      if (modo === 'planilha') escolhidos.forEach(x => lista.push({ tipo: d.tipo, destinatario_tipo: 'externo', destinatario_id: '', nome: x.nome, titulo: x.linha.titulo || d.titulo, descricao: x.linha.descricao || d.descricao, carga_horaria: x.linha.carga || Number(d.carga) || null }));
+      if (modo === 'planilha' && lista.some(c => !c.titulo)) { ui().toast('Informe o título (ou preencha a coluna titulo na planilha).', 'warn'); return; }
       if (modo === 'avulso') {
         if (d.nome) lista.push({ tipo: d.tipo, destinatario_tipo: 'externo', destinatario_id: '', nome: d.nome, titulo: d.titulo, descricao: d.descricao, carga_horaria: Number(d.carga) || null });
         escolhidos.forEach(x => lista.push({ tipo: d.tipo, destinatario_tipo: 'aluno', destinatario_id: x.id, nome: x.nome, titulo: d.titulo, descricao: d.descricao, carga_horaria: Number(d.carga) || null }));

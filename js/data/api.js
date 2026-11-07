@@ -273,7 +273,14 @@
         const horas = aulas.reduce((s, a) => s + (a.horas || 0), 0);
         const eventos = await S().list('eventos', e => e.projeto_id === id && (!de || e.data >= de) && (!ate || e.data <= ate));
         const fotos = aulas.reduce((s, a) => s + (a.fotos || []).length, 0);
-        return { turmas: turmas.length, aulas: aulas.length, horas, ativos: ativos.size, atendidos: atendidos.size, freq: T ? Math.round(P / T * 100) : 0, eventos: eventos.length, fotos, desligados: mats.filter(m => m.status === 'saiu').length };
+        // Indicadores de resultado: frequência por aluno, permanência, famílias e certificados
+        const porAluno = {}; aulas.forEach(a => Object.entries(a.presencas || {}).forEach(([id, v]) => { const x = porAluno[id] || (porAluno[id] = { P: 0, T: 0 }); x.T++; if (v !== 'F') x.P++; }));
+        const comAula = [...ativos].filter(id => porAluno[id] && porAluno[id].T);
+        const freq75 = comAula.length ? Math.round(comAula.filter(id => porAluno[id].P / porAluno[id].T >= 0.75).length / comAula.length * 100) : 0;
+        const alunosP = await S().list('alunos', a => atendidos.has(a.id)).catch(() => []);
+        const familias = new Set(alunosP.map(a => { const r = a.responsavel || {}; const k = (String(r.nome || '').trim().toLowerCase() + '|' + String(r.telefone || '').replace(/\D/g, '')); return k.length > 1 ? k : a.id; })).size;
+        const certificados = (await S().list('certificados', c => c.status === 'valido' && atendidos.has(c.destinatario_id) && (!de || c.data_emissao >= de) && (!ate || c.data_emissao <= ate)).catch(() => [])).length;
+        return { turmas: turmas.length, aulas: aulas.length, horas, ativos: ativos.size, atendidos: atendidos.size, freq: T ? Math.round(P / T * 100) : 0, eventos: eventos.length, fotos, desligados: mats.filter(m => m.status === 'saiu').length, freq75, permanencia: atendidos.size ? Math.round(ativos.size / atendidos.size * 100) : 0, familias, certificados };
       }
     },
 

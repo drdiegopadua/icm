@@ -27,6 +27,7 @@
     { re: /^\/projetos$/, page: 'projetos' },
     { re: /^\/projetos\/([\w-]+)$/, page: 'projetoDetalhe', keys: ['id'] },
     { re: /^\/turmas$/, page: 'turmasLista' },
+    { re: /^\/impacto$/, page: 'impacto', perm: 'projetos.editar' },
     { re: /^\/turmas\/([\w-]+)$/, page: 'turma', keys: ['id'] },
     { re: /^\/eventos$/, page: 'eventos' },
     { re: /^\/eventos\/([\w-]+)$/, page: 'eventoDetalhe', keys: ['id'] },
@@ -114,6 +115,7 @@
     ] },
     { label: 'Gestão', icon: 'building', itens: [
       { href: '#/projetos', icon: 'folder', label: 'Projetos', desc: 'Editais e termos, metas, vigência, orçamento e app', match: /^\/projetos/ },
+      ICM.auth.can('projetos.editar') && { href: '#/impacto', icon: 'target', label: 'Indicadores de impacto', desc: 'Matriz de indicadores, ODS e relatório de impacto', match: /^\/impacto/ },
       ICM.auth.can('financeiro.ver') && { href: '#/financeiro', icon: 'dollar', label: 'Financeiro', desc: 'Pagar e receber, orçamento por projeto, conciliação', match: /^\/financeiro/ },
       { href: '#/compras', icon: 'clipboard', label: 'Compras', desc: 'Pedidos, 3 orçamentos e aprovação', match: /^\/compras/ },
       { href: '#/patrimonio', icon: 'building', label: 'Patrimônio', match: /^\/patrimonio/, count: 'atrasos' },
@@ -131,7 +133,7 @@
   // Menus grandes abrem em colunas por assunto
   const SECOES = {
     '#/gestao-pedagogica': 'Acompanhamento', '#/rotina': 'Acompanhamento',
-    '#/turmas': 'Turmas e alunos', '#/projetos': 'Projetos e recursos', '#/grade-semanal': 'Turmas e alunos', '#/mapa-atendidos': 'Turmas e alunos',
+    '#/turmas': 'Turmas e alunos', '#/projetos': 'Projetos e recursos', '#/impacto': 'Projetos e recursos', '#/grade-semanal': 'Turmas e alunos', '#/mapa-atendidos': 'Turmas e alunos',
     '#/eventos': 'Eventos e calendário', '#/agenda': 'Eventos e calendário', '#/calendario-letivo': 'Eventos e calendário',
     '#/financeiro': 'Projetos e recursos', '#/compras': 'Administrativo', '#/patrimonio': 'Administrativo', '#/estoque': 'Administrativo',
     '#/equipe': 'Pessoas e acessos', '#/assinaturas-equipe': 'Pessoas e acessos', '#/usuarios': 'Pessoas e acessos',

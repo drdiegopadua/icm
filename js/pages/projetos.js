@@ -68,7 +68,7 @@
         </div>
       </div>
       <div class="tabs mb-4">
-        ${[['turmas', 'Turmas / atividades', 'layers'], ['dados', 'Dados do projeto', 'fileText'], ['metas', 'Metas e indicadores', 'target'], ['eventos', 'Eventos', 'star']].map(([k, t, ic]) => `<button class="tab ${k === tab0 ? 'active' : ''}" data-tab="${k}">${I(ic, 16)} ${t}</button>`).join('')}
+        ${[['turmas', 'Turmas / atividades', 'layers'], ['dados', 'Dados do projeto', 'fileText'], ['metas', 'Indicadores e impacto', 'target'], ['eventos', 'Eventos', 'star']].map(([k, t, ic]) => `<button class="tab ${k === tab0 ? 'active' : ''}" data-tab="${k}">${I(ic, 16)} ${t}</button>`).join('')}
       </div>
       <div data-panel></div>
     </div>`;
@@ -101,10 +101,8 @@
         </div>`;
       },
       async metas() {
-        panel.innerHTML = `<div class="card tab-panel"><div class="card-head"><div><div class="card-title">Metas e indicadores</div><div class="card-sub">Valores atuais calculados automaticamente a partir dos registros de aulas, turmas e eventos</div></div></div>
-          ${(p.metas || []).length ? (p.metas).map(m => { const at = metaAtual(m, s, p); const pc = m.alvo ? Math.min(100, Math.round(at / m.alvo * 100)) : 0; return `
-            <div class="mb-4"><div class="row between"><div><b>${esc(m.descricao)}</b><div class="xs muted">${esc(m.indicador)}</div></div><div class="bold">${num(at)} / ${num(m.alvo)} ${esc(m.unidade || '')}</div></div>
-            <div class="progress mt-2 ${pc >= 100 ? 'ok' : pc >= 60 ? '' : 'warn'}"><span style="width:${pc}%"></span></div><div class="xs muted mt-2">${pc}% da meta</div></div>`; }).join('') : ui().empty('Nenhuma meta cadastrada', 'target')}</div>`;
+        const recarregar = () => { const h = `#/projetos/${p.id}?tab=metas`; if (location.hash === h) ICM.app.reload(); else location.hash = h; };
+        await ICM.impacto.abaProjeto(panel, p, s, recarregar);
       },
       async eventos() {
         const evs = (await ICM.api.eventos.list()).filter(e => e.projeto_id === p.id);

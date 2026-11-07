@@ -612,3 +612,13 @@ body.sens-blur::before { content: 'Conteúdo protegido — volte para esta janel
   body.sens-on:not(:has(> .report-viewer)) > * { display: none !important; }
   body.sens-on:not(:has(> .report-viewer))::before { content: 'Impressão bloqueada: tela com dados sensíveis. Use Relatórios para gerar o documento oficial.'; display: block; position: static; padding: 40px; font: 700 16px Arial, sans-serif; color: #000; filter: none; }
 }
+
+/* Menus grandes em colunas (Pedagógico, Gestão) */
+.tn-sec { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 8px 10px 4px; }
+@media (min-width: 1081px) {
+  .tn-mega { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(210px, 1fr); gap: 2px 10px; min-width: 0; padding: 10px 12px; }
+  .tn-mega .tn-col + .tn-col { border-left: 1px solid var(--line-2); padding-left: 10px; }
+  .tn-mega .tn-link { padding: 7px 8px; gap: 10px; }
+  .tn-mega .tn-link b { font-size: 13.5px; white-space: nowrap; }
+  .tn-mega .tn-ic { width: 30px; height: 30px; border-radius: 10px; }
+}

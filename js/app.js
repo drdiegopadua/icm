@@ -125,7 +125,16 @@
       { href: '#/config', icon: 'settings', label: 'Configurações', match: /^\/config/ }
     ] },
     { href: '#/chat', icon: 'chat', label: 'Chat', match: /^\/chat/, count: 'chat' }
-  ].map(n => n.itens ? { ...n, itens: n.itens.filter(Boolean) } : n);
+  ].map(n => n.itens ? { ...n, itens: n.itens.filter(Boolean).map(x => ({ ...x, secao: SECOES[x.href] || '' })) } : n);
+  // Menus grandes abrem em colunas por assunto
+  const SECOES = {
+    '#/gestao-pedagogica': 'Acompanhamento', '#/rotina': 'Acompanhamento',
+    '#/projetos': 'Turmas e alunos', '#/grade-semanal': 'Turmas e alunos', '#/mapa-atendidos': 'Turmas e alunos',
+    '#/eventos': 'Eventos e calendário', '#/agenda': 'Eventos e calendário', '#/calendario-letivo': 'Eventos e calendário',
+    '#/financeiro': 'Administrativo', '#/compras': 'Administrativo', '#/patrimonio': 'Administrativo', '#/estoque': 'Administrativo',
+    '#/equipe': 'Pessoas e acessos', '#/assinaturas-equipe': 'Pessoas e acessos', '#/usuarios': 'Pessoas e acessos',
+    '#/auditoria': 'Sistema', '#/importar': 'Sistema', '#/dados': 'Sistema', '#/config': 'Sistema'
+  };
 
   let alertCount = 0, atrasoCount = 0, inadCount = 0, docsCount = 0, chatCount = 0, govCount = 0, espacoCount = 0;
   const contagem = c => ({ alertas: alertCount, atrasos: atrasoCount, inadimplentes: inadCount, docs: docsCount, chat: chatCount, gov: govCount, espaco: espacoCount }[c] || 0);
@@ -172,6 +181,8 @@
       if (gb) {
         const g = gb.parentElement; const abrir = !g.classList.contains('aberto');
         fecharMenus(g); g.classList.toggle('aberto', abrir); gb.setAttribute('aria-expanded', String(abrir));
+        const dr = g.querySelector('.tn-mega');
+        if (dr && abrir) { dr.style.marginLeft = '0px'; const r = dr.getBoundingClientRect(); const sobra = Math.max(0, r.right - (innerWidth - 12)) - Math.max(0, 12 - r.left); if (sobra) dr.style.marginLeft = `${-sobra}px`; }
         return;
       }
       if (e.target.closest('.tn-drop a, .tn-menu > a')) { fecharMenus(); root.querySelector('.app').classList.remove('mobile-open'); }
@@ -202,9 +213,12 @@
       const ativo = n.itens.some(x => x.match.test(path));
       const pend = n.itens.some(x => x.count && contagem(x.count));
       const ab = abertoLbl === n.label;
+      const secs = [...new Set(n.itens.map(x => x.secao).filter(Boolean))];
+      const mega = n.itens.length > 6 && secs.length > 1 && n.itens.every(x => x.secao);
+      const link = (x, compacto) => `<a class="tn-link ${x.match.test(path) ? 'active' : ''}" href="${x.href}" role="menuitem"${compacto && x.desc ? ` title="${esc(x.desc)}"` : ''}><span class="tn-ic">${I(x.icon, compacto ? 16 : 18)}</span><span class="grow"><b>${esc(x.label)}</b>${x.desc && !compacto ? `<small>${esc(x.desc)}</small>` : ''}</span>${x.count ? badge(x.count) : ''}</a>`;
       return `<div class="tn-grupo ${ab ? 'aberto' : ''}">
         <button class="tn-item tn-grupo-btn ${ativo ? 'active' : ''}" data-lbl="${esc(n.label)}" aria-haspopup="true" aria-expanded="${ab}">${I(n.icon, 18)}<span>${esc(n.label)}</span><span class="tn-seta">${I('chevronDown', 14)}</span>${pend ? '<span class="tn-ponto"></span>' : ''}</button>
-        <div class="tn-drop" role="menu">${n.itens.map(x => `<a class="tn-link ${x.match.test(path) ? 'active' : ''}" href="${x.href}" role="menuitem"><span class="tn-ic">${I(x.icon, 18)}</span><span class="grow"><b>${esc(x.label)}</b>${x.desc ? `<small>${esc(x.desc)}</small>` : ''}</span>${x.count ? badge(x.count) : ''}</a>`).join('')}</div>
+        ${mega ? `<div class="tn-drop tn-mega" role="menu">${secs.map(sc => `<div class="tn-col"><div class="tn-sec">${esc(sc)}</div>${n.itens.filter(x => x.secao === sc).map(x => link(x, true)).join('')}</div>`).join('')}</div>` : `<div class="tn-drop" role="menu">${n.itens.map(x => link(x, false)).join('')}</div>`}
       </div>`;
     }).join('');
   }

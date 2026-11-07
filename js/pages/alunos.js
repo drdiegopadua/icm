@@ -70,17 +70,17 @@
       if (q) { const s = q.toLowerCase(); itens = itens.filter(x => x.a.nome.toLowerCase().includes(s) || String(x.a.matricula || '').toLowerCase().includes(s)); }
       const lista = tipoPend ? itens.filter(x => x.p.includes(tipoPend)) : itens;
       const lote = tipoPend && PEND[tipoPend][2];
-      listEl.innerHTML = `<div class="row wrap mb-4" style="gap:6px">
-          <button class="chip-f ${!tipoPend ? 'on' : ''}" data-tp="">Todas (${itens.length} aluno(s))</button>
-          ${Object.keys(PEND).filter(k => cont[k]).map(k => `<button class="chip-f ${tipoPend === k ? 'on' : ''}" data-tp="${k}">${esc(PEND[k][0])} · ${cont[k]}</button>`).join('')}
+      listEl.innerHTML = `<div class="row wrap mb-4"><label class="small bold muted" for="f-pend">Pendência</label>
+          <select class="input" id="f-pend" data-tp style="width:auto;min-width:280px"><option value="">Todas (${itens.length} aluno(s))</option>
+          ${Object.keys(PEND).filter(k => cont[k]).map(k => `<option value="${k}" ${tipoPend === k ? "selected" : ""}>${esc(PEND[k][0])} (${cont[k]})</option>`).join("")}</select>
         </div>
         ${lote ? `<div class="card flat mb-4 row between wrap"><span class="small">${I('info', 16)} Dá para resolver todos de uma vez.</span><a class="btn btn-sm btn-primary" href="#/cadastros?tab=${lote}">${lote === 'termos' ? 'Pedir assinaturas' : lote === 'bairros' ? 'Padronizar bairros' : 'Corrigir datas em lote'}</a></div>` : ''}
         ${lista.length ? `<div class="table-wrap"><table class="table"><thead><tr><th>Aluno</th><th>Matrícula</th><th>Pendências</th></tr></thead><tbody>
           ${lista.map(x => `<tr class="clickable" data-href="#/alunos/${esc(x.a.id)}/editar"><td><div class="row">${ICM.util.avatar(x.a.nome, x.a.foto, 'sm')}<div class="bold">${esc(x.a.nome)}</div></div></td><td class="small">${esc(x.a.matricula || '')}</td>
             <td><div class="row wrap" style="gap:4px">${x.p.map(k => `<span class="badge ${PEND[k][1]}">${esc(PEND[k][0])}${k === 'bairro_grafia' ? `: ${esc((x.a.endereco || {}).bairro)}` : ''}</span>`).join('')}</div></td></tr>`).join('')}
         </tbody></table></div><div class="xs muted mt-2">${lista.length} aluno(s) · clique para abrir a ficha e completar</div>` : ICM.ui.empty('Nenhum aluno ativo com pendências 🎉', 'userCheck')}
-        <style>.chip-f{border:0;cursor:pointer;padding:6px 12px;border-radius:999px;font-size:12.5px;font-weight:600;background:var(--surface-2);color:var(--text-2);box-shadow:var(--sh-out-sm)}.chip-f.on{background:var(--primary);color:#fff}</style>`;
-      listEl.querySelectorAll('[data-tp]').forEach(b => b.addEventListener('click', () => { tipoPend = b.dataset.tp; renderPendencias(); }));
+`;
+      listEl.querySelector('[data-tp]').addEventListener('change', e => { tipoPend = e.target.value; renderPendencias(); });
       listEl.querySelectorAll('tr[data-href]').forEach(tr => tr.addEventListener('click', () => { location.hash = tr.dataset.href; }));
     }
 

@@ -280,7 +280,7 @@
     turmas: {
       async list(projetoId) {
         const ids = await minhasTurmasIds();
-        return S().list('turmas', t => ids.includes(t.id) && (!projetoId || t.projeto_id === projetoId));
+        return (await S().list('turmas', t => ids.includes(t.id) && (!projetoId || t.projeto_id === projetoId))).sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR', { numeric: true, sensitivity: 'base' }));
       },
       async get(id) { if (!(await podeTurma(id))) deny('Esta turma não é sua.'); return S().get('turmas', id); },
       async save(t) {

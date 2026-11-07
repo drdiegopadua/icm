@@ -81,28 +81,83 @@
   }
 
   // ======================= CONFERÊNCIA =======================
+  let confFiltro = 'todas', confBusca = '';
   async function conferencia(painel) {
     const linhas = await P().conferencia(ym);
     const profs = P().porProfessor(linhas);
     const pode = ICM.auth.can('pedagogico.gestao');
-    painel.innerHTML = `<div class="card mb-4"><div class="card-head"><div><div class="card-title">Conferência de ${esc(ICM.util.fmtMonth(ym))}</div>
-        <div class="card-sub">Cada turma: plano de aula do mês, chamada e relatório de cada aula (aulas até ontem, sem feriados, recessos e aulas canceladas). Obrigatório para o pagamento do professor.</div></div>
-        <button class="btn btn-primary" data-tes>${I('printer', 18)} Relatório para a tesouraria</button></div>
-      ${profs.map(p => `<div class="mb-4"><div class="row between wrap"><b>${esc(p.professor)}</b><span class="row" style="gap:8px">${p.total == null ? '' : `<b style="color:${corPct(p.total)}">${p.total}%</b>`}${p.total == null ? '<span class="badge neutral">Sem aulas</span>' : p.emDia ? '<span class="badge ok">Em dia</span>' : '<span class="badge danger">Pendente</span>'}</span></div>
-        <div class="table-wrap"><table class="table"><thead><tr><th>Turma</th><th>Aulas</th><th>Plano do mês</th><th>Chamada</th><th>Relatório de aula</th><th style="min-width:120px">Cumprido</th><th>Observação</th><th></th></tr></thead><tbody>
-        ${p.turmas.map(l => { const i = linhas.indexOf(l); return `<tr><td><a href="#/turmas/${esc(l.turma.id)}?mes=${ym}"><b>${esc(l.turma.nome)}</b></a><div class="xs muted">${esc(l.projeto.nome || '')}</div></td>
-          <td>${l.aulas}</td>
-          <td>${stBadge(l.status.plano)}${l.ajuste && l.ajuste.status && l.ajuste.status.plano ? ' <span class="xs muted" title="Ajustado pela coordenação">✎</span>' : ''}</td>
-          <td>${stBadge(l.status.chamada)} <span class="xs muted">${l.status.chamada ? `${l.comChamada}/${l.aulas}` : ''}</span></td>
-          <td>${stBadge(l.status.relatorio)} <span class="xs muted">${l.status.relatorio ? `${l.comRel}/${l.aulas}` : ''}</span></td>
-          <td><b style="color:${corPct(l.total)}">${l.total == null ? '—' : l.total + '%'}</b>${barra(l.total)}</td>
-          <td class="small" style="max-width:220px">${esc(l.obs || '')}</td>
-          <td>${pode ? `<button class="btn btn-sm" data-aj="${i}">${I('edit', 14)} Conferir</button>` : ''}</td></tr>`; }).join('')}
-        </tbody></table></div></div>`).join('') || ui().empty('Nenhuma turma ativa', 'layers')}
-    </div>`;
-    painel.querySelectorAll('[data-aj]').forEach(b => b.addEventListener('click', () => ajustarModal(linhas[+b.dataset.aj], () => conferencia(painel))));
+    const comAulas = linhas.filter(l => l.total != null);
+    const media = comAulas.length ? Math.round(comAulas.reduce((s, l) => s + l.total, 0) / comAulas.length) : null;
+    const situacao = l => l.total == null ? 'sem' : l.emDia ? 'dia' : l.total === 0 ? 'pendente' : 'parcial';
+    const cont = { dia: 0, parcial: 0, pendente: 0, sem: 0 }; linhas.forEach(l => cont[situacao(l)]++);
+    const ini = n => String(n || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(x => x[0]).join('').toUpperCase();
+    const chip = (s, x) => s ? `<span class="cf-chip ${ST[s][1]}">${ST[s][0]}${x ? `<small>${x}</small>` : ''}</span>` : '<span class="cf-chip neutro">—</span>';
+    const pctCel = v => `<div class="cf-pct"><b style="color:${corPct(v)}">${v == null ? '—' : v + '%'}</b>${barra(v)}</div>`;
+
+    const desenhar = () => {
+      const q = confBusca.toLowerCase();
+      const grupos = profs.map(p => ({ ...p, turmas: p.turmas.filter(l => (confFiltro === 'todas' || situacao(l) === confFiltro || (confFiltro === 'pendente' && situacao(l) === 'parcial')) && (!q || (p.professor + ' ' + l.turma.nome).toLowerCase().includes(q))) })).filter(p => p.turmas.length);
+      painel.querySelector('[data-tab-conf]').innerHTML = grupos.length ? `<div class="table-wrap"><table class="table cf-tab">
+        <colgroup><col style="width:23%"><col style="width:6%"><col style="width:11%"><col style="width:12%"><col style="width:12%"><col style="width:12%"><col><col style="width:110px"></colgroup>
+        <thead><tr><th>Turma</th><th class="c">Aulas</th><th>Plano do mês</th><th>Chamada</th><th>Relatório</th><th>Cumprido</th><th>Observação</th><th></th></tr></thead>
+        <tbody>${grupos.map(p => `<tr class="cf-prof"><td colspan="8"><div class="cf-prof-in"><span class="cf-av">${esc(ini(p.professor))}</span><b>${esc(p.professor)}</b><span class="xs muted">${p.turmas.length} turma(s)</span>
+            <span class="cf-prof-dir">${p.total == null ? '' : `<span class="cf-prof-bar">${barra(p.total)}</span><b style="color:${corPct(p.total)}">${p.total}%</b>`}${p.total == null ? '<span class="cf-chip neutro">Sem aulas</span>' : p.emDia ? '<span class="cf-chip ok">Em dia — liberado</span>' : '<span class="cf-chip danger">Pendente</span>'}</span></div></td></tr>
+          ${p.turmas.map(l => { const i = linhas.indexOf(l); const aj = l.ajuste && l.ajuste.status ? l.ajuste.status : {}; return `<tr>
+            <td><a href="#/turmas/${esc(l.turma.id)}?mes=${ym}" class="cf-turma">${esc(l.turma.nome)}</a><div class="xs muted truncate">${esc(l.projeto.nome || '')}</div></td>
+            <td class="c"><b>${l.aulas}</b></td>
+            <td>${chip(l.status.plano)}${aj.plano ? '<span class="cf-aj" title="Ajustado pela coordenação">✎</span>' : ''}</td>
+            <td>${chip(l.status.chamada, l.status.chamada ? `${l.comChamada}/${l.aulas}` : '')}${aj.chamada ? '<span class="cf-aj" title="Ajustado pela coordenação">✎</span>' : ''}</td>
+            <td>${chip(l.status.relatorio, l.status.relatorio ? `${l.comRel}/${l.aulas}` : '')}${aj.relatorio ? '<span class="cf-aj" title="Ajustado pela coordenação">✎</span>' : ''}</td>
+            <td>${pctCel(l.total)}</td>
+            <td class="small cf-obs">${esc(l.obs || '') || '<span class="muted">—</span>'}</td>
+            <td style="text-align:right">${pode ? `<button class="btn btn-sm" data-aj="${i}">${I('edit', 14)} Conferir</button>` : ''}</td></tr>`; }).join('')}`).join('')}
+        </tbody></table></div>` : ui().empty('Nenhuma turma neste filtro', 'clipboardCheck');
+      painel.querySelectorAll('[data-aj]').forEach(b => b.addEventListener('click', () => ajustarModal(linhas[+b.dataset.aj], () => conferencia(painel))));
+    };
+
+    painel.innerHTML = `<div class="card mb-4">
+        <div class="card-head"><div><div class="card-title">Conferência de ${esc(ICM.util.fmtMonth(ym))}</div>
+          <div class="card-sub">Plano de aula do mês, chamada e relatório de cada aula. Contam as aulas até ontem, sem feriados, recessos e aulas canceladas. Obrigatório para o pagamento do professor.</div></div>
+          <button class="btn btn-primary" data-tes>${I('printer', 18)} Relatório para a tesouraria</button></div>
+        <div class="cf-resumo">
+          <div class="cf-r" style="--c:${corPct(media)}"><b>${media == null ? '—' : media + '%'}</b><span>Média de cumprimento</span></div>
+          <div class="cf-r" style="--c:#10b981"><b>${cont.dia}</b><span>Turmas em dia</span></div>
+          <div class="cf-r" style="--c:#f59e0b"><b>${cont.parcial}</b><span>Incompletas</span></div>
+          <div class="cf-r" style="--c:#ef4444"><b>${cont.pendente}</b><span>Pendentes</span></div>
+          <div class="cf-r" style="--c:#94a3b8"><b>${cont.sem}</b><span>Sem aulas no mês</span></div>
+        </div>
+        <div class="row wrap between mt-4">
+          <div class="segmented" data-cf>${[['todas', 'Todas'], ['pendente', 'Pendentes e incompletas'], ['dia', 'Em dia'], ['sem', 'Sem aulas']].map(([k, n]) => `<button data-v="${k}" class="${k === confFiltro ? 'active' : ''}">${n}</button>`).join('')}</div>
+          <div class="input-icon" style="width:260px">${I('search', 18)}<input class="input" data-cfq placeholder="Professor ou turma" value="${esc(confBusca)}"></div>
+        </div>
+        <div class="row wrap mt-4 xs muted" style="gap:14px"><span class="cf-chip ok">Em dia</span> todas as aulas registradas · <span class="cf-chip warn">Parcial</span> alguma aula sem registro · <span class="cf-chip danger">Pendente</span> nada registrado · <span class="cf-aj">✎</span> ajustado pela coordenação</div>
+      </div>
+      <div class="card" data-tab-conf></div>
+      <style>
+        .gp .cf-resumo{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:6px}
+        .gp .cf-r{padding:12px 14px;border-radius:14px;background:var(--surface-2);border-left:4px solid var(--c)}.gp .cf-r b{display:block;font-size:22px;color:var(--c)}.gp .cf-r span{font-size:12px;color:var(--muted);font-weight:600}
+        .gp .cf-tab{table-layout:fixed;width:100%}.gp .cf-tab th.c,.gp .cf-tab td.c{text-align:center}
+        .gp .cf-tab td{vertical-align:middle}
+        .gp .cf-prof td{background:var(--surface-sunken);padding:10px 14px}
+        .gp .cf-prof-in{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+        .gp .cf-prof-dir{margin-left:auto;display:flex;align-items:center;gap:10px}
+        .gp .cf-prof-bar{width:140px}
+        .gp .cf-av{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--grad-primary);color:#fff;font-size:11px;font-weight:800;flex:none}
+        .gp .cf-turma{font-weight:700}
+        .gp .cf-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap}
+        .gp .cf-chip small{font-weight:600;opacity:.8}
+        .gp .cf-chip.ok{background:var(--ok-soft);color:var(--ok)}.gp .cf-chip.warn{background:var(--warn-soft);color:#b45309}.gp .cf-chip.danger{background:var(--danger-soft);color:var(--danger)}.gp .cf-chip.neutro{background:var(--surface-sunken);color:var(--muted)}
+        .gp .cf-aj{margin-left:4px;color:var(--primary);font-weight:800}
+        .gp .cf-pct{display:flex;align-items:center;gap:8px}.gp .cf-pct b{min-width:38px}.gp .cf-pct .gp-bar{flex:1;min-width:40px}
+        .gp .cf-obs{overflow-wrap:anywhere}
+        @media (max-width:900px){.gp .cf-tab{table-layout:auto;min-width:860px}}
+      </style>`;
+    desenhar();
+    painel.querySelectorAll('[data-cf] button').forEach(b => b.addEventListener('click', () => { painel.querySelectorAll('[data-cf] button').forEach(x => x.classList.toggle('active', x === b)); confFiltro = b.dataset.v; desenhar(); }));
+    painel.querySelector('[data-cfq]').addEventListener('input', ICM.util.debounce(e => { confBusca = e.target.value.trim(); desenhar(); }, 200));
     painel.querySelector('[data-tes]').addEventListener('click', () => ICM.reports.generate('conferencia_tesouraria', { ym }));
   }
+
   function ajustarModal(l, depois) {
     const sel = (k, auto) => `<select class="input" name="${k}"><option value="">Automático (${auto ? ST[auto][0] : 'sem aulas'})</option>${Object.entries(ST).map(([v, [n]]) => `<option value="${v}" ${l.ajuste && l.ajuste.status && l.ajuste.status[k] === v ? 'selected' : ''}>${n}</option>`).join('')}</select>`;
     const pl = l.plano;
@@ -166,22 +221,51 @@
     const comReuniao = new Set(lista.filter(a => a.tipo !== 'visita').flatMap(a => a.professores || []));
     const pode = ICM.auth.can('pedagogico.gestao');
     const doc = a => a.tipo === 'visita' ? 'Relatório de visita' : 'Ata';
+    const ultVisita = id => lista.filter(a => a.tipo === 'visita' && a.turma_id === id).sort((x, y) => y.data.localeCompare(x.data))[0];
+    const ultReun = id => lista.filter(a => a.tipo !== 'visita' && (a.professores || []).includes(id)).sort((x, y) => y.data.localeCompare(x.data))[0];
+    const profDe = t => (users.find(x => x.id === t.professor_id) || {}).nome || 'Professor(a) a definir';
+    const nV = visitadas.size, nR = profIds.filter(id => comReuniao.has(id)).length;
+    const prog = (n, t) => { const v = t ? Math.round(n / t * 100) : 0; return `<div class="ac-prog"><span style="width:${v}%;background:${corPct(v)}"></span></div>`; };
+    const linhaPend = (titulo, sub, feito, acao) => `<div class="ac-row ${feito ? 'feito' : ''}"><span class="ac-ic">${feito ? I('check', 14) : ''}</span><div class="grow"><b>${titulo}</b><div class="xs muted">${sub}</div></div>${feito ? `<span class="xs muted">${esc(fmtDate(feito.data))}</span>` : acao}</div>`;
     painel.innerHTML = `<div class="grid grid-2 mb-4">
-        <div class="card"><div class="card-title mb-2">Turmas visitadas em ${esc(ICM.util.fmtMonth(ym))}: ${visitadas.size} de ${ativas.length}</div>
-          <div class="row wrap" style="gap:6px">${ativas.map(t => `<span class="badge ${visitadas.has(t.id) ? 'ok' : 'neutral'}">${visitadas.has(t.id) ? '✓ ' : ''}${esc(t.nome)}</span>`).join('')}</div></div>
-        <div class="card"><div class="card-title mb-2">Professores com reunião no mês: ${profIds.filter(id => comReuniao.has(id)).length} de ${profIds.length}</div>
-          <div class="row wrap" style="gap:6px">${profIds.map(id => `<span class="badge ${comReuniao.has(id) ? 'ok' : 'neutral'}">${comReuniao.has(id) ? '✓ ' : ''}${esc(nomeU(id))}</span>`).join('')}</div></div>
+        <div class="card"><div class="ac-head"><div><div class="card-title">Visitas às turmas</div><div class="card-sub">${nV} de ${ativas.length} turma(s) visitada(s) em ${esc(ICM.util.fmtMonth(ym))}</div></div><b class="ac-num" style="color:${corPct(ativas.length ? Math.round(nV / ativas.length * 100) : null)}">${nV}/${ativas.length}</b></div>
+          ${prog(nV, ativas.length)}
+          <div class="ac-lista">${ativas.map(t => linhaPend(esc(t.nome), esc(profDe(t)), ultVisita(t.id), pode ? `<button class="btn btn-sm" data-vis="${esc(t.id)}">${I('eye', 14)} Visitar</button>` : '')).join('') || ui().empty('Sem turmas ativas', 'layers')}</div></div>
+        <div class="card"><div class="ac-head"><div><div class="card-title">Reuniões com professores</div><div class="card-sub">${nR} de ${profIds.length} professor(es) com reunião em ${esc(ICM.util.fmtMonth(ym))}</div></div><b class="ac-num" style="color:${corPct(profIds.length ? Math.round(nR / profIds.length * 100) : null)}">${nR}/${profIds.length}</b></div>
+          ${prog(nR, profIds.length)}
+          <div class="ac-lista">${profIds.map(id => linhaPend(esc(nomeU(id)), esc(ativas.filter(t => t.professor_id === id).map(t => t.nome).join(', ')), ultReun(id), pode ? `<button class="btn btn-sm" data-reu="${esc(id)}">${I('plus', 14)} Ata</button>` : '')).join('') || ui().empty('Sem professores', 'users')}</div></div>
       </div>
-      <div class="card"><div class="card-head"><div class="card-title">Registros de ${esc(ICM.util.fmtMonth(ym))}</div>
-        ${pode ? `<div class="row wrap"><button class="btn" data-novo="visita">${I('eye', 16)} Nova visita à aula</button><button class="btn btn-primary" data-novo="reuniao">${I('plus', 18)} Nova ata de reunião</button></div>` : ''}</div>
-        ${lista.length ? lista.map(a => `<div class="list-item" style="align-items:flex-start"><span class="badge ${a.tipo === 'visita' ? 'ok' : 'neutral'}">${esc(fmtDate(a.data))}</span>
-          <div class="grow"><b>${esc(T[a.tipo] || a.tipo)} ${a.numero ? 'nº ' + esc(a.numero) : ''}${a.turma_id ? ' — ' + esc((turmas.find(t => t.id === a.turma_id) || {}).nome || '') : a.pauta ? ' — ' + esc(a.pauta) : ''}</b>
-            <div class="xs muted">${esc((a.participantes || []).map(p => p.nome).join(', ') || (a.professores || []).map(nomeU).join(', '))}${a.registrado_por ? ' · por ' + esc(a.registrado_por) : ''}</div>
-            ${a.encaminhamentos ? `<div class="small mt-1"><b>Encaminhamentos:</b> ${esc(a.encaminhamentos)}</div>` : ''}</div>
-          <div class="row" style="gap:4px"><button class="btn btn-sm" data-pdf="${esc(a.id)}">${I('printer', 14)} ${doc(a)}</button>${pode ? `<button class="btn btn-sm btn-ghost" data-ed="${esc(a.id)}">${I('edit', 14)}</button>` : ''}</div></div>`).join('') : ui().empty('Nenhuma visita ou reunião registrada neste mês', 'users')}
-      </div>`;
+      <div class="card"><div class="card-head"><div><div class="card-title">Registros de ${esc(ICM.util.fmtMonth(ym))}</div><div class="card-sub">${lista.length} registro(s)</div></div>
+        ${pode ? `<div class="row wrap"><button class="btn" data-novo="visita">${I('eye', 16)} Nova visita</button><button class="btn btn-primary" data-novo="reuniao">${I('plus', 18)} Nova ata</button></div>` : ''}</div>
+        ${lista.length ? `<div class="table-wrap"><table class="table ac-tab"><colgroup><col style="width:110px"><col style="width:170px"><col><col style="width:28%"><col style="width:170px"></colgroup>
+          <thead><tr><th>Data</th><th>Tipo</th><th>Turma / pauta</th><th>Participantes</th><th></th></tr></thead><tbody>
+          ${lista.map(a => `<tr><td><b>${esc(fmtDate(a.data))}</b><div class="xs muted">nº ${esc(a.numero || '—')}</div></td>
+            <td><span class="ac-tipo ${a.tipo === 'visita' ? 'v' : 'r'}">${a.tipo === 'visita' ? I('eye', 13) : I('users', 13)} ${esc(a.tipo === 'visita' ? 'Visita à aula' : T[a.tipo] || a.tipo)}</span></td>
+            <td><b>${esc(a.turma_id ? (turmas.find(t => t.id === a.turma_id) || {}).nome || '' : a.pauta || '')}</b>${a.encaminhamentos ? `<div class="xs muted truncate" title="${esc(a.encaminhamentos)}">Encaminhamento: ${esc(a.encaminhamentos)}</div>` : ''}</td>
+            <td class="small truncate" title="${esc((a.participantes || []).map(p => p.nome).join(', '))}">${esc((a.participantes || []).map(p => p.nome).join(', ') || (a.professores || []).map(nomeU).join(', ') || a.observador || '')}</td>
+            <td style="text-align:right;white-space:nowrap"><button class="btn btn-sm" data-pdf="${esc(a.id)}" title="${doc(a)}">${I('printer', 14)} ${a.tipo === 'visita' ? 'Relatório' : 'Ata'}</button>${pode ? `<button class="btn btn-sm btn-ghost" data-ed="${esc(a.id)}" title="Editar">${I('edit', 14)}</button>` : ''}</td></tr>`).join('')}
+          </tbody></table></div>` : `<div class="ac-vazio">${I('users', 22)}<span>Nenhuma visita ou reunião registrada neste mês. Use os botões <b>Visitar</b> e <b>Ata</b> nas listas acima.</span></div>`}
+      </div>
+      <style>
+        .gp .ac-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+        .gp .ac-num{font-size:24px;font-weight:900}
+        .gp .ac-prog{height:8px;border-radius:6px;background:var(--surface-sunken);overflow:hidden;margin:10px 0 6px}.gp .ac-prog span{display:block;height:100%;border-radius:6px}
+        .gp .ac-lista{max-height:300px;overflow:auto}
+        .gp .ac-row{display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--line-2)}
+        .gp .ac-row:last-child{border-bottom:0}
+        .gp .ac-ic{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;flex:none;border:2px solid var(--line-2)}
+        .gp .ac-row.feito .ac-ic{background:var(--ok);border-color:var(--ok);color:#fff}
+        .gp .ac-row b{font-size:13.5px}
+        .gp .ac-tab{table-layout:fixed;width:100%}.gp .ac-tab td{vertical-align:middle}
+        .gp .ac-tipo{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap}
+        .gp .ac-tipo.v{background:color-mix(in srgb,#8b5cf6 14%,transparent);color:#7c3aed}.gp .ac-tipo.r{background:var(--primary-soft);color:var(--primary)}
+        .gp .ac-vazio{display:flex;align-items:center;gap:12px;padding:18px;border-radius:14px;background:var(--surface-2);color:var(--muted);font-size:13.5px}
+        @media (max-width:900px){.gp .ac-tab{table-layout:auto;min-width:720px}}
+      </style>`;
     const ctx = { turmas, ativas, users, projetos, profIds, depois: () => acomp(painel) };
     painel.querySelectorAll('[data-novo]').forEach(b => b.addEventListener('click', () => b.dataset.novo === 'visita' ? visitaModal(null, ctx) : ataModal(null, ctx)));
+    painel.querySelectorAll('[data-vis]').forEach(b => b.addEventListener('click', () => visitaModal(null, ctx, { turma_id: b.dataset.vis })));
+    painel.querySelectorAll('[data-reu]').forEach(b => b.addEventListener('click', () => { const u = users.find(x => x.id === b.dataset.reu) || {}; ataModal(null, ctx, { extra: { id: u.id, nome: u.nome || '', funcao: funcaoProfessor(u.id, turmas) || cargoDe(u) } }); }));
     painel.querySelectorAll('[data-ed]').forEach(b => b.addEventListener('click', () => { const a = lista.find(x => x.id === b.dataset.ed); a.tipo === 'visita' ? visitaModal(a, ctx) : ataModal(a, ctx); }));
     painel.querySelectorAll('[data-pdf]').forEach(b => b.addEventListener('click', () => { const a = lista.find(x => x.id === b.dataset.pdf); ICM.reports.generate(a.tipo === 'visita' ? 'visita_aula' : 'ata_reuniao_pedagogica', { id: a.id }); }));
   }
@@ -189,9 +273,9 @@
   // Participantes: equipe do sistema (com função) + outras pessoas
   function funcaoProfessor(uid, turmas) { const ts = turmas.filter(t => t.professor_id === uid && t.status !== 'encerrada').map(t => t.nome); return ts.length ? `Professor(a) — ${ts.join(', ')}` : ''; }
 
-  function ataModal(a, { turmas, users, projetos, profIds, depois }) {
+  function ataModal(a, { turmas, users, projetos, profIds, depois }, pre = {}) {
     const eu = ICM.auth.user();
-    a = a || { tipo: 'reuniao', data: ICM.util.today(), horario: '', formato: 'Presencial', local: 'Sede do Instituto', pauta: 'Reunião pedagógica mensal', redator: eu.nome, participantes: [{ id: eu.id, nome: eu.nome, funcao: cargoDe(eu) }], topicos: TOPICOS_PADRAO.map(t => ({ titulo: t, texto: '' })), encaminhamentos: '' };
+    a = a || { tipo: 'reuniao', data: ICM.util.today(), horario: '', formato: 'Presencial', local: 'Sede do Instituto', pauta: 'Reunião pedagógica mensal', redator: eu.nome, participantes: [{ id: eu.id, nome: eu.nome, funcao: cargoDe(eu) }, ...(pre.extra && pre.extra.id !== eu.id ? [pre.extra] : [])], topicos: TOPICOS_PADRAO.map(t => ({ titulo: t, texto: '' })), encaminhamentos: '' };
     let parts = (a.participantes || []).map(p => ({ ...p }));
     let tops = (a.topicos || []).map(t => ({ ...t }));
     const equipe = users.filter(u => u.ativo !== false && !u.convite).sort((x, y) => x.nome.localeCompare(y.nome));
@@ -243,9 +327,9 @@
     const del = m.$('[data-del]'); if (del) del.addEventListener('click', async () => { if (!(await ui().confirm({ title: 'Excluir ata', text: 'Excluir esta ata?', ok: 'Excluir', danger: true }))) return; await ui().run(() => P().acompanhamentos.remove(a.id), 'Excluída'); m.close(); depois(); });
   }
 
-  function visitaModal(a, { ativas, turmas, users, projetos, depois }) {
+  function visitaModal(a, { ativas, turmas, users, projetos, depois }, pre = {}) {
     const eu = ICM.auth.user();
-    a = a || { tipo: 'visita', data: ICM.util.today(), horario: '', observador: eu.nome, observador_funcao: cargoDe(eu), aspectos: Object.fromEntries(ASPECTOS.map(x => [x, ''])), chamada_feita: '' };
+    a = a || { tipo: 'visita', data: ICM.util.today(), horario: '', observador: eu.nome, observador_funcao: cargoDe(eu), aspectos: Object.fromEntries(ASPECTOS.map(x => [x, ''])), chamada_feita: '', ...pre };
     const m = ui().modal({ title: a.id ? `Visita nº ${a.numero || ''}` : 'Nova visita à aula', size: 'wide', body: `<form data-f>
       <div class="grid grid-4">
         ${ui().field({ name: 'turma_id', label: 'Turma', type: 'select', value: a.turma_id || '', options: [['', 'Escolha…'], ...ativas.map(t => [t.id, t.nome])], cls: 'span-2' })}

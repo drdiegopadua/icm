@@ -61,6 +61,7 @@
       'estoque.movimentar': ['admin', 'coordenacao', 'secretaria'],
       'estoque.editar': ['admin', 'coordenacao'],
       'equipe.gerir': ['admin', 'coordenacao'],
+      'equipe.assinaturas': ['admin', 'coordenacao'],
       'equipe.salarios': ['admin'],
       'avisos.enviar': ['admin', 'coordenacao', 'secretaria', 'professor'],
       'avisos.modelos': ['admin', 'coordenacao'],

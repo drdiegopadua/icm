@@ -49,7 +49,8 @@
     });
   };
 
-  // Quadro de assinatura (mouse, caneta e toque)
+  // Quadro de assinatura (mouse, caneta e toque) — também usado em Assinaturas da equipe
+  ICM.signaturePad = cv => signaturePad(cv);
   function signaturePad(cv) {
     const ctx = cv.getContext('2d'); let des = false, vazio = true, last = null;
     const style = () => { ctx.lineWidth = 3.2; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#0e1838'; };

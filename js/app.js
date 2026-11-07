@@ -68,6 +68,8 @@
     { re: /^\/grade-semanal$/, page: 'gradeSemanal' },
     { re: /^\/mapa-atendidos$/, page: 'mapaAtendidos', perm: 'alunos.sensivel' },
     { re: /^\/cadastros$/, page: 'cadastros', perm: 'alunos.editar' },
+    { re: /^\/minha-assinatura$/, page: 'minhaAssinatura' },
+    { re: /^\/assinaturas-equipe$/, page: 'assinaturasEquipe', perm: 'equipe.assinaturas' },
     { re: /^\/mapa-atendidos\/relatorio$/, page: 'mapaRelatorio', perm: 'alunos.sensivel' },
     { re: /^\/chat$/, page: 'chat' },
     { re: /^\/chat\/([\w-]+)$/, page: 'chat', keys: ['id'] }
@@ -112,6 +114,7 @@
       { href: '#/compras', icon: 'clipboard', label: 'Compras', desc: 'Pedidos, 3 orçamentos e aprovação', match: /^\/compras/ },
       { href: '#/patrimonio', icon: 'building', label: 'Patrimônio', match: /^\/patrimonio/, count: 'atrasos' },
       { href: '#/estoque', icon: 'layers', label: 'Estoque de consumo', match: /^\/estoque/ },
+      ICM.auth.can('equipe.assinaturas') && { href: '#/assinaturas-equipe', icon: 'edit', label: 'Assinaturas da equipe', desc: 'Assinaturas que saem nos relatórios e atas', match: /^\/assinaturas-equipe/ },
       ICM.auth.can('equipe.gerir') && { href: '#/equipe', icon: 'users', label: 'Equipe (RH)', desc: 'Professores e colaboradores', match: /^\/equipe/ },
       ICM.auth.can('usuarios.gerenciar') && { href: '#/usuarios', icon: 'key', label: 'Usuários e acessos', match: /^\/usuarios/ },
       ICM.auth.can('auditoria.ver') && { href: '#/auditoria', icon: 'shield', label: 'Auditoria', match: /^\/auditoria/ },
@@ -140,6 +143,7 @@
               <button class="tn-user-btn" data-user aria-haspopup="true" aria-expanded="false" aria-label="Minha conta">${ICM.util.avatar(user.nome, user.foto, 'sm')}</button>
               <div class="tn-drop tn-drop-user" role="menu">
                 <div class="tn-quem">${ICM.util.avatar(user.nome, user.foto, 'sm')}<div><b>${esc(user.nome)}</b><div class="xs muted">${esc(ICM.C.PAPEIS[user.papel].nome)}</div></div></div>
+                <a class="tn-link" href="#/minha-assinatura">${I('edit', 18)}<span>Minha assinatura</span></a>
                 <a class="tn-link" href="#/config">${I('settings', 18)}<span>Configurações</span></a>
                 <button class="tn-link" data-logout>${I('logout', 18)}<span>Sair</span></button>
               </div>

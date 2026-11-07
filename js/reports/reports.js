@@ -101,7 +101,8 @@
   const photos = (list, max = 9) => list.length ? `<div class="photos">${list.slice(0, max).map(f => `<figure><img src="${esc(f.src)}" alt=""><figcaption>${esc(f.legenda || '')}</figcaption></figure>`).join('')}</div>${list.length > max ? `<p style="font-size:10px;color:#5b6788">+ ${list.length - max} foto(s) arquivada(s) no sistema.</p>` : ''}` : '<p style="color:#5b6788">Sem registros fotográficos no período.</p>';
   const barChart = data => { const mx = Math.max(1, ...data.map(d => d.v)); return `<div class="bar-chart">${data.map(d => `<div class="bc"><b>${esc(d.lbl ?? U().num(d.v))}</b><i style="height:${Math.max(2, d.v / mx * 85)}%"></i><small>${esc(d.l)}</small></div>`).join('')}</div>`; };
   const tagNivel = (n, F) => n === 'danger' ? { html: `<span class="tag danger">${F} faltas — desligamento</span>` } : n === 'warn' ? { html: `<span class="tag warn">${F} faltas — alerta</span>` } : { html: '<span class="tag ok">Regular</span>' };
-  const signs = (a, b) => sec(`<div class="signs"><div>${esc(a)}</div><div>${esc(b)}</div></div>`);
+  // Linhas de assinatura: se a pessoa/função tiver assinatura cadastrada (Gestão → Assinaturas da equipe), imprime a imagem
+  const signs = (a, b) => { const AE = ICM.assinaturasEquipe; const bl = r => AE ? AE.bloco(r) : `<div class="sg"><div class="sg-l">${esc(r)}</div></div>`; return sec(`<div class="signs">${bl(a)}${bl(b)}</div>`); };
   const declaracao = () => sec(`<p style="margin-top:18px;font-size:11px;color:#3a4669"><b>Declaração.</b> Declaramos, para fins de prestação de contas, que as informações deste relatório correspondem aos registros de aulas, frequência, fotos e atividades lançados no ICM Sistema, cujos históricos são preservados e auditáveis. Dados pessoais sensíveis foram omitidos conforme a LGPD (Lei 13.709/2018).</p>`);
 
   const ymRange = (de, ate) => { const out = []; let d = U().parseD(de.slice(0, 7) + '-01'); const end = U().parseD(ate); while (d <= end) { out.push(U().iso(d).slice(0, 7)); d.setMonth(d.getMonth() + 1); } return out; };
@@ -455,6 +456,7 @@
 
   async function generate(kind, params) {
     try {
+      if (ICM.assinaturasEquipe) await ICM.assinaturasEquipe.carregar().catch(() => { });
       const r = await animate(TITLES[kind], STEPS[kind], () => B[kind](params));
       if (r.viewer) await r.viewer(r); else await view(r.title, r.html, r.file);
     } catch (e) { console.error(e); ICM.ui.toast(e.message || 'Falha ao gerar relatório', 'danger'); }

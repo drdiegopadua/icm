@@ -12,7 +12,7 @@
       ['telefone', 'telefone', ''], ['responsavel', 'responsavel.nome', 'Ana Souza', true], ['parentesco', 'responsavel.parentesco', 'Mãe'], ['telefone_responsavel', 'responsavel.telefone', '(27) 99999-0000', true],
       ['cpf_responsavel', 'responsavel.cpf', ''], ['profissao_responsavel', 'responsavel.profissao', ''], ['endereco', 'endereco.logradouro', 'Rua das Flores'], ['numero', 'endereco.numero', '10'],
       ['bairro', 'endereco.bairro', 'Centro'], ['cidade', 'endereco.cidade', 'Afonso Cláudio'], ['cep', 'endereco.cep', '29600-000'], ['escola', 'escolaridade.escola', 'EEEFM ...'], ['serie', 'escolaridade.serie', '5º ano'],
-      ['alergias', 'saude.alergias', ''], ['data_matricula', 'data_matricula', '01/03/2026'], ['turma', 'turma', 'Nome exato da turma no sistema']] },
+      ['alergias', 'saude.alergias', ''], ['data_primeira_matricula', 'data_matricula', '01/03/2019'], ['turma', 'turma', 'Nome exato da turma no sistema']] },
     turmas: { nome: 'Turmas', icon: 'layers', cor: '#8b5cf6', desc: 'Turmas dos projetos já cadastrados, com dias e horários.', colunas: [
       ['nome', 'nome', 'Violino — Turma A', true], ['projeto', 'projeto', 'Nome exato do projeto no sistema', true], ['modalidade', 'modalidade', 'Violino'], ['professor', 'professor', 'Nome ou e-mail do professor'],
       ['dias', 'dias', 'seg, qua'], ['inicio', 'inicio', '14:00'], ['fim', 'fim', '16:00'], ['local', 'local', 'Sede do Instituto'], ['vagas', 'vagas', '20'], ['faixa', 'faixa', '8 a 14 anos']] },
@@ -30,7 +30,7 @@
     voluntarios: { nome: 'Voluntários', icon: 'heart', cor: '#64748b', desc: 'Voluntários com área e disponibilidade.', colunas: [
       ['nome', 'nome', 'Paula Lima', true], ['telefone', 'telefone', ''], ['email', 'email', ''], ['profissao', 'profissao', ''], ['area', 'area', 'Reforço escolar'], ['disponibilidade', 'disponibilidade', 'Sábados de manhã'], ['inicio', 'inicio', '']] }
   };
-  const DATAS = new Set(['nascimento', 'data_matricula', 'admissao', 'data_aquisicao', 'inicio']);
+  const DATAS = new Set(['nascimento', 'data_matricula', 'data_primeira_matricula', 'admissao', 'data_aquisicao', 'inicio']);
 
   const norm = s => String(s == null ? '' : s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
   const pad = n => String(n).padStart(2, '0');
@@ -53,7 +53,8 @@
       const porNome = {}; Object.keys(l).forEach(k => { porNome[norm(k)] = l[k]; });
       const o = {};
       cols.forEach(([col, caminho]) => {
-        let v = porNome[col]; if (v === undefined || v === null || String(v).trim() === '') return;
+        let v = porNome[col]; if (col === 'data_primeira_matricula' && (v === undefined || v === '')) v = porNome.data_matricula;   // planilhas antigas
+        if (v === undefined || v === null || String(v).trim() === '') return;
         if (DATAS.has(col)) v = data(v); else if (col === 'inicio' || col === 'fim') v = tipo === 'turmas' ? hora(v) : data(v); else v = typeof v === 'string' ? v.trim() : v;
         if (col === 'sexo') v = String(v).toUpperCase().startsWith('F') ? 'F' : String(v).toUpperCase().startsWith('M') ? 'M' : 'O';
         if (col === 'vinculo') v = norm(v).replace('pj_mei', 'pj');

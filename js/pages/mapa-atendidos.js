@@ -55,7 +55,7 @@
     el.innerHTML = `<div class="page mapa-at">
       <div class="page-head">
         <div><h1 class="page-title">Localização dos atendidos</h1><div class="page-sub">Cada ponto é um aluno, identificado só pela matrícula.</div></div>
-        <div class="row wrap no-print"><button class="btn" data-cheia>${I('maximize', 18)} Tela cheia</button><button class="btn" data-imprimir>${I('fileText', 18)} Imprimir</button></div>
+        <div class="row wrap no-print"><a class="btn" href="#/mapa-atendidos/relatorio">${I('folder', 18)} Mapa por projeto</a><button class="btn" data-cheia>${I('maximize', 18)} Tela cheia</button><button class="btn" data-imprimir>${I('fileText', 18)} Imprimir</button></div>
       </div>
       <div class="card mb-4 no-print"><div class="ma-filtros">
         <label>Situação<select class="input" data-f="situacao"><option value="ativo">Ativos</option><option value="">Todos</option><option value="inativo">Inativos</option></select></label>
@@ -147,10 +147,10 @@
       if (primeiraVez && comPonto.length) { mapa.fitBounds(L.latLngBounds(comPonto.map(x => [x.g.lat, x.g.lng])).pad(.08), { maxZoom: 15 }); primeiraVez = false; }
 
       // por bairro
-      const norm = t => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ');
+      const norm = t => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ');
       const grupos = {};
       lista.forEach(a => { const b = limpa((a.endereco || {}).bairro) || 'Não informado'; const k = norm(b); const g = grupos[k] || (grupos[k] = { n: 0, nomes: {} }); g.n++; g.nomes[b] = (g.nomes[b] || 0) + 1; });
-      const bairros = Object.values(grupos).map(g => [Object.entries(g.nomes).sort((x, y) => y[1] - x[1] || /[^ -]/.test(y[0]) - /[^ -]/.test(x[0]))[0][0], g.n]).sort((x, y) => y[1] - x[1]);
+      const bairros = Object.values(grupos).map(g => [Object.entries(g.nomes).sort((x, y) => /[^\x00-\x7f]/.test(y[0]) - /[^\x00-\x7f]/.test(x[0]) || y[1] - x[1])[0][0], g.n]).sort((x, y) => y[1] - x[1]);
       const mx = bairros.length ? bairros[0][1] : 1;
       el.querySelector('[data-bairros]').innerHTML = bairros.map(([b, n]) => `<div class="ma-b"><span class="truncate">${esc(b)}</span><b>${n}</b><i style="width:${n / mx * 100}%"></i></div>`).join('') || ICM.ui.empty('Nenhum aluno');
       const projsNoMapa = f.corProjeto ? projetos.filter(p => comPonto.some(({ a }) => { const t = turmasDo(a)[0]; return t && t.projeto_id === p.id; })) : [];
@@ -212,5 +212,88 @@
 
     desenhar();
     setTimeout(() => mapa.invalidateSize(), 200);
+  };
+
+  // ======================= Relatório: mapa por projeto (prestação de contas) =======================
+  // Uma folha por projeto: mapa com círculos por bairro (sem pontos individuais) + tabela de atendidos por bairro.
+  const normB = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+  ICM.pages.mapaRelatorio = async function (el, params, query) {
+    ICM.app.setCrumbs([['Pedagógico'], ['Localização dos atendidos', '#/mapa-atendidos'], ['Mapa por projeto']]);
+    el.innerHTML = `<div class="page"><div class="card" style="height:120px"></div></div>`;
+    const [alunos, mats, turmas, projetos] = await Promise.all([ICM.api.alunos.list({ status: '' }), ICM.api.raw('matriculas'), ICM.api.turmas.list(), ICM.api.projetos.list()]);
+    try { await carregarLeaflet(); } catch (e) { el.innerHTML = `<div class="page">${ICM.ui.empty(e.message, 'alert')}</div>`; return; }
+    const ativosP = projetos.filter(p => p.status !== 'encerrado');
+    let sel = (query && query.get('projeto')) || '';
+    let situacao = 'ativo';
+
+    function dadosProjeto(p) {
+      const tids = new Set(turmas.filter(t => t.projeto_id === p.id).map(t => t.id));
+      const ids = new Set(mats.filter(m => tids.has(m.turma_id) && (situacao !== 'ativo' || m.status === 'ativo')).map(m => m.aluno_id));
+      const lista = alunos.filter(a => ids.has(a.id) && (situacao !== 'ativo' || a.status === 'ativo'));
+      const g = {};
+      lista.forEach(a => {
+        const nome = String((a.endereco || {}).bairro || '').trim() || 'Não informado'; const k = normB(nome);
+        const x = g[k] || (g[k] = { nomes: {}, n: 0, pts: [] }); x.n++; x.nomes[nome] = (x.nomes[nome] || 0) + 1;
+        const geo = geoValido(a) ? a.geo : (DEMO ? geoDemo(a) : null); if (geo && k !== normB('Não informado')) x.pts.push([geo.lat, geo.lng]);
+      });
+      const bairros = Object.values(g).map(x => ({ nome: Object.entries(x.nomes).sort((q, r) => /[^\x00-\x7f]/.test(r[0]) - /[^\x00-\x7f]/.test(q[0]) || r[1] - q[1])[0][0], n: x.n, ll: x.pts.length ? [x.pts.reduce((s, q) => s + q[0], 0) / x.pts.length, x.pts.reduce((s, q) => s + q[1], 0) / x.pts.length] : null })).sort((q, r) => r.n - q.n);
+      return { p, total: lista.length, bairros, semLocal: bairros.filter(b => !b.ll).reduce((s, b) => s + b.n, 0) };
+    }
+
+    function render() {
+      const lista = (sel ? ativosP.filter(p => p.id === sel) : ativosP).map(dadosProjeto);
+      el.innerHTML = `<div class="page mapa-rel">
+        <div class="page-head no-print"><div><h1 class="page-title">Mapa por projeto</h1><div class="page-sub">Uma folha por projeto, pronta para anexar à prestação de contas. Mostra só quantidades por bairro — nenhum aluno é identificado.</div></div>
+          <div class="row wrap">
+            <select class="input" style="width:auto" data-proj><option value="">Todos os projetos (${ativosP.length} folhas)</option>${ativosP.map(p => `<option value="${esc(p.id)}" ${p.id === sel ? 'selected' : ''}>${esc(p.nome)}</option>`).join('')}</select>
+            <select class="input" style="width:auto" data-sit><option value="ativo" ${situacao === 'ativo' ? 'selected' : ''}>Só atendidos ativos</option><option value="" ${situacao === '' ? 'selected' : ''}>Todos que já passaram pelo projeto</option></select>
+            <button class="btn btn-primary" data-imprimir>${I('fileText', 18)} Imprimir / salvar PDF</button>
+          </div></div>
+        ${lista.map((d, i) => `<section class="folha card mb-4">
+          <div class="fl-cab"><div>${ICM.logoCompleta ? ICM.logoCompleta(40) : ''}</div><div class="fl-tit"><div class="xs muted bold">${esc(ICM.C.ORG.razao)} · CNPJ ${esc(ICM.C.ORG.cnpj)}</div><h2>${esc(d.p.nome)}</h2><div class="small muted">Território atendido — ${d.total} ${situacao === 'ativo' ? 'atendido(s) ativo(s)' : 'atendido(s)'} · ${esc(ICM.util.fmtDateLong(ICM.util.today()))}</div></div></div>
+          <div class="fl-corpo"><div class="fl-mapa" data-m="${i}"></div>
+            <div class="fl-tab"><table class="table"><thead><tr><th>Bairro / localidade</th><th style="text-align:right">Atendidos</th><th style="text-align:right">%</th></tr></thead><tbody>
+              ${d.bairros.map(b => `<tr><td>${esc(b.nome)}${b.ll ? '' : ' <span class="xs muted">*</span>'}</td><td style="text-align:right"><b>${b.n}</b></td><td style="text-align:right">${d.total ? Math.round(b.n / d.total * 100) : 0}%</td></tr>`).join('') || '<tr><td colspan="3" class="muted">Sem atendidos</td></tr>'}
+              <tr><td><b>Total</b></td><td style="text-align:right"><b>${d.total}</b></td><td style="text-align:right">100%</td></tr></tbody></table>
+              ${d.semLocal ? `<div class="xs muted mt-2">* ${d.semLocal} atendido(s) sem localização no mapa (bairro não informado ou endereço não encontrado) — contados na tabela.</div>` : ''}</div></div>
+          <div class="xs muted mt-2">Círculos = quantidade de atendidos por bairro (posição média dos endereços). Base cartográfica © colaboradores do OpenStreetMap. Gerado pelo ICM Sistema.</div>
+        </section>`).join('') || ICM.ui.empty('Nenhum projeto ativo.', 'folder')}
+      </div>
+      <style>
+        .mapa-rel .folha{padding:22px}
+        .mapa-rel .fl-cab{display:flex;gap:16px;align-items:center;border-bottom:2px solid var(--line-2);padding-bottom:12px;margin-bottom:14px}
+        .mapa-rel .fl-tit h2{margin:4px 0 2px;font-size:22px}
+        .mapa-rel .fl-corpo{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:16px;align-items:start}
+        .mapa-rel .fl-mapa{height:430px;border-radius:12px;overflow:hidden;z-index:0}
+        .mapa-rel .fl-tab .table td,.mapa-rel .fl-tab .table th{padding:6px 8px;font-size:12.5px}
+        .rel-circ{display:grid;place-items:center;border-radius:50%;background:color-mix(in srgb,var(--c) 75%,transparent);border:2px solid #fff;color:#fff;font-weight:800;font-size:12px;box-shadow:0 1px 6px rgba(0,0,0,.4);text-shadow:0 1px 2px rgba(0,0,0,.4)}
+        .rel-sede{width:14px;height:14px;border-radius:4px;background:#1d2a5c;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.5)}
+        @media (max-width:900px){.mapa-rel .fl-corpo{grid-template-columns:1fr}}
+        @media print{.topnav,.subbar,.no-print,.bg-orbs,.leaflet-control-zoom{display:none!important}
+          .mapa-rel .folha{box-shadow:none;border:0;padding:0;margin:0;break-after:page;page-break-after:always}
+          .mapa-rel .folha:last-child{break-after:auto;page-break-after:auto}
+          .mapa-rel .fl-corpo{grid-template-columns:1.5fr 1fr}.mapa-rel .fl-mapa{height:120mm}
+          .rel-circ,.rel-sede{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+      </style>`;
+      lista.forEach((d, i) => {
+        const box = el.querySelector(`[data-m="${i}"]`);
+        const m = L.map(box, { zoomControl: true, scrollWheelZoom: false });
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap', referrerPolicy: 'strict-origin-when-cross-origin' }).addTo(m);
+        const cor = d.p.cor || '#2563eb'; const mx = Math.max(1, ...d.bairros.map(b => b.n));
+        const pts = [];
+        d.bairros.filter(b => b.ll).forEach(b => {
+          const t = Math.round(26 + 34 * Math.sqrt(b.n / mx));
+          L.marker(b.ll, { icon: L.divIcon({ html: `<div class="rel-circ" style="--c:${cor};width:${t}px;height:${t}px">${b.n}</div>`, className: '', iconSize: [t, t], iconAnchor: [t / 2, t / 2] }) }).bindTooltip(`${esc(b.nome)}: ${b.n}`).addTo(m);
+          pts.push(b.ll);
+        });
+        L.marker(SEDE.ll, { icon: L.divIcon({ html: '<div class="rel-sede"></div>', className: '', iconSize: [14, 14], iconAnchor: [7, 7] }) }).bindTooltip('Sede do Instituto').addTo(m);
+        if (pts.length) m.fitBounds(L.latLngBounds(pts.concat([SEDE.ll])).pad(.15), { maxZoom: 15 }); else m.setView(SEDE.ll, 13);
+        setTimeout(() => m.invalidateSize(), 200);
+      });
+      el.querySelector('[data-proj]').addEventListener('change', e => { sel = e.target.value; render(); });
+      el.querySelector('[data-sit]').addEventListener('change', e => { situacao = e.target.value; render(); });
+      el.querySelector('[data-imprimir]').addEventListener('click', () => window.print());
+    }
+    render();
   };
 })();

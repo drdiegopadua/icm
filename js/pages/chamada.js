@@ -118,6 +118,7 @@
         if (!navigator.onLine) ICM.api.offline.enfileirar({ tipo: 'chamada', aula_id: r.id, turma: t.nome, data });
         ui().toast(navigator.onLine ? 'Chamada salva!' : 'Chamada salva no aparelho — será enviada quando a internet voltar', 'ok', 4000);
         ICM.app.refreshAlerts(); fechar();
+        ICM.pages._avisosFaltas(t.id, pres);
       }).catch(() => { }));
     }
   };

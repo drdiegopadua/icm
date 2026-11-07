@@ -51,7 +51,7 @@
           ${F({ name: 'telefone', label: 'Telefone do aluno', value: a.telefone, placeholder: '(00) 00000-0000' })}
           ${F({ name: 'email', label: 'E-mail', type: 'email', value: a.email })}
           ${F({ name: 'status', label: 'Situação', type: 'select', value: a.status || 'ativo', options: Object.entries(ICM.C.STATUS_ALUNO).map(([k, v]) => [k, v.nome]) })}
-          ${F({ name: 'data_matricula', label: 'Data da matrícula', type: 'date', value: a.data_matricula || ICM.util.today() })}
+          ${F({ name: 'data_matricula', label: 'Data da 1ª matrícula no Instituto', type: 'date', value: a.data_matricula || (editing ? '' : ICM.util.today()) })}
         </section>
 
         <section data-sec="1" class="grid grid-3" hidden>
@@ -68,7 +68,7 @@
           ${F({ name: 'endereco.cep', label: 'CEP', value: en.cep })}
           ${F({ name: 'endereco.logradouro', label: 'Logradouro', value: en.logradouro, cls: 'span-2' })}
           ${F({ name: 'endereco.numero', label: 'Número', value: en.numero })}
-          ${F({ name: 'endereco.bairro', label: 'Bairro', value: en.bairro })}
+          ${F({ name: 'endereco.bairro', label: 'Bairro', value: en.bairro, attrs: 'list="lista-bairros" autocomplete="off"' })}<datalist id="lista-bairros"></datalist>
           ${F({ name: 'endereco.cidade', label: 'Cidade', value: en.cidade })}
           <div class="span-all section-title" style="margin-bottom:0">${I('pin', 18)} Transporte</div>
           ${F({ name: 'van.usa', label: 'Usa a van do Instituto', type: 'toggle', value: (a.van || {}).usa })}
@@ -138,6 +138,18 @@
     </div>`;
 
     const form = el.querySelector('form');
+    // Bairro: sugestões da lista oficial (ou dos bairros já cadastrados) e grafia padronizada ao sair do campo
+    (async () => {
+      const nb = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+      let lista = await ICM.api.alunos.bairros().catch(() => []);
+      if (!lista.length) {
+        const cont = {}; (await ICM.api.alunos.list({ status: '' }).catch(() => [])).forEach(x => { const b = String((x.endereco || {}).bairro || '').trim(); if (b) { const k = nb(b); (cont[k] = cont[k] || {})[b] = (cont[k][b] || 0) + 1; } });
+        lista = Object.values(cont).map(o => Object.entries(o).sort((p, q) => (q[0].match(/[^\x00-\x7f]/g) || []).length - (p[0].match(/[^\x00-\x7f]/g) || []).length || q[1] - p[1])[0][0]);
+      }
+      const dl = el.querySelector('#lista-bairros'); if (dl) dl.innerHTML = lista.sort((p, q) => p.localeCompare(q, 'pt-BR')).map(b => `<option value="${ICM.util.esc(b)}"></option>`).join('');
+      const inp = form.querySelector('[name="endereco.bairro"]');
+      if (inp) inp.addEventListener('change', () => { const ok = lista.find(b => nb(b) === nb(inp.value)); if (ok) inp.value = ok; else if (inp.value.trim()) inp.value = inp.value.trim(); });
+    })();
     const secs = el.querySelectorAll('[data-sec]');
     const stepsBtns = el.querySelectorAll('[data-step]');
 

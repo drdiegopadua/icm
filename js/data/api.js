@@ -112,6 +112,23 @@
         if (A().can('alunos.sensivel')) await audit('visualizar_sensivel', 'alunos', id, `Ficha completa de ${a.nome}`);
         return sanitizeAluno(a);
       },
+      // Correções em lote (Arrumar cadastros): só bairro, data da 1ª matrícula e termos assinados em papel
+      async corrigir(id, patch) {
+        need('alunos.editar');
+        const a = await S().get('alunos', id); if (!a) throw new Error('Aluno não encontrado.');
+        const out = {};
+        if ('bairro' in patch) out.endereco = { ...(a.endereco || {}), bairro: patch.bairro };
+        if ('data_matricula' in patch) { out.data_matricula = patch.data_matricula || ''; out.data_matricula_desconhecida = !patch.data_matricula; }
+        if (patch.autorizacoes) out.autorizacoes = { ...(a.autorizacoes || {}), ...patch.autorizacoes };
+        return S().update('alunos', id, out);
+      },
+      // Lista oficial de bairros (sugestão no cadastro). Gravar: direção e coordenação.
+      async bairros() { const c = await S().getConfig(); return Array.isArray(c && c.bairros) ? c.bairros : []; },
+      async salvarBairros(lista) {
+        need('importar.dados');
+        const l = [...new Set(lista.map(x => String(x || '').trim()).filter(Boolean))].sort((x, y) => x.localeCompare(y, 'pt-BR'));
+        await S().setConfig({ bairros: l }); await audit('editar', 'config', 'bairros', `Lista oficial de bairros (${l.length})`); return l;
+      },
       // Coordenada do endereço (mapa dos atendidos). Só quem edita alunos grava.
       async salvarGeo(id, geo) {
         need('alunos.editar');

@@ -399,7 +399,8 @@
             const dup = (await S().list('alunos')).find(a => norm(a.nome) === norm(l.nome) && (!l.nascimento || a.nascimento === l.nascimento));
             if (dup && !opts.duplicar) { res.duplicados++; continue; }
             const { turma, ...dados } = l;
-            const al = await ICM.api.alunos.save({ status: 'ativo', autorizacoes: { lgpd: false, imagem: false }, ...dados, social: { ...(dados.social || {}) } });
+            // Sem a data da 1ª matrícula na planilha: fica "não informada" (não vira matrícula de hoje)
+            const al = await ICM.api.alunos.save({ status: 'ativo', autorizacoes: { lgpd: false, imagem: false }, ...dados, data_matricula: dados.data_matricula || '', data_matricula_desconhecida: !dados.data_matricula, importado_em: u().today(), social: { ...(dados.social || {}) } });
             if (turma) { const t = turmas.find(x => norm(x.nome) === norm(turma) || norm(x.modalidade) === norm(turma)); if (t) await ICM.api.turmas.incluirAluno(t.id, al.id, al.data_matricula); else res.erros.push({ linha: i + 2, msg: `Turma "${turma}" não encontrada (aluno importado sem turma)` }); }
           } else if (tipo === 'turmas') {
             // Projeto e professor pelo nome (ou e-mail); dias como "seg, qua" ou "segunda e quarta"

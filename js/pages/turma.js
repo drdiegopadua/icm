@@ -227,6 +227,7 @@
         const payload = { ...a, ...d, plano: { ...pl, ...d.plano }, relatorio: { ...rl, ...d.relatorio }, presencas: pres, fotos, turma_id: t.id, professor_id: a.professor_id || t.professor_id };
         await ui().run(() => ICM.api.aulas.save(payload), 'Aula salva');
         m.close(); ICM.app.refreshAlerts(); R[cur]();
+        ICM.pages._avisosFaltas(t.id, pres);
       }).catch(() => { }));
       const del = m.$('[data-del]');
       if (del) del.addEventListener('click', async () => {

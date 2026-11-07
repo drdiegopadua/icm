@@ -67,6 +67,7 @@
       { n: (r.estoque || []).length, t: 'itens de estoque acabando', ic: 'layers', href: '#/estoque', nivel: 'warn' },
       { n: (r.mensalidades || []).length, t: 'mensalidades em atraso', ic: 'dollar', href: '#/associados', nivel: 'warn' },
       { n: (r.rh || []).length + (r.mandatos || []).length, t: 'pendências de equipe e diretoria', ic: 'users', href: '#/equipe', nivel: 'warn' },
+      { n: can('alunos.editar') ? ativos.filter(a => !(a.autorizacoes || {}).lgpd).length : 0, t: 'alunos sem termo LGPD assinado', ic: 'edit', href: '#/cadastros?tab=termos', nivel: 'danger' },
       { n: (r.aniversarios || []).length, t: 'aniversariantes hoje', ic: 'star', href: '#/aniversariantes', nivel: 'ok' }
     ].filter(x => x.n > 0);
 

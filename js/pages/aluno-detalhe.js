@@ -39,7 +39,7 @@
               ${assoc ? `<a href="#/associados/${esc(assoc.id)}" class="badge ${assoc.em_dia ? 'ok' : 'danger'}">${I('key', 13)} Associado ${esc(assoc.numero)} — ${assoc.em_dia ? 'em dia' : `${assoc.vencidas} mensalidade(s) em atraso`}</a>` : semCad && ICM.auth.can('associados.gerir') ? `<a href="#/associados" class="badge warn">${I('alert', 13)} Sem CadÚnico e não associado</a>` : ''}
               ${a.social && a.social.cadunico ? `<span class="badge neutral">CadÚnico</span>` : ''}
               ${emprestados.length ? `<span class="badge" style="background:rgba(8,145,178,.14);color:#0891b2">${I('download', 13)} Com ${emprestados.reduce((s, e) => s + e.quantidade, 0)} bem(ns) emprestado(s)</span>` : ''}
-              ${a.autorizacoes && !a.autorizacoes.imagem ? `<span class="badge warn">${I('camera', 13)} Sem autorização de imagem</span>` : ''}
+              ${a.autorizacoes && !a.autorizacoes.lgpd ? `<a class="badge danger" href="#/cadastros?tab=termos">${I('edit', 13)} Sem termo LGPD</a>` : ''}${a.autorizacoes && !a.autorizacoes.imagem ? `<span class="badge warn">${I('camera', 13)} Sem autorização de imagem</span>` : ''}
             </div>
           </div>
           <div class="row wrap">
@@ -63,7 +63,7 @@
         const r = a.responsavel || {}, e = a.endereco || {}, au = a.autorizacoes || {};
         panel.innerHTML = `<div class="grid grid-2 tab-panel">
           <div class="card"><div class="section-title">${I('user', 18)} Dados pessoais</div>
-            ${ui().kv([['Nome social', a.nome_social], ['Nascimento', fmtDate(a.nascimento)], ['Sexo', { F: 'Feminino', M: 'Masculino', O: 'Outro' }[a.sexo] || ''], ['Cor/raça', a.cor_raca], ['CPF', sens ? a.cpf : a.cpf], ['RG', a.rg], ['NIS', a.nis], ['Telefone', a.telefone], ['Matriculado em', fmtDate(a.data_matricula)]])}
+            ${ui().kv([['Nome social', a.nome_social], ['Nascimento', fmtDate(a.nascimento)], ['Sexo', { F: 'Feminino', M: 'Masculino', O: 'Outro' }[a.sexo] || ''], ['Cor/raça', a.cor_raca], ['CPF', sens ? a.cpf : a.cpf], ['RG', a.rg], ['NIS', a.nis], ['Telefone', a.telefone], ['No Instituto desde (1ª matrícula)', a.data_matricula ? fmtDate(a.data_matricula) : 'Não informada']])}
           </div>
           <div class="card"><div class="section-title">${I('users', 18)} Responsável e endereço</div>
             ${ui().kv([['Responsável', r.nome], ['Parentesco', r.parentesco], ['Telefone', r.telefone], ['Profissão', r.profissao], ['Nascimento do responsável', r.nascimento ? `${fmtDate(r.nascimento)} (${age(r.nascimento)} anos)` : ''], ['Estado civil', r.estado_civil], ['Escolaridade do responsável', r.escolaridade], ['Endereço', [e.logradouro, e.numero].filter(Boolean).join(', ')], ['Bairro', e.bairro], ['Cidade', e.cidade], ['CEP', e.cep], ['Van', (a.van || {}).usa ? `Sim · ${(a.van || {}).ponto || 'ponto a definir'}` : 'Não usa']])}

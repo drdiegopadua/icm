@@ -24,7 +24,7 @@
 
   let aba = 'termos';
   ICM.pages.cadastros = async function (el, params, query) {
-    ICM.app.setCrumbs([['Alunos', '#/alunos'], ['Arrumar cadastros']]);
+    ICM.app.setCrumbs([['Alunos', '#/alunos'], ['Com pendências', '#/alunos?status=pendencias'], ['Resolver em lote']]);
     if (query && query.get('tab')) aba = query.get('tab');
     const alunos = await ICM.api.alunos.list({ status: '' });
     const ativos = alunos.filter(a => a.status === 'ativo');
@@ -34,7 +34,7 @@
     const lotes = lotesDatas(alunos);
 
     el.innerHTML = `<div class="page cad">
-      <div class="page-head"><div><h1 class="page-title">Arrumar cadastros</h1><div class="page-sub">Pendências que deixam relatórios, mapa e documentos incompletos.</div></div></div>
+      <div class="page-head"><div><h1 class="page-title">Resolver pendências em lote</h1><div class="page-sub">Pendências que deixam relatórios, mapa e documentos incompletos.</div></div></div>
       <div class="tabs mb-4">
         <button class="tab ${aba === 'termos' ? 'active' : ''}" data-tab="termos">${I('edit', 16)} Termos LGPD e imagem ${semTermo ? `<span class="badge warn">${semTermo}</span>` : ''}</button>
         <button class="tab ${aba === 'bairros' ? 'active' : ''}" data-tab="bairros">${I('pin', 16)} Bairros ${variantes ? `<span class="badge warn">${variantes}</span>` : ''}</button>

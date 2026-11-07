@@ -80,7 +80,6 @@
       { href: '#/alunos', icon: 'users', label: 'Alunos', desc: 'Matrícula, ficha e histórico', match: /^\/alunos/ },
       { href: '#/chamada', icon: 'userCheck', label: 'Chamada (celular)', desc: 'Presença rápida pelo QR da carteirinha', match: /^\/chamada/ },
       ICM.auth.can('espera.gerir') && { href: '#/espera', icon: 'list', label: 'Lista de espera', desc: 'Triagem e vagas', match: /^\/espera/ },
-      ICM.auth.can('alunos.editar') && { href: '#/cadastros', icon: 'clipboardCheck', label: 'Arrumar cadastros', desc: 'Termos LGPD e imagem, bairros e datas de matrícula', match: /^\/cadastros/ },
       ICM.auth.can('social.gerir') && { href: '#/social', icon: 'heartPulse', label: 'Acompanhamento social', desc: 'PIA, encaminhamentos à rede e evolução', match: /^\/social/ },
       { href: '#/aniversariantes', icon: 'star', label: 'Aniversariantes', match: /^\/aniversariantes/ }
     ] },

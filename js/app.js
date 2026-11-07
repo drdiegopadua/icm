@@ -69,6 +69,7 @@
     { re: /^\/mapa-atendidos$/, page: 'mapaAtendidos', perm: 'alunos.sensivel' },
     { re: /^\/cadastros$/, page: 'cadastros', perm: 'alunos.editar' },
     { re: /^\/minha-assinatura$/, page: 'minhaAssinatura' },
+    { re: /^\/gestao-pedagogica$/, page: 'gestaoPedagogica', perm: 'pedagogico.gestao' },
     { re: /^\/assinaturas-equipe$/, page: 'assinaturasEquipe', perm: 'equipe.assinaturas' },
     { re: /^\/mapa-atendidos\/relatorio$/, page: 'mapaRelatorio', perm: 'alunos.sensivel' },
     { re: /^\/chat$/, page: 'chat' },
@@ -86,6 +87,7 @@
       { href: '#/aniversariantes', icon: 'star', label: 'Aniversariantes', match: /^\/aniversariantes/ }
     ] },
     { label: 'Pedagógico', icon: 'folder', itens: [
+      ICM.auth.can('pedagogico.gestao') && { href: '#/gestao-pedagogica', icon: 'chart', label: 'Gestão pedagógica', desc: 'Conferência dos professores, frequência, visitas e cronograma', match: /^\/gestao-pedagogica/ },
       { href: '#/rotina', icon: 'sun', label: 'Rotina do dia', desc: 'Aulas, pendências e avisos de hoje', match: /^\/rotina/ },
       { href: '#/projetos', icon: 'folder', label: 'Projetos e turmas', desc: 'Planos de aula, chamadas e relatórios de aula', match: /^\/(projetos|turmas)/ },
       { href: '#/grade-semanal', icon: 'calendar', label: 'Agenda da semana', desc: 'Todas as turmas e seus horários', match: /^\/grade-semanal/ },

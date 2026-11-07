@@ -28,7 +28,7 @@
         </div>
       </div>
       <div class="row between wrap mb-4">
-        <div class="tabs">${[['aulas', 'Aulas', 'book'], ['alunos', 'Alunos', 'users'], ['frequencia', 'Frequência', 'userCheck'], ['fotos', 'Fotos', 'image'], ['relatorios', 'Relatórios', 'fileText']].map(([k, n, ic]) => `<button class="tab ${k === tab0 ? 'active' : ''}" data-tab="${k}">${I(ic, 16)} ${n}</button>`).join('')}</div>
+        <div class="tabs">${[['aulas', 'Aulas', 'book'], ['plano', 'Plano do mês', 'clipboard'], ['alunos', 'Alunos', 'users'], ['frequencia', 'Frequência', 'userCheck'], ['fotos', 'Fotos', 'image'], ['relatorios', 'Relatórios', 'fileText']].map(([k, n, ic]) => `<button class="tab ${k === tab0 ? 'active' : ''}" data-tab="${k}">${I(ic, 16)} ${n}</button>`).join('')}</div>
         <div class="row"><button class="btn btn-icon btn-sm" data-ym="-1" aria-label="Mês anterior">${I('chevronLeft', 16)}</button><b data-ymlabel style="min-width:150px;text-align:center;text-transform:capitalize"></b><button class="btn btn-icon btn-sm" data-ym="1" aria-label="Próximo mês">${I('chevronRight', 16)}</button></div>
       </div>
       <div data-panel></div>
@@ -57,10 +57,10 @@
           </div>
           <div class="card">
             <div class="card-head"><div class="card-title">Aulas de ${esc(ICM.util.fmtMonth(ym))}</div>${ICM.auth.can('aulas.registrar') ? `<button class="btn btn-sm" data-gerar>${I('sparkles', 16)} Planejar aulas do mês</button>` : ''}</div>
-            ${aulas.length ? `<div class="table-wrap"><table class="table"><thead><tr><th>Data</th><th>Tema / plano</th><th>Presença</th><th>Relatório</th><th>Fotos</th><th>Situação</th></tr></thead><tbody>
+            ${aulas.length ? `<div class="table-wrap"><table class="table"><thead><tr><th>Data</th><th>Tema da aula</th><th>Presença</th><th>Relatório</th><th>Fotos</th><th>Situação</th></tr></thead><tbody>
             ${aulas.map(a => { const pr = Object.values(a.presencas || {}); const P = pr.filter(v => v !== 'F').length; const atrasada = a.status === 'planejada' && a.data < hoje; return `
               <tr class="clickable" data-aula="${esc(a.id)}"><td><b>${esc(fmtDate(a.data))}</b><div class="xs muted">${esc(ICM.util.DIAS[ICM.util.parseD(a.data).getDay()])} · ${esc(a.inicio)}–${esc(a.fim)}</div></td>
-              <td class="small"><b>${esc(a.plano && a.plano.tema || 'Sem plano')}</b></td>
+              <td class="small"><b>${esc(a.plano && a.plano.tema || '—')}</b></td>
               <td>${pr.length ? `<b>${P}/${pr.length}</b>` : '<span class="muted">—</span>'}</td>
               <td>${a.relatorio && a.relatorio.texto ? ui().badge('Preenchido', 'ok') : ui().badge('Pendente', a.status === 'realizada' || atrasada ? 'warn' : 'neutral')}</td>
               <td>${(a.fotos || []).length ? `<span class="row" style="gap:4px">${I('image', 14)} ${(a.fotos || []).length}</span>` : '<span class="muted">—</span>'}</td>
@@ -69,6 +69,42 @@
           </div></div>`;
         panel.querySelectorAll('[data-aula]').forEach(r => r.addEventListener('click', () => aulaModal(r.dataset.aula)));
         const g = panel.querySelector('[data-gerar]'); if (g) g.addEventListener('click', planejarMes);
+      },
+
+      async plano() {
+        const PG = ICM.api.pedagogico;
+        const pl = (await PG.planos.get(t.id, ym)) || {};
+        const conf = (await PG.conferencia(ym)).find(l => l.turma.id === t.id);
+        const pode = ICM.auth.can('aulas.registrar');
+        const F = o => ui().field({ ...o, attrs: (o.attrs || '') + (pode ? '' : ' disabled') });
+        const cor = v => v == null ? '#94a3b8' : v >= 90 ? '#10b981' : v >= 60 ? '#f59e0b' : '#ef4444';
+        const it = (n, st, x) => `<div class="list-item"><div class="grow small bold">${n}</div>${st ? `<span class="badge ${st === 'EM_DIA' ? 'ok' : st === 'PARCIAL' ? 'warn' : 'danger'}">${st === 'EM_DIA' ? 'Em dia' : st === 'PARCIAL' ? 'Parcial' : 'Pendente'}</span>` : '<span class="xs muted">sem aulas</span>'}${x ? `<span class="xs muted">${x}</span>` : ''}</div>`;
+        panel.innerHTML = `<div class="tab-panel grid" style="grid-template-columns:minmax(0,2fr) minmax(260px,1fr);gap:16px;align-items:start">
+          <div class="card"><div class="card-head"><div><div class="card-title">Plano de aula de ${esc(ICM.util.fmtMonth(ym))}</div><div class="card-sub">Um plano por mês para a turma. Em cada aula, registre a chamada e o relatório da aula.</div></div>
+            ${pl.atualizado_em ? `<span class="xs muted">Atualizado por ${esc(pl.atualizado_por || '')} em ${esc(fmtDate(pl.atualizado_em.slice(0, 10)))}</span>` : ''}</div>
+            <form class="grid grid-2">
+              ${F({ name: 'tema', label: 'Tema / unidade do mês', value: pl.tema, cls: 'span-2' })}
+              ${F({ name: 'objetivos', label: 'Objetivos', type: 'textarea', rows: 3, value: pl.objetivos })}
+              ${F({ name: 'conteudos', label: 'Conteúdos / repertório', type: 'textarea', rows: 3, value: pl.conteudos })}
+              ${F({ name: 'metodologia', label: 'Metodologia e atividades', type: 'textarea', rows: 3, value: pl.metodologia })}
+              ${F({ name: 'recursos', label: 'Recursos e materiais', type: 'textarea', rows: 3, value: pl.recursos })}
+              ${F({ name: 'avaliacao', label: 'Como vai avaliar', type: 'textarea', rows: 2, value: pl.avaliacao })}
+              ${F({ name: 'observacoes', label: 'Observações', type: 'textarea', rows: 2, value: pl.observacoes })}
+            </form>
+            ${pode ? `<div class="row end mt-4"><button class="btn btn-primary" data-salvar-plano>${I('check', 18)} Salvar plano do mês</button></div>` : ''}</div>
+          <div class="card"><div class="card-title mb-2">Obrigações do mês</div>
+            ${conf ? `<div class="row mb-4" style="gap:12px"><b style="font-size:34px;color:${cor(conf.total)}">${conf.total == null ? '—' : conf.total + '%'}</b><span class="small muted">do que precisa ser feito em ${esc(ICM.util.fmtMonth(ym))}${conf.aulas ? ` (${conf.aulas} aula(s) até ontem)` : ''}</span></div>
+              <div class="progress mb-4"><span style="width:${conf.total || 0}%;background:${cor(conf.total)}"></span></div>
+              ${it('Plano de aula do mês', conf.status.plano)}${it('Chamada das aulas', conf.status.chamada, conf.status.chamada ? `${conf.comChamada}/${conf.aulas}` : '')}${it('Relatório de cada aula', conf.status.relatorio, conf.status.relatorio ? `${conf.comRel}/${conf.aulas}` : '')}
+              ${conf.obs ? `<p class="small mt-4"><b>Coordenação:</b> ${esc(conf.obs)}</p>` : ''}
+              <p class="xs muted mt-4">Estar em dia com o plano, as chamadas e os relatórios é obrigatório para o pagamento.</p>` : '<p class="small muted">Turma fora da conferência.</p>'}
+          </div></div>`;
+        const b = panel.querySelector('[data-salvar-plano]');
+        if (b) b.addEventListener('click', e => ui().busy(e.currentTarget, async () => {
+          const d = ICM.util.formData(panel.querySelector('form'));
+          if (!Object.values(d).some(v => String(v || '').trim())) { ui().toast('Preencha o plano antes de salvar.', 'warn'); return; }
+          await ui().run(() => PG.planos.save(t.id, ym, d), 'Plano do mês salvo'); R.plano();
+        }).catch(() => { }));
       },
 
       async alunos() {
@@ -166,21 +202,16 @@
             ${F({ name: 'fim', label: 'Término', type: 'time', value: a.fim })}
             ${F({ name: 'status', label: 'Situação', type: 'select', value: a.status, options: [['planejada', 'Planejada'], ['realizada', 'Realizada'], ['cancelada', 'Cancelada']] })}
           </div>
-          <div class="tabs mb-4" data-atabs>${[['plano', 'Plano de aula', 'clipboard'], ['chamada', 'Chamada', 'userCheck'], ['relatorio', 'Relatório da aula', 'fileText'], ['fotos', 'Fotos', 'camera']].map(([k, n, ic], i) => `<button type="button" class="tab ${i === 0 ? 'active' : ''}" data-tab="${k}">${I(ic, 16)} ${n}</button>`).join('')}</div>
-          <section data-s="plano" class="grid grid-2 tab-panel">
-            ${F({ name: 'plano.tema', label: 'Tema / conteúdo da aula', value: pl.tema, cls: 'span-2' })}
-            ${F({ name: 'plano.objetivos', label: 'Objetivos', type: 'textarea', value: pl.objetivos, rows: 3 })}
-            ${F({ name: 'plano.conteudo', label: 'Desenvolvimento / atividades', type: 'textarea', value: pl.conteudo, rows: 3 })}
-            ${F({ name: 'plano.recursos', label: 'Recursos e materiais', value: pl.recursos })}
-            ${F({ name: 'plano.avaliacao', label: 'Forma de avaliação', value: pl.avaliacao })}
-          </section>
-          <section data-s="chamada" hidden>
+          <div class="tabs mb-4" data-atabs>${[['chamada', 'Chamada', 'userCheck'], ['relatorio', 'Relatório da aula', 'fileText'], ['fotos', 'Fotos', 'camera']].map(([k, n, ic], i) => `<button type="button" class="tab ${i === 0 ? 'active' : ''}" data-tab="${k}">${I(ic, 16)} ${n}</button>`).join('')}</div>
+<input type="hidden" name="plano.objetivos" value="${esc(pl.objetivos || '')}">
+          <section data-s="chamada">
             <div class="row between mb-4"><div class="small muted">${mats.length} aluno(s) na turma nesta data</div>
               ${canEdit ? `<div class="row"><button type="button" class="btn btn-sm" data-all="P">${I('check', 16)} Todos presentes</button></div>` : ''}</div>
             <div data-depois></div>
             <div data-chamada></div>
           </section>
           <section data-s="relatorio" class="col" hidden>
+            ${F({ name: 'plano.tema', label: 'Tema / conteúdo trabalhado na aula', value: pl.tema, hint: 'O plano de aula agora é mensal — veja a aba “Plano do mês” da turma.' })}
             ${F({ name: 'relatorio.texto', label: 'Relatório da aula', type: 'textarea', value: rl.texto, rows: 6, placeholder: 'Como foi a aula? Objetivos alcançados, participação, dificuldades, evolução dos alunos…' })}
             ${F({ name: 'relatorio.ocorrencias', label: 'Ocorrências da aula (se houver)', type: 'textarea', value: rl.ocorrencias, rows: 2 })}
           </section>

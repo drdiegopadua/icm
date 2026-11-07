@@ -56,11 +56,12 @@
     const r = await tentar(() => ICM.api.rotina(), {}) || {};
     const espera = can('espera.gerir') ? await tentar(() => ICM.api.espera.list({ status: 'aguardando' }), []) : [];
     const pelaApp = espera.filter(e => e.origem === 'app').length;
-    const planosPend = turmas.filter(t => t.status !== 'encerrada').filter(t => !aulas.some(a => a.turma_id === t.id && a.data.startsWith(hoje.slice(0, 7)) && a.plano && (a.plano.tema || a.plano.objetivos))).length;
+    const pms = await tentar(() => ICM.api.pedagogico.planos.list(hoje.slice(0, 7)), []);
+    const planosPend = turmas.filter(t => t.status !== 'encerrada').filter(t => !pms.some(p => p.turma_id === t.id)).length;
     d.atencao = [
       { n: r.semRegistro || 0, t: 'aulas sem chamada', ic: 'clipboard', href: '#/rotina', nivel: 'warn' },
       { n: (r.faltas || []).length, t: 'alunos com faltas', ic: 'alert', href: '#/relatorios?r=assiduidade', nivel: 'danger' },
-      { n: planosPend, t: 'turmas sem plano de aula no mês', ic: 'book', href: '#/projetos', nivel: 'warn' },
+      { n: planosPend, t: 'turmas sem plano de aula do mês', ic: 'book', href: '#/gestao-pedagogica?tab=conferencia', nivel: 'warn' },
       { n: espera.length, t: 'na lista de espera', sub: pelaApp ? `${pelaApp} pelo app` : '', ic: 'list', href: '#/espera', nivel: 'info' },
       { n: (r.docsInst || []).length, t: 'documentos do Instituto vencendo', ic: 'shield', href: '#/documentos', nivel: 'danger' },
       { n: (r.emprestimos || []).length, t: 'empréstimos atrasados', ic: 'building', href: '#/patrimonio', nivel: 'warn' },

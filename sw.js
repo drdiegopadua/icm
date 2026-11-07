@@ -1,6 +1,6 @@
 /* Service worker: guarda o app no aparelho para abrir e fazer chamada sem internet.
    Estratégia: tenta a rede primeiro (pega atualizações); sem rede, usa a cópia guardada. */
-const CACHE = 'icm-app-v29';
+const CACHE = 'icm-app-v30';
 const ARQUIVOS = [
   './', 'index.html', 'manifest.webmanifest', 'assets/favicon.ico', 'assets/icon-192.png', 'assets/icon-512.png', 'assets/apple-touch-icon.png', 'assets/icm-marca.png', 'assets/icm-logo-branca.png', 'assets/icm-logo-escura.png',
   'css/design-system.css', 'css/app.css', 'css/report.css', 'css/revista.css',
@@ -9,7 +9,7 @@ const ARQUIVOS = [
   'js/data/constants.js', 'js/data/seed.js', 'js/data/seed-comunidade.js', 'js/data/seed-gestao.js', 'js/data/store.js', 'js/data/store-supabase.js',
   'js/data/api.js', 'js/data/api-comunidade.js', 'js/data/api-gestao.js', 'js/data/api-rotina.js', 'js/data/api-chat.js', 'js/data/api-calendario.js', 'js/data/api-pedagogico.js', 'js/data/api-financeiro.js', 'js/data/seed-financeiro.js',
   'js/pages/login.js', 'js/pages/dashboard.js', 'js/pages/alunos.js', 'js/pages/aluno-form.js', 'js/pages/aluno-detalhe.js',
-  'js/pages/projetos.js', 'js/pages/turma.js', 'js/pages/eventos.js', 'js/pages/relatorios.js', 'js/pages/patrimonio.js',
+  'js/pages/projetos.js', 'js/pages/turma.js', 'js/pages/turmas.js', 'js/pages/eventos.js', 'js/pages/relatorios.js', 'js/pages/patrimonio.js',
   'js/pages/voluntarios.js', 'js/pages/espera.js', 'js/pages/reunioes.js', 'js/pages/certificados.js', 'js/pages/doadores.js',
   'js/pages/associados.js', 'js/pages/pesquisas.js', 'js/pages/agenda.js', 'js/pages/estoque.js', 'js/pages/equipe.js',
   'js/pages/avisos.js', 'js/pages/avisos-faltas.js', 'js/pages/portal.js', 'js/pages/assinaturas.js', 'js/pages/assinaturas-equipe.js', 'js/pages/rotina.js', 'js/pages/chamada.js',

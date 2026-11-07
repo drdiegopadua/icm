@@ -161,7 +161,7 @@
 
       <div class="grid grid-4 stagger">
         ${stat('users', '#2563eb', d.kpi.alunos, `Alunos ativos · ${d.kpi.novos} novo(s) ${R.rot}${d.kpi.saidas ? ` · ${d.kpi.saidas} saída(s)` : ''}`, delta(d.kpi.novos, d.kpi.novosAnt, 'n'), '', '#/alunos')}
-        ${stat('layers', '#8b5cf6', d.kpi.turmas, `Turmas ativas${d.ocupacao.lotadas ? ` · ${d.ocupacao.lotadas} lotada(s)` : ''}`, '', '', '#/projetos')}
+        ${stat('layers', '#8b5cf6', d.kpi.turmas, `Turmas ativas${d.ocupacao.lotadas ? ` · ${d.ocupacao.lotadas} lotada(s)` : ''}`, '', '', '#/turmas')}
         ${stat('clock', '#f97316', Math.round(d.kpi.horas), `Horas de aula ${R.rot} (${d.kpi.aulas} aulas)`, delta(d.kpi.horas, d.kpi.horasAnt), 'h')}
         ${stat('userCheck', '#10b981', d.kpi.freq || 0, `Frequência ${R.rot}`, delta(d.kpi.freq, d.kpi.freqAnt, 'pp'), '%')}
       </div>

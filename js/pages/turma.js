@@ -11,14 +11,14 @@
     const p = await ICM.api.projetos.get(t.projeto_id);
     const users = await ICM.api.usuarios.list();
     const prof = users.find(u => u.id === t.professor_id) || {};
-    ICM.app.setCrumbs([['Projetos', '#/projetos'], [p.nome, `#/projetos/${p.id}`], [t.nome]]);
+    ICM.app.setCrumbs([['Turmas', '#/turmas'], [t.nome]]);
     let ym = query.get('mes') || ICM.util.today().slice(0, 7);
     const tab0 = query.get('tab') || 'aulas';
 
     el.innerHTML = `<div class="page">
       <div class="card mb-4 project-card" style="--c:${p.cor};cursor:default">
         <div class="row between wrap">
-          <div><div class="row wrap">${ui().areaChip(p.area)}<span class="badge neutral">${esc(t.modalidade || '')}</span>${t.status === 'encerrada' ? ui().badge('Encerrada', 'neutral') : ui().badge('Ativa', 'ok', true)}</div>
+          <div><div class="row wrap"><a class="badge neutral" href="#/projetos/${esc(p.id)}" style="text-decoration:none">${I('folder', 12)} ${esc(p.nome)}</a>${ui().areaChip(p.area)}<span class="badge neutral">${esc(t.modalidade || '')}</span>${t.status === 'encerrada' ? ui().badge('Encerrada', 'neutral') : ui().badge('Ativa', 'ok', true)}</div>
             <h1 class="page-title mt-2" style="font-size:28px">${esc(t.nome)}</h1>
             <div class="meta mt-2"><span>${I('user', 15)} ${esc(prof.nome || 'Professor(a) a definir')}</span><span>${I('calendar', 15)} ${esc(ICM.pages._diasTxt(t.dias))}</span><span>${I('clock', 15)} ${esc(t.inicio)}–${esc(t.fim)}</span><span>${I('pin', 15)} ${esc(t.local || '')}</span></div></div>
           <div class="row wrap">

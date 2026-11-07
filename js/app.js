@@ -26,6 +26,7 @@
     { re: /^\/alunos\/([\w-]+)$/, page: 'alunoDetalhe', keys: ['id'] },
     { re: /^\/projetos$/, page: 'projetos' },
     { re: /^\/projetos\/([\w-]+)$/, page: 'projetoDetalhe', keys: ['id'] },
+    { re: /^\/turmas$/, page: 'turmasLista' },
     { re: /^\/turmas\/([\w-]+)$/, page: 'turma', keys: ['id'] },
     { re: /^\/eventos$/, page: 'eventos' },
     { re: /^\/eventos\/([\w-]+)$/, page: 'eventoDetalhe', keys: ['id'] },
@@ -89,7 +90,7 @@
     { label: 'Pedagógico', icon: 'folder', itens: [
       ICM.auth.can('pedagogico.gestao') && { href: '#/gestao-pedagogica', icon: 'chart', label: 'Gestão pedagógica', desc: 'Conferência dos professores, frequência, visitas e cronograma', match: /^\/gestao-pedagogica/ },
       { href: '#/rotina', icon: 'sun', label: 'Rotina do dia', desc: 'Aulas, pendências e avisos de hoje', match: /^\/rotina/ },
-      { href: '#/projetos', icon: 'folder', label: 'Projetos e turmas', desc: 'Planos de aula, chamadas e relatórios de aula', match: /^\/(projetos|turmas)/ },
+      { href: '#/turmas', icon: 'layers', label: 'Turmas', desc: 'Aulas, plano do mês, chamada e frequência', match: /^\/turmas/ },
       { href: '#/grade-semanal', icon: 'calendar', label: 'Agenda da semana', desc: 'Todas as turmas e seus horários', match: /^\/grade-semanal/ },
       ICM.auth.can('alunos.sensivel') && { href: '#/mapa-atendidos', icon: 'pin', label: 'Localização dos atendidos', desc: 'Mapa de onde moram os alunos, por matrícula', match: /^\/mapa-atendidos/ },
       { href: '#/eventos', icon: 'star', label: 'Eventos e ações', desc: 'Apresentações, campeonatos e participantes', match: /^\/eventos/ },
@@ -112,6 +113,7 @@
       ICM.auth.can('governanca.ver') && { href: '#/governanca', icon: 'users', label: 'Governança', desc: 'Diretoria, conselhos, atas e estatuto', match: /^\/governanca/, count: 'gov' }
     ] },
     { label: 'Gestão', icon: 'building', itens: [
+      { href: '#/projetos', icon: 'folder', label: 'Projetos', desc: 'Editais e termos, metas, vigência, orçamento e app', match: /^\/projetos/ },
       ICM.auth.can('financeiro.ver') && { href: '#/financeiro', icon: 'dollar', label: 'Financeiro', desc: 'Pagar e receber, orçamento por projeto, conciliação', match: /^\/financeiro/ },
       { href: '#/compras', icon: 'clipboard', label: 'Compras', desc: 'Pedidos, 3 orçamentos e aprovação', match: /^\/compras/ },
       { href: '#/patrimonio', icon: 'building', label: 'Patrimônio', match: /^\/patrimonio/, count: 'atrasos' },
@@ -129,9 +131,9 @@
   // Menus grandes abrem em colunas por assunto
   const SECOES = {
     '#/gestao-pedagogica': 'Acompanhamento', '#/rotina': 'Acompanhamento',
-    '#/projetos': 'Turmas e alunos', '#/grade-semanal': 'Turmas e alunos', '#/mapa-atendidos': 'Turmas e alunos',
+    '#/turmas': 'Turmas e alunos', '#/projetos': 'Projetos e recursos', '#/grade-semanal': 'Turmas e alunos', '#/mapa-atendidos': 'Turmas e alunos',
     '#/eventos': 'Eventos e calendário', '#/agenda': 'Eventos e calendário', '#/calendario-letivo': 'Eventos e calendário',
-    '#/financeiro': 'Administrativo', '#/compras': 'Administrativo', '#/patrimonio': 'Administrativo', '#/estoque': 'Administrativo',
+    '#/financeiro': 'Projetos e recursos', '#/compras': 'Administrativo', '#/patrimonio': 'Administrativo', '#/estoque': 'Administrativo',
     '#/equipe': 'Pessoas e acessos', '#/assinaturas-equipe': 'Pessoas e acessos', '#/usuarios': 'Pessoas e acessos',
     '#/auditoria': 'Sistema', '#/importar': 'Sistema', '#/dados': 'Sistema', '#/config': 'Sistema'
   };

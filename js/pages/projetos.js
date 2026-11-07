@@ -7,7 +7,7 @@
 
   // ---------- Lista ----------
   ICM.pages.projetos = async function (el) {
-    ICM.app.setCrumbs([['Início', '#/'], ['Projetos']]);
+    ICM.app.setCrumbs([['Gestão'], ['Projetos']]);
     const list = await ICM.api.projetos.list();
     const stats = {}; for (const p of list) stats[p.id] = await ICM.api.projetos.stats(p.id);
     let area = '';
@@ -236,7 +236,7 @@
     const del = m.$('[data-del]');
     if (del) del.addEventListener('click', async () => {
       if (!(await ui().confirm({ title: 'Excluir turma', text: 'Turmas com aulas realizadas não podem ser excluídas — apenas encerradas.', ok: 'Excluir', danger: true }))) return;
-      try { await ui().run(() => ICM.api.turmas.remove(t.id), 'Turma excluída'); m.close(); location.hash = `#/projetos/${t.projeto_id}`; } catch (e) { /* toast */ }
+      try { await ui().run(() => ICM.api.turmas.remove(t.id), 'Turma excluída'); m.close(); location.hash = '#/turmas'; } catch (e) { /* toast */ }
     });
   }
   ICM.pages._turmaForm = turmaForm;

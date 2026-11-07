@@ -10,7 +10,7 @@
   const stBadge = s => s ? `<span class="badge ${ST[s][1]}">${ST[s][0]}</span>` : '<span class="xs muted">sem aulas</span>';
   const corPct = v => v == null ? '#94a3b8' : v >= 90 ? '#10b981' : v >= 60 ? '#f59e0b' : '#ef4444';
   const barra = v => `<div class="gp-bar" title="${v == null ? 'sem aulas no mês' : v + '%'}"><span style="width:${v || 0}%;background:${corPct(v)}"></span></div>`;
-  const anel = (v, t = 64) => { const r = 26, c = 2 * Math.PI * r; return `<svg width="${t}" height="${t}" viewBox="0 0 64 64"><circle cx="32" cy="32" r="${r}" fill="none" stroke="var(--surface-sunken)" stroke-width="7"/><circle cx="32" cy="32" r="${r}" fill="none" stroke="${corPct(v)}" stroke-width="7" stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${c * (1 - (v || 0) / 100)}" transform="rotate(-90 32 32)"/><text x="32" y="37" text-anchor="middle" font-size="15" font-weight="800" fill="currentColor">${v == null ? '—' : v + '%'}</text></svg>`; };
+  const anel = (v, t = 64) => { const r = 26, c = 2 * Math.PI * r; return `<svg width="${t}" height="${t}" viewBox="0 0 64 64" style="flex:none;width:${t}px;height:${t}px"><circle cx="32" cy="32" r="${r}" fill="none" stroke="var(--surface-sunken)" stroke-width="7"/><circle cx="32" cy="32" r="${r}" fill="none" stroke="${corPct(v)}" stroke-width="7" stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${c * (1 - (v || 0) / 100)}" transform="rotate(-90 32 32)"/></svg>`; };
 
   let aba = 'visao';
   let ym = ICM.util.today().slice(0, 7);
@@ -28,7 +28,9 @@
     <style>
       .gp .gp-bar{height:8px;border-radius:6px;background:var(--surface-sunken);overflow:hidden;min-width:80px}.gp .gp-bar span{display:block;height:100%;border-radius:6px}
       .gp .gp-kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
-      .gp .gp-k{display:flex;align-items:center;gap:12px}.gp .gp-k b{font-size:24px;display:block}
+      .gp .gp-k{display:flex;align-items:center;gap:14px;position:relative;overflow:hidden;border-top:4px solid var(--c)}.gp .gp-k b{font-size:26px;display:block;color:var(--c)}
+      .gp .gp-ic{display:grid;place-items:center;width:52px;height:52px;border-radius:16px;flex:none;color:#fff;background:linear-gradient(135deg,var(--c),color-mix(in srgb,var(--c) 70%,#fff));box-shadow:0 8px 18px color-mix(in srgb,var(--c) 35%,transparent)}
+      .gp .gp-k::after{content:"";position:absolute;right:-30px;bottom:-30px;width:110px;height:110px;border-radius:50%;background:var(--c);opacity:.07}
       .gp .gp-prof{display:grid;grid-template-columns:minmax(140px,220px) 1fr 52px;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line-2)}
       .gp .gp-prof .gp-bar{height:12px}
       .gp td .gp-bar{margin-top:4px}
@@ -59,10 +61,10 @@
     const ano = ym.slice(0, 4); const hoje = ICM.util.today();
     const prox = (await P().cronograma.list(ano)).filter(e => (e.fim || e.inicio) >= hoje).slice(0, 5);
     painel.innerHTML = `<div class="gp-kpis mb-4">
-        <div class="card gp-k">${anel(media)}<div><b>${media == null ? '—' : media + '%'}</b><span class="small muted">Obrigações cumpridas no mês (média)</span></div></div>
-        <div class="card gp-k">${I('userCheck', 28)}<div><b>${profs.filter(p => p.emDia && p.total != null).length} de ${profs.filter(p => p.total != null).length}</b><span class="small muted">Professores em dia</span></div></div>
-        <div class="card gp-k">${I('alert', 28)}<div><b>${alertas.length}</b><span class="small muted">Alunos em alerta de faltas</span></div></div>
-        <div class="card gp-k">${I('eye', 28)}<div><b>${visitadas.size} de ${linhas.length}</b><span class="small muted">Turmas visitadas no mês</span></div></div>
+        <div class="card gp-k" style="--c:${corPct(media)}">${anel(media, 58)}<div><b>${media == null ? '—' : media + '%'}</b><span class="small muted">Obrigações cumpridas no mês (média)</span></div></div>
+        <div class="card gp-k" style="--c:${!profs.filter(p => p.total != null).length ? '#64748b' : profs.filter(p => p.emDia && p.total != null).length === profs.filter(p => p.total != null).length ? '#10b981' : profs.filter(p => p.emDia && p.total != null).length ? '#f59e0b' : '#ef4444'}"><span class="gp-ic">${I('userCheck', 26)}</span><div><b>${profs.filter(p => p.emDia && p.total != null).length} de ${profs.filter(p => p.total != null).length}</b><span class="small muted">Professores em dia</span></div></div>
+        <div class="card gp-k" style="--c:${alertas.length ? '#ef4444' : '#10b981'}"><span class="gp-ic">${I('alert', 26)}</span><div><b>${alertas.length}</b><span class="small muted">Alunos em alerta de faltas</span></div></div>
+        <div class="card gp-k" style="--c:#8b5cf6"><span class="gp-ic">${I('eye', 26)}</span><div><b>${visitadas.size} de ${linhas.length}</b><span class="small muted">Turmas visitadas no mês</span></div></div>
       </div>
       <div class="grid grid-2">
         <div class="card"><div class="card-head"><div><div class="card-title">Professores — ${esc(ICM.util.fmtMonth(ym))}</div><div class="card-sub">Plano do mês + chamada + relatório de cada aula</div></div><button class="btn btn-sm btn-ghost" data-go="conferencia">Conferir</button></div>

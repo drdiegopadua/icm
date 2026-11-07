@@ -132,6 +132,12 @@
       need('pedagogico.gestao');
       if (!a.data || !a.tipo) throw new Error('Informe o tipo e a data.');
       if (a.tipo === 'visita' && !a.turma_id) throw new Error('Escolha a turma visitada.');
+      if (!a.id && !a.numero) {   // numeração anual: visitas 001/2026; atas P001/26 (professor), G001/26 (geral), F001/26 (formação)
+        const ano = String(a.data).slice(0, 4), pre = { reuniao: 'P', reuniao_geral: 'G', formacao: 'F' }[a.tipo] || '';
+        const ja = (await S().list('acompanhamentos', x => x.tipo === a.tipo && String(x.data).startsWith(ano))).map(x => parseInt(String(x.numero || '').replace(/^\D+/, ''), 10) || 0);
+        const n = String(Math.max(0, ...ja) + 1).padStart(3, '0');
+        a = { ...a, numero: a.tipo === 'visita' ? `${n}/${ano}` : `${pre}${n}/${ano.slice(2)}` };
+      }
       const r = a.id ? await S().update('acompanhamentos', a.id, a) : await S().insert('acompanhamentos', { ...a, registrado_por: me().nome });
       await audit(a.id ? 'editar' : 'criar', 'acompanhamentos', r.id, `${TIPOS_ACOMP[r.tipo]} em ${u().fmtDate(r.data)}`);
       return r;

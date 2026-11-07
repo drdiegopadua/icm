@@ -148,50 +148,193 @@
   }
 
   // ======================= VISITAS E REUNIÕES =======================
+  // Ata de reunião (modelo P001/26) e relatório de visita à aula (modelo 001/2026)
+  const ASPECTOS = ['Aula de acordo com o plano de aula mensal', 'Pontualidade (início e término da aula)', 'Organização do espaço e dos materiais', 'Didática e condução da aula', 'Participação e interesse dos alunos', 'Disciplina e convivência da turma'];
+  const NOTAS = ['Ótimo', 'Bom', 'Regular', 'Precisa melhorar', 'Não observado'];
+  const TOPICOS_PADRAO = ['PLANO DE AULA MENSAL', 'RELATÓRIOS DE AULA E REGISTRO DE CHAMADA', 'FREQUÊNCIA E ALUNOS FALTOSOS', 'FOTOS', 'OCORRÊNCIAS'];
+  const cargoDe = u => (u && (u.cargo || (ICM.C.PAPEIS[u.papel] || {}).nome)) || '';
+
   async function acomp(painel) {
     const T = P().acompanhamentos.TIPOS;
-    const [lista, turmas, users] = await Promise.all([P().acompanhamentos.list(ym), ICM.api.turmas.list(), ICM.api.usuarios.list().catch(() => [])]);
+    const [lista, turmas, users, projetos] = await Promise.all([P().acompanhamentos.list(ym), ICM.api.turmas.list(), ICM.api.usuarios.list().catch(() => []), ICM.api.projetos.list()]);
     const ativas = turmas.filter(t => t.status !== 'encerrada');
     const profIds = [...new Set(ativas.map(t => t.professor_id).filter(Boolean))];
     const nomeU = id => (users.find(x => x.id === id) || {}).nome || '—';
     const visitadas = new Set(lista.filter(a => a.tipo === 'visita').map(a => a.turma_id));
     const comReuniao = new Set(lista.filter(a => a.tipo !== 'visita').flatMap(a => a.professores || []));
     const pode = ICM.auth.can('pedagogico.gestao');
+    const doc = a => a.tipo === 'visita' ? 'Relatório de visita' : 'Ata';
     painel.innerHTML = `<div class="grid grid-2 mb-4">
         <div class="card"><div class="card-title mb-2">Turmas visitadas em ${esc(ICM.util.fmtMonth(ym))}: ${visitadas.size} de ${ativas.length}</div>
           <div class="row wrap" style="gap:6px">${ativas.map(t => `<span class="badge ${visitadas.has(t.id) ? 'ok' : 'neutral'}">${visitadas.has(t.id) ? '✓ ' : ''}${esc(t.nome)}</span>`).join('')}</div></div>
         <div class="card"><div class="card-title mb-2">Professores com reunião no mês: ${profIds.filter(id => comReuniao.has(id)).length} de ${profIds.length}</div>
           <div class="row wrap" style="gap:6px">${profIds.map(id => `<span class="badge ${comReuniao.has(id) ? 'ok' : 'neutral'}">${comReuniao.has(id) ? '✓ ' : ''}${esc(nomeU(id))}</span>`).join('')}</div></div>
       </div>
-      <div class="card"><div class="card-head"><div class="card-title">Registros de ${esc(ICM.util.fmtMonth(ym))}</div>${pode ? `<button class="btn btn-primary" data-novo>${I('plus', 18)} Registrar visita ou reunião</button>` : ''}</div>
-        ${lista.length ? lista.map(a => `<div class="list-item" style="align-items:flex-start"><span class="badge ${a.tipo === 'visita' ? 'info' : 'neutral'}">${esc(fmtDate(a.data))}</span>
-          <div class="grow"><b>${esc(T[a.tipo] || a.tipo)}${a.turma_id ? ' — ' + esc((turmas.find(t => t.id === a.turma_id) || {}).nome || '') : ''}</b>
-            <div class="xs muted">${(a.professores || []).map(nomeU).map(esc).join(', ')}${a.registrado_por ? ' · por ' + esc(a.registrado_por) : ''}</div>
-            ${a.observacoes ? `<div class="small mt-1">${esc(a.observacoes)}</div>` : ''}${a.encaminhamentos ? `<div class="small mt-1"><b>Encaminhamentos:</b> ${esc(a.encaminhamentos)}</div>` : ''}</div>
-          ${pode ? `<button class="btn btn-sm btn-ghost" data-ed="${esc(a.id)}">${I('edit', 14)}</button>` : ''}</div>`).join('') : ui().empty('Nenhuma visita ou reunião registrada neste mês', 'users')}
+      <div class="card"><div class="card-head"><div class="card-title">Registros de ${esc(ICM.util.fmtMonth(ym))}</div>
+        ${pode ? `<div class="row wrap"><button class="btn" data-novo="visita">${I('eye', 16)} Nova visita à aula</button><button class="btn btn-primary" data-novo="reuniao">${I('plus', 18)} Nova ata de reunião</button></div>` : ''}</div>
+        ${lista.length ? lista.map(a => `<div class="list-item" style="align-items:flex-start"><span class="badge ${a.tipo === 'visita' ? 'ok' : 'neutral'}">${esc(fmtDate(a.data))}</span>
+          <div class="grow"><b>${esc(T[a.tipo] || a.tipo)} ${a.numero ? 'nº ' + esc(a.numero) : ''}${a.turma_id ? ' — ' + esc((turmas.find(t => t.id === a.turma_id) || {}).nome || '') : a.pauta ? ' — ' + esc(a.pauta) : ''}</b>
+            <div class="xs muted">${esc((a.participantes || []).map(p => p.nome).join(', ') || (a.professores || []).map(nomeU).join(', '))}${a.registrado_por ? ' · por ' + esc(a.registrado_por) : ''}</div>
+            ${a.encaminhamentos ? `<div class="small mt-1"><b>Encaminhamentos:</b> ${esc(a.encaminhamentos)}</div>` : ''}</div>
+          <div class="row" style="gap:4px"><button class="btn btn-sm" data-pdf="${esc(a.id)}">${I('printer', 14)} ${doc(a)}</button>${pode ? `<button class="btn btn-sm btn-ghost" data-ed="${esc(a.id)}">${I('edit', 14)}</button>` : ''}</div></div>`).join('') : ui().empty('Nenhuma visita ou reunião registrada neste mês', 'users')}
       </div>`;
-    const abrir = a => {
-      a = a || { tipo: 'visita', data: ICM.util.today(), professores: [] };
-      const m = ui().modal({ title: a.id ? 'Editar registro' : 'Registrar visita ou reunião', body: `<form class="grid grid-2">
-        ${ui().field({ name: 'tipo', label: 'Tipo', type: 'select', value: a.tipo, options: Object.entries(T) })}
-        ${ui().field({ name: 'data', label: 'Data', type: 'date', value: a.data })}
-        ${ui().field({ name: 'turma_id', label: 'Turma (visita)', type: 'select', value: a.turma_id || '', options: [['', '—'], ...ativas.map(t => [t.id, t.nome])], cls: 'span-2' })}
-        <div class="span-2 field"><label class="label">Professor(es)</label><div class="row wrap" style="gap:10px">${profIds.map(id => `<label class="row"><input type="checkbox" name="prof" value="${esc(id)}" ${(a.professores || []).includes(id) ? 'checked' : ''}> ${esc(nomeU(id))}</label>`).join('')}</div></div>
-        ${ui().field({ name: 'observacoes', label: 'Observações / pauta', type: 'textarea', rows: 3, value: a.observacoes, cls: 'span-2' })}
-        ${ui().field({ name: 'encaminhamentos', label: 'Encaminhamentos e prazos', type: 'textarea', rows: 2, value: a.encaminhamentos, cls: 'span-2' })}
-      </form>`, foot: `${a.id ? `<button class="btn btn-danger" data-del style="margin-right:auto">${I('trash', 16)} Excluir</button>` : ''}<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" data-ok>Salvar</button>` });
-      const selT = m.$('[name=turma_id]');
-      selT.addEventListener('change', () => { const t = ativas.find(x => x.id === selT.value); if (t && t.professor_id) { const c = m.$(`[name=prof][value="${t.professor_id}"]`); if (c) c.checked = true; } });
-      m.$('[data-ok]').addEventListener('click', async () => {
-        const d = ICM.util.formData(m.$('form')); delete d.prof;
-        const rec = { ...a, ...d, professores: [...m.el.querySelectorAll('[name=prof]:checked')].map(c => c.value) };
-        try { await ui().run(() => P().acompanhamentos.save(rec), 'Registro salvo'); m.close(); acomp(painel); } catch (e) { /* toast */ }
-      });
-      const del = m.$('[data-del]'); if (del) del.addEventListener('click', async () => { if (!(await ui().confirm({ title: 'Excluir registro', text: 'Excluir este registro?', ok: 'Excluir', danger: true }))) return; await ui().run(() => P().acompanhamentos.remove(a.id), 'Excluído'); m.close(); acomp(painel); });
-    };
-    const bn = painel.querySelector('[data-novo]'); if (bn) bn.addEventListener('click', () => abrir());
-    painel.querySelectorAll('[data-ed]').forEach(b => b.addEventListener('click', () => abrir(lista.find(x => x.id === b.dataset.ed))));
+    const ctx = { turmas, ativas, users, projetos, profIds, depois: () => acomp(painel) };
+    painel.querySelectorAll('[data-novo]').forEach(b => b.addEventListener('click', () => b.dataset.novo === 'visita' ? visitaModal(null, ctx) : ataModal(null, ctx)));
+    painel.querySelectorAll('[data-ed]').forEach(b => b.addEventListener('click', () => { const a = lista.find(x => x.id === b.dataset.ed); a.tipo === 'visita' ? visitaModal(a, ctx) : ataModal(a, ctx); }));
+    painel.querySelectorAll('[data-pdf]').forEach(b => b.addEventListener('click', () => { const a = lista.find(x => x.id === b.dataset.pdf); ICM.reports.generate(a.tipo === 'visita' ? 'visita_aula' : 'ata_reuniao_pedagogica', { id: a.id }); }));
   }
+
+  // Participantes: equipe do sistema (com função) + outras pessoas
+  function funcaoProfessor(uid, turmas) { const ts = turmas.filter(t => t.professor_id === uid && t.status !== 'encerrada').map(t => t.nome); return ts.length ? `Professor(a) — ${ts.join(', ')}` : ''; }
+
+  function ataModal(a, { turmas, users, projetos, profIds, depois }) {
+    const eu = ICM.auth.user();
+    a = a || { tipo: 'reuniao', data: ICM.util.today(), horario: '', formato: 'Presencial', local: 'Sede do Instituto', pauta: 'Reunião pedagógica mensal', redator: eu.nome, participantes: [{ id: eu.id, nome: eu.nome, funcao: cargoDe(eu) }], topicos: TOPICOS_PADRAO.map(t => ({ titulo: t, texto: '' })), encaminhamentos: '' };
+    let parts = (a.participantes || []).map(p => ({ ...p }));
+    let tops = (a.topicos || []).map(t => ({ ...t }));
+    const equipe = users.filter(u => u.ativo !== false && !u.convite).sort((x, y) => x.nome.localeCompare(y.nome));
+    const m = ui().modal({ title: a.id ? `Ata ${a.numero || ''}` : 'Nova ata de reunião', size: 'wide', body: `<form data-f>
+      <div class="grid grid-4">
+        ${ui().field({ name: 'tipo', label: 'Tipo', type: 'select', value: a.tipo, options: [['reuniao', 'Reunião com professor(a)'], ['reuniao_geral', 'Reunião geral de professores'], ['formacao', 'Formação / capacitação']] })}
+        ${ui().field({ name: 'data', label: 'Data', type: 'date', value: a.data })}
+        ${ui().field({ name: 'horario', label: 'Horário', type: 'time', value: a.horario })}
+        ${ui().field({ name: 'formato', label: 'Formato', type: 'select', value: a.formato, options: ['Presencial', 'Online', 'Híbrido'] })}
+        ${ui().field({ name: 'local', label: 'Local / plataforma', value: a.local, placeholder: 'Sede, WhatsApp, Google Meet…' })}
+        ${ui().field({ name: 'projeto_id', label: 'Projeto (opcional)', type: 'select', value: a.projeto_id || '', options: [['', '—'], ...projetos.map(p => [p.id, p.nome])] })}
+        ${ui().field({ name: 'pauta', label: 'Pauta / assunto', value: a.pauta, cls: 'span-2' })}
+        ${ui().field({ name: 'redator', label: 'Redator(a)', value: a.redator || eu.nome })}
+      </div>
+      <div class="section-title mt-4">${I('users', 18)} Participantes</div>
+      <div class="row wrap mb-2" style="gap:8px"><select class="input" data-addu style="width:auto;min-width:260px"><option value="">+ Adicionar da equipe…</option>${equipe.map(u => `<option value="${esc(u.id)}">${esc(u.nome)}${profIds.includes(u.id) ? ' (professor)' : ''}</option>`).join('')}</select>
+        <button type="button" class="btn btn-sm" data-addo>${I('plus', 14)} Outra pessoa</button></div>
+      <div data-parts></div>
+      <div class="section-title mt-4">${I('fileText', 18)} Relato da reunião</div>
+      <p class="xs muted mb-2">O parágrafo de abertura (data, horário, formato, participantes e pauta) é montado sozinho na ata.</p>
+      <div data-tops></div><button type="button" class="btn btn-sm mt-2" data-addt>${I('plus', 14)} Tópico</button>
+      ${ui().field({ name: 'encaminhamentos', label: 'Encaminhamentos', type: 'textarea', rows: 2, value: a.encaminhamentos, placeholder: 'Sem encaminhamentos.' })}
+    </form>`, foot: `${a.id ? `<button class="btn btn-danger" data-del style="margin-right:auto">${I('trash', 16)} Excluir</button>` : ''}<button class="btn" data-close>Cancelar</button><button class="btn" data-salvar-pdf>${I('printer', 16)} Salvar e gerar ata</button><button class="btn btn-primary" data-ok>Salvar</button>` });
+    const desenharParts = () => {
+      m.$('[data-parts]').innerHTML = parts.map((p, i) => `<div class="row mb-2" style="gap:8px"><input class="input" data-pn="${i}" value="${esc(p.nome)}" placeholder="Nome completo" style="flex:1"><input class="input" data-pf="${i}" value="${esc(p.funcao || '')}" placeholder="Função / papel no projeto" style="flex:1.4"><button type="button" class="btn btn-sm btn-ghost" data-pr="${i}">${I('x', 14)}</button></div>`).join('') || '<p class="small muted">Nenhum participante.</p>';
+      m.el.querySelectorAll('[data-pn]').forEach(x => x.addEventListener('input', () => { parts[+x.dataset.pn].nome = x.value; }));
+      m.el.querySelectorAll('[data-pf]').forEach(x => x.addEventListener('input', () => { parts[+x.dataset.pf].funcao = x.value; }));
+      m.el.querySelectorAll('[data-pr]').forEach(x => x.addEventListener('click', () => { parts.splice(+x.dataset.pr, 1); desenharParts(); }));
+    };
+    const desenharTops = () => {
+      m.$('[data-tops]').innerHTML = tops.map((t, i) => `<div class="card flat mb-2" style="padding:10px"><div class="row mb-2" style="gap:8px"><b>${i + 1}.</b><input class="input" data-tt="${i}" value="${esc(t.titulo)}" style="flex:1;font-weight:700"><button type="button" class="btn btn-sm btn-ghost" data-tr="${i}" title="Remover tópico">${I('trash', 14)}</button></div><textarea class="textarea" rows="2" data-tx="${i}" placeholder="O que foi tratado (deixe em branco para não sair na ata)">${esc(t.texto || '')}</textarea></div>`).join('');
+      m.el.querySelectorAll('[data-tt]').forEach(x => x.addEventListener('input', () => { tops[+x.dataset.tt].titulo = x.value; }));
+      m.el.querySelectorAll('[data-tx]').forEach(x => x.addEventListener('input', () => { tops[+x.dataset.tx].texto = x.value; }));
+      m.el.querySelectorAll('[data-tr]').forEach(x => x.addEventListener('click', () => { tops.splice(+x.dataset.tr, 1); desenharTops(); }));
+    };
+    desenharParts(); desenharTops();
+    m.$('[data-addu]').addEventListener('change', e => { const u = equipe.find(x => x.id === e.target.value); e.target.value = ''; if (!u || parts.some(p => p.id === u.id)) return; parts.push({ id: u.id, nome: u.nome, funcao: funcaoProfessor(u.id, turmas) || cargoDe(u) }); desenharParts(); });
+    m.$('[data-addo]').addEventListener('click', () => { parts.push({ nome: '', funcao: '' }); desenharParts(); });
+    m.$('[data-addt]').addEventListener('click', () => { tops.push({ titulo: '', texto: '' }); desenharTops(); });
+    const salvar = async () => {
+      const d = ICM.util.formData(m.$('[data-f]'));
+      const participantes = parts.filter(p => String(p.nome || '').trim()).map(p => ({ ...p, nome: p.nome.trim(), funcao: (p.funcao || '').trim() }));
+      if (!participantes.length) { ui().toast('Inclua pelo menos um participante.', 'warn'); return null; }
+      const rec = { ...a, ...d, participantes, professores: participantes.map(p => p.id).filter(id => id && profIds.includes(id)), topicos: tops.filter(t => String(t.titulo || '').trim()), encaminhamentos: d.encaminhamentos.trim() };
+      try { const r = await ui().run(() => P().acompanhamentos.save(rec), 'Ata salva'); m.close(); depois(); return r; } catch (e) { return null; }
+    };
+    m.$('[data-ok]').addEventListener('click', salvar);
+    m.$('[data-salvar-pdf]').addEventListener('click', async () => { const r = await salvar(); if (r) setTimeout(() => ICM.reports.generate('ata_reuniao_pedagogica', { id: r.id }), 300); });
+    const del = m.$('[data-del]'); if (del) del.addEventListener('click', async () => { if (!(await ui().confirm({ title: 'Excluir ata', text: 'Excluir esta ata?', ok: 'Excluir', danger: true }))) return; await ui().run(() => P().acompanhamentos.remove(a.id), 'Excluída'); m.close(); depois(); });
+  }
+
+  function visitaModal(a, { ativas, turmas, users, projetos, depois }) {
+    const eu = ICM.auth.user();
+    a = a || { tipo: 'visita', data: ICM.util.today(), horario: '', observador: eu.nome, observador_funcao: cargoDe(eu), aspectos: Object.fromEntries(ASPECTOS.map(x => [x, ''])), chamada_feita: '' };
+    const m = ui().modal({ title: a.id ? `Visita nº ${a.numero || ''}` : 'Nova visita à aula', size: 'wide', body: `<form data-f>
+      <div class="grid grid-4">
+        ${ui().field({ name: 'turma_id', label: 'Turma', type: 'select', value: a.turma_id || '', options: [['', 'Escolha…'], ...ativas.map(t => [t.id, t.nome])], cls: 'span-2' })}
+        ${ui().field({ name: 'data', label: 'Data', type: 'date', value: a.data })}
+        ${ui().field({ name: 'horario', label: 'Horário', type: 'time', value: a.horario })}
+        ${ui().field({ name: 'observador', label: 'Observador(a)', value: a.observador })}
+        ${ui().field({ name: 'observador_funcao', label: 'Função do observador(a)', value: a.observador_funcao })}
+        ${ui().field({ name: 'presentes', label: 'Alunos presentes', type: 'number', value: a.presentes ?? '', attrs: 'min="0"' })}
+        <div class="field"><label class="label">Matriculados</label><div class="input" data-mat style="display:flex;align-items:center">—</div></div>
+      </div>
+      <div class="section-title mt-4">${I('clipboardCheck', 18)} Aspectos observados</div>
+      <div class="table-wrap"><table class="table"><thead><tr><th>Aspecto</th><th style="width:200px">Avaliação</th></tr></thead><tbody>
+        ${ASPECTOS.map((x, i) => `<tr><td>${esc(x)}</td><td><select class="input" data-asp="${i}"><option value="">—</option>${NOTAS.map(n => `<option ${(a.aspectos || {})[x] === n ? 'selected' : ''}>${n}</option>`).join('')}</select></td></tr>`).join('')}
+        <tr><td>Registro de chamada feito na aula</td><td><select class="input" name="chamada_feita"><option value="">—</option>${['Sim', 'Não', 'Feito depois da aula'].map(n => `<option ${a.chamada_feita === n ? 'selected' : ''}>${n}</option>`).join('')}</select></td></tr>
+      </tbody></table></div>
+      <div class="grid grid-2 mt-4">
+        ${ui().field({ name: 'observacoes', label: 'Relato da visita', type: 'textarea', rows: 3, value: a.observacoes, cls: 'span-2' })}
+        ${ui().field({ name: 'pontos_positivos', label: 'Pontos positivos', type: 'textarea', rows: 2, value: a.pontos_positivos })}
+        ${ui().field({ name: 'pontos_melhorar', label: 'Pontos a melhorar', type: 'textarea', rows: 2, value: a.pontos_melhorar })}
+        ${ui().field({ name: 'encaminhamentos', label: 'Encaminhamentos', type: 'textarea', rows: 2, value: a.encaminhamentos, cls: 'span-2' })}
+      </div></form>`,
+      foot: `${a.id ? `<button class="btn btn-danger" data-del style="margin-right:auto">${I('trash', 16)} Excluir</button>` : ''}<button class="btn" data-close>Cancelar</button><button class="btn" data-salvar-pdf>${I('printer', 16)} Salvar e gerar relatório</button><button class="btn btn-primary" data-ok>Salvar</button>` });
+    // matriculados na data e presentes pela chamada do dia (se já foi feita)
+    const atualizar = async () => {
+      const tid = m.$('[name=turma_id]').value, dt = m.$('[name=data]').value; if (!tid) { m.$('[data-mat]').textContent = '—'; return; }
+      const mats = await ICM.api.turmas.alunos(tid).catch(() => []);
+      const n = mats.filter(x => x.entrada <= dt && (!x.saida || x.saida > dt)).length; m.$('[data-mat]').textContent = String(n); m.$('[data-mat]').dataset.n = n;
+      const pres = m.$('[name=presentes]');
+      if (pres.value === '') { const aula = (await ICM.api.aulas.list(tid, dt.slice(0, 7)).catch(() => [])).find(x => x.data === dt); if (aula && Object.keys(aula.presencas || {}).length) pres.value = Object.values(aula.presencas).filter(v => v === 'P').length; }
+      if (!m.$('[name=horario]').value) { const t = ativas.find(x => x.id === tid); if (t && t.inicio) m.$('[name=horario]').value = t.inicio; }
+    };
+    m.$('[name=turma_id]').addEventListener('change', atualizar); m.$('[name=data]').addEventListener('change', atualizar); atualizar();
+    const salvar = async () => {
+      const d = ICM.util.formData(m.$('[data-f]'));
+      const aspectos = Object.fromEntries(ASPECTOS.map((x, i) => [x, m.$(`[data-asp="${i}"]`).value]));
+      const t = turmas.find(x => x.id === d.turma_id) || {};
+      const rec = { ...a, ...d, aspectos, presentes: d.presentes === '' ? null : +d.presentes, matriculados: +(m.$('[data-mat]').dataset.n || 0), professores: t.professor_id ? [t.professor_id] : [] };
+      try { const r = await ui().run(() => P().acompanhamentos.save(rec), 'Visita salva'); m.close(); depois(); return r; } catch (e) { return null; }
+    };
+    m.$('[data-ok]').addEventListener('click', salvar);
+    m.$('[data-salvar-pdf]').addEventListener('click', async () => { const r = await salvar(); if (r) setTimeout(() => ICM.reports.generate('visita_aula', { id: r.id }), 300); });
+    const del = m.$('[data-del]'); if (del) del.addEventListener('click', async () => { if (!(await ui().confirm({ title: 'Excluir visita', text: 'Excluir este relatório de visita?', ok: 'Excluir', danger: true }))) return; await ui().run(() => P().acompanhamentos.remove(a.id), 'Excluída'); m.close(); depois(); });
+  }
+
+  // ---------- Documentos (folha timbrada) ----------
+  const dataExtenso = d => ICM.util.fmtDateLong(d).replace(/^\w+-?\w*,\s*/, '');
+  ICM.reports.register('ata_reuniao_pedagogica', {
+    title: 'Ata de reunião', steps: ['Carregando a reunião', 'Montando o relato', 'Incluindo assinaturas'],
+    async build({ id }) {
+      const { sec, head, meta, esc: e } = ICM.reports.h;
+      const a = (await P().acompanhamentos.list()).find(x => x.id === id); if (!a) throw new Error('Ata não encontrada.');
+      const proj = a.projeto_id ? ((await ICM.api.projetos.list()).find(p => p.id === a.projeto_id) || {}).nome : '';
+      const parts = a.participantes || [];
+      const nomes = parts.map(p => p.nome); const lista = nomes.length > 1 ? nomes.slice(0, -1).join(', ') + ' e ' + nomes.slice(-1) : nomes.join('');
+      const fmt = String(a.formato || 'Presencial').toLowerCase();
+      let html = head(`Ata de reunião ${a.numero || ''}`, a.pauta || P().acompanhamentos.TIPOS[a.tipo]);
+      html += meta([['Data', dataExtenso(a.data)], ['Horário / formato', [a.horario, a.formato].filter(Boolean).join(' — ')], ['Local', a.local || ''], ['Projeto', proj || '—'], ['Redator(a)', a.redator || a.registrado_por || '']]);
+      html += sec(`<h2>Participantes</h2><table><thead><tr><th>Nome</th><th>Função / papel no projeto</th></tr></thead><tbody>${parts.map(p => `<tr><td>${e(p.nome)}</td><td>${e(p.funcao || '')}</td></tr>`).join('')}</tbody></table>`);
+      const tops = (a.topicos || []).filter(t => String(t.texto || '').trim());
+      html += sec(`<h2>Relato da reunião</h2><p>A reunião realizada no dia ${e(dataExtenso(a.data))}${a.horario ? `, com início às ${e(a.horario)},` : ''} foi realizada de forma ${e(fmt)}${a.local ? ` no(a) ${e(a.local)}` : ''}, com a participação de ${e(lista)}, tendo como pauta: ${e(a.pauta || '')}.</p>
+        ${tops.map((t, i) => `<h3 style="margin:14px 0 4px;font-size:12.5px">${i + 1}. ${e(String(t.titulo).toUpperCase())}</h3><p style="white-space:pre-line">${e(t.texto)}</p>`).join('')}`);
+      html += sec(`<h2>Encaminhamentos</h2><p style="white-space:pre-line">${e(a.encaminhamentos || 'Sem encaminhamentos.')}</p><p style="text-align:center;margin-top:18px">Lavrada em ${e(dataExtenso(a.data))}.</p>`);
+      const AE = ICM.assinaturasEquipe; const bl = p => AE ? AE.bloco(`${p.nome} — ${p.funcao || 'Participante'}`) : `<div class="sg"><div class="sg-l">${e(p.nome)} — ${e(p.funcao || '')}</div></div>`;
+      for (let i = 0; i < parts.length; i += 2) html += sec(`<div class="signs">${bl(parts[i])}${parts[i + 1] ? bl(parts[i + 1]) : '<div></div>'}</div>`);
+      html += sec(`<p style="font-size:10px;color:#3a4669;text-align:center;margin-top:10px">${e(ICM.C.ORG.razao)} • Documento interno • ${e(ICM.util.fmtDate(a.data))}</p>`);
+      return { title: `Ata ${a.numero || ''} — ${a.pauta || ''}`, html, file: `ata-${String(a.numero || a.id).replace(/\W+/g, '-')}` };
+    }
+  });
+  ICM.reports.register('visita_aula', {
+    title: 'Relatório de visita à aula', steps: ['Carregando a visita', 'Montando o relatório', 'Incluindo assinaturas'],
+    async build({ id }) {
+      const { sec, head, table, esc: e } = ICM.reports.h;
+      const a = (await P().acompanhamentos.list()).find(x => x.id === id); if (!a) throw new Error('Visita não encontrada.');
+      const t = (await ICM.api.turmas.list()).find(x => x.id === a.turma_id) || {};
+      const proj = (await ICM.api.projetos.list()).find(p => p.id === t.projeto_id) || {};
+      const prof = ((await ICM.api.usuarios.list().catch(() => [])).find(u => u.id === t.professor_id) || {}).nome || '';
+      const area = (ICM.C.AREAS[proj.area] || {}).nome || '';
+      let html = head(`Relatório de visita à aula nº ${a.numero || ''}`, `${t.nome || ''} — ${dataExtenso(a.data)}${a.horario ? `, às ${a.horario}` : ''}`);
+      html += sec(`<h2>1. Identificação</h2>${table(['Campo', 'Informação', 'Campo', 'Informação'], [
+        ['Turma', t.nome || '', 'Data / horário', `${ICM.util.fmtDate(a.data)}${a.horario ? ' — ' + a.horario : ''}`],
+        ['Área / projeto', [area, proj.nome].filter(Boolean).join(' — '), 'Professor(a)', prof],
+        ['Observador(a)', `${a.observador || ''}${a.observador_funcao ? ' — ' + a.observador_funcao : ''}`, 'Alunos presentes', a.presentes == null ? '—' : `${a.presentes} de ${a.matriculados || 0} matriculados`]])}`);
+      html += sec(`<h2>2. Aspectos observados</h2>${table(['Aspecto', 'Avaliação'], [...ASPECTOS.map(x => [x, (a.aspectos || {})[x] || '—']), ['Registro de chamada feito na aula', a.chamada_feita || '—']])}`);
+      const bloco = (n, tit, v) => sec(`<h2>${n}. ${tit}</h2><p style="white-space:pre-line">${e(v || 'Nada a declarar.')}</p>`);
+      html += bloco(3, 'Relato da visita', a.observacoes) + bloco(4, 'Pontos positivos', a.pontos_positivos) + bloco(5, 'Pontos a melhorar', a.pontos_melhorar) + bloco(6, 'Encaminhamentos', a.encaminhamentos);
+      html += sec(`<p style="text-align:right;margin-top:16px">${e(ICM.C.ORG.cidade)}, ${e(dataExtenso(a.data))}.</p>`);
+      const AE = ICM.assinaturasEquipe; const bl = r => AE ? AE.bloco(r) : `<div class="sg"><div class="sg-l">${e(r)}</div></div>`;
+      html += sec(`<div class="signs">${bl(`${a.observador || 'Observador(a)'} — ${a.observador_funcao || 'Observador(a)'}`)}${bl(`${prof || 'Professor(a)'} — Professor(a) da turma`)}</div>`);
+      return { title: `Visita ${a.numero || ''} — ${t.nome || ''}`, html, file: `visita-${String(a.numero || a.id).replace(/\W+/g, '-')}-${(t.nome || '').replace(/\W+/g, '-')}` };
+    }
+  });
 
   // ======================= CRONOGRAMA =======================
   async function cronograma(painel) {

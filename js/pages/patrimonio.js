@@ -134,7 +134,7 @@
       </div>
       <div class="grid grid-2">
         <div class="card"><div class="section-title">${I('info', 18)} Dados do bem</div>
-          ${ui().kv([['Local', i.local], ['Projeto / origem', p ? p.nome : 'Recursos próprios / doação'], ['Fonte do recurso', p ? ICM.C.FONTES[p.fonte] : ''], ['Data de aquisição', fmtDate(i.data_aquisicao)],
+          ${ui().kv([['Local', i.local], ['Projeto / origem', p ? p.nome : (ICM.C.ORIGENS_PAT[i.origem] || 'Recursos próprios / doação')], ['Fonte do recurso', p ? ICM.C.FONTES[p.fonte] : ''], ['Data de aquisição', fmtDate(i.data_aquisicao)],
             ...(valores ? (dp => [['Valor unitário', i.valor_unitario ? money(i.valor_unitario) : ''], ['Valor total (aquisição)', i.valor_unitario ? money(i.valor_unitario * i.quantidade) : ''], ['Depreciação acumulada', dp.total ? `${money(dp.depreciado)} (${dp.pct}% · vida útil ${dp.vida} anos)` : ''], ['Valor contábil hoje', dp.total ? money(dp.contabil) : ''], ['Nota fiscal', i.nota_fiscal], ['Fornecedor', i.fornecedor]])(ICM.api.depreciacao(i)) : []),
             ['Observações', i.observacoes]])}</div>
         <div class="card"><div class="section-title">${I('history', 18)} Histórico do bem</div>
@@ -187,7 +187,7 @@
         ${F({ name: 'numero_serie', label: 'Nº de série', value: i.numero_serie })}
         ${F({ name: 'local', label: 'Localização', value: i.local, placeholder: 'Sala, almoxarifado…' })}
         ${F({ name: 'estado', label: 'Estado de conservação', type: 'select', value: i.estado || 'bom', options: Object.entries(ICM.C.ESTADOS_PAT) })}
-        ${F({ name: 'projeto_id', label: 'Adquirido com recurso do projeto', type: 'select', value: i.projeto_id, options: [['', 'Recursos próprios / doação'], ...projetos.map(p => [p.id, p.nome])] })}
+        ${F({ name: 'projeto_id', label: 'Adquirido com recurso do projeto', type: 'select', value: i.projeto_id || (i.origem ? 'origem:' + i.origem : ''), options: [['', 'Recursos próprios / doação'], ...projetos.map(p => [p.id, p.nome]), ...Object.entries(ICM.C.ORIGENS_PAT).map(([k, v]) => ['origem:' + k, v])], lista: 'ORIGENS_PAT' })}
         ${F({ name: 'data_aquisicao', label: 'Data de aquisição', type: 'date', value: i.data_aquisicao })}
         ${F({ name: 'valor_unitario', label: 'Valor unitário (R$)', type: 'number', value: i.valor_unitario, attrs: 'min="0" step="0.01"' })}
         ${F({ name: 'nota_fiscal', label: 'Nota fiscal', value: i.nota_fiscal })}
@@ -199,6 +199,8 @@
     });
     m.$('[data-ok]').addEventListener('click', e => ui().busy(e.currentTarget, async () => {
       const d = ICM.util.formData(m.$('form'));
+      // Origem que não é projeto (doação, recursos próprios, outras criadas no +)
+      if (String(d.projeto_id || '').startsWith('origem:')) { d.origem = d.projeto_id.slice(7); d.projeto_id = ''; } else d.origem = '';
       const r = await ui().run(() => ICM.api.patrimonio.save(i.id ? { ...i, ...d } : d), i.id ? 'Bem atualizado' : 'Bem cadastrado no inventário');
       m.close(); location.hash = `#/patrimonio/${r.id}`; ICM.app.reload();
     }).catch(() => { }));

@@ -258,6 +258,8 @@
       outro: { nome: 'Outros', icon: 'more', cor: '#475569' }
     },
 
+    // Origem do recurso de bens que não vieram de projeto (ampliável pelo +)
+    ORIGENS_PAT: { doacao: 'Doação', proprio: 'Recursos próprios' },
     ESTADOS_PAT: { novo: 'Novo', bom: 'Bom', regular: 'Regular', ruim: 'Ruim', inservivel: 'Inservível' },
 
     SITUACAO_PAT: {

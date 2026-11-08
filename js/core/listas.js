@@ -12,6 +12,7 @@
     TIPOS_EVENTO: { t: 'obj', titulo: 'Tipo de evento', cor: true, base: { icon: 'star' } },
     CATEGORIAS_PAT: { t: 'obj', titulo: 'Categoria de patrimônio', cor: true, base: { icon: 'more' } },
     CATEGORIAS_ESTOQUE: { t: 'obj', titulo: 'Categoria de estoque', cor: true, base: { icon: 'more' } },
+    ORIGENS_PAT: { t: 'str', titulo: 'Origem do recurso', prefixo: 'origem:' },
     TIPOS_OCORRENCIA: { t: 'obj', titulo: 'Tipo de ocorrência', base: { cls: 'neutral', icon: 'info' } },
     RUBRICAS: { t: 'str', titulo: 'Rubrica de despesa' },
     CATEGORIAS_RECEITA: { t: 'str', titulo: 'Categoria de receita' },
@@ -76,7 +77,7 @@
       const nome = m.$('[data-nome]').value; const c = m.el.querySelector('input[name=cor]:checked');
       try {
         const v = await ICM.ui.run(() => adicionar(lista, nome, c && c.value), 'Opção criada');
-        if (sel && sel.tagName === 'SELECT') { const o = document.createElement('option'); o.value = v; o.textContent = nome.trim(); sel.appendChild(o); sel.value = v; sel.dispatchEvent(new Event('change', { bubbles: true })); }
+        if (sel && sel.tagName === 'SELECT') { const o = document.createElement('option'); o.value = (d.prefixo || '') + v; o.textContent = nome.trim(); sel.appendChild(o); sel.value = o.value; sel.dispatchEvent(new Event('change', { bubbles: true })); }
         m.close();
       } catch (er) { /* aviso já mostrado */ }
     };

@@ -92,7 +92,7 @@
   const nivelPill = (nivel, F) => nivel === 'danger' ? `<span class="alert-pill danger">${I('alert', 14)} ${F} faltas — desligamento</span>` : nivel === 'warn' ? `<span class="alert-pill warn">${I('alert', 14)} ${F} faltas — alerta</span>` : '';
 
   // Campos de formulário
-  function field({ name, label, value = '', type = 'text', options, required, placeholder = '', hint = '', cls = '', rows = 4, attrs = '' }) {
+  function field({ name, label, value = '', type = 'text', options, required, placeholder = '', hint = '', cls = '', rows = 4, attrs = '', lista = '' }) {
     const id = 'f_' + name.replace(/\W/g, '_');
     let ctl;
     if (type === 'select') {
@@ -104,7 +104,7 @@
     } else {
       ctl = `<input class="input" id="${id}" type="${type}" name="${esc(name)}" value="${esc(value)}" placeholder="${esc(placeholder)}" ${required ? 'required' : ''} ${attrs} autocomplete="off">`;
     }
-    return `<div class="field ${cls}"><label for="${id}">${esc(label)}${required ? ' *' : ''}</label>${ctl}${hint ? `<span class="hint">${esc(hint)}</span>` : ''}</div>`;
+    return `<div class="field ${cls}"><label for="${id}">${esc(label)}${required ? ' *' : ''}${lista && ICM.listas ? ICM.listas.botao(lista) : ''}</label>${ctl}${hint ? `<span class="hint">${esc(hint)}</span>` : ''}</div>`;
   }
 
   // Abas: html de botões + lógica

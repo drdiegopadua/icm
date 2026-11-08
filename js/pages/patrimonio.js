@@ -180,7 +180,7 @@
       title: i.id ? `Editar ${i.tombo}` : 'Cadastrar bem', size: 'wide',
       body: `<form class="grid grid-3">
         ${F({ name: 'nome', label: 'Nome do bem', value: i.nome, required: true, cls: 'span-2', placeholder: 'Ex.: Violino 4/4, Ar-condicionado 12.000 BTUs' })}
-        ${F({ name: 'categoria', label: 'Categoria', type: 'select', value: i.categoria, options: Object.entries(CAT()).map(([k, v]) => [k, v.nome]) })}
+        ${F({ name: 'categoria', label: 'Categoria', type: 'select', value: i.categoria, options: Object.entries(CAT()).map(([k, v]) => [k, v.nome]) , lista: 'CATEGORIAS_PAT' })}
         ${F({ name: 'quantidade', label: 'Quantidade', type: 'number', value: i.quantidade || 1, attrs: 'min="1"', hint: 'Itens iguais podem ser cadastrados em lote (ex.: 10 kimonos).' })}
         ${F({ name: 'marca', label: 'Marca', value: i.marca })}
         ${F({ name: 'modelo', label: 'Modelo', value: i.modelo })}

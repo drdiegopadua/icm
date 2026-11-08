@@ -53,7 +53,7 @@
     const F = o => ui().field(o); const alunos = await ICM.api.alunos.list({ status: 'ativo' });
     const m = ui().modal({ title: e.id ? 'Atualizar encaminhamento' : 'Novo encaminhamento à rede', body: `<form class="grid grid-2">
       ${e.aluno_id ? '' : F({ name: 'aluno_id', label: 'Aluno(a)', type: 'select', options: [['', 'Selecione…'], ...alunos.map(a => [a.id, a.nome])], cls: 'span-2' })}
-      ${F({ name: 'orgao', label: 'Encaminhado para', type: 'select', value: e.orgao, options: ICM.C.ORGAOS_REDE })}${F({ name: 'data', label: 'Data', type: 'date', value: e.data || ICM.util.today() })}
+      ${F({ name: 'orgao', label: 'Encaminhado para', type: 'select', value: e.orgao, options: ICM.C.ORGAOS_REDE , lista: 'ORGAOS_REDE' })}${F({ name: 'data', label: 'Data', type: 'date', value: e.data || ICM.util.today() })}
       ${F({ name: 'motivo', label: 'Motivo', value: e.motivo, cls: 'span-2', required: true })}${F({ name: 'descricao', label: 'Detalhes / contato no órgão', type: 'textarea', rows: 2, value: e.descricao, cls: 'span-2' })}
       ${F({ name: 'status', label: 'Situação', type: 'select', value: e.status || 'enviado', options: Object.entries(SE()).map(([k, v]) => [k, v[0]]) })}${F({ name: 'data_retorno', label: 'Data do retorno', type: 'date', value: e.data_retorno })}
       ${F({ name: 'retorno', label: 'Retorno recebido', type: 'textarea', rows: 2, value: e.retorno, cls: 'span-2' })}</form>

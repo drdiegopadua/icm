@@ -131,22 +131,26 @@
     let html = head('Relatório Mensal de Atividades', `${t.nome} — ${U().fmtMonth(ym)}`);
     html += meta([['Projeto', p.nome], ['Área', ICM.C.AREAS[p.area].nome], ['Financiador / instrumento', p.financiador], ['Nº termo / processo', p.numero_termo], ['Professor(a) responsável', prof.nome], ['Dias e horário', `${ICM.pages._diasTxt(t.dias)} · ${t.inicio}–${t.fim}`], ['Local', t.local], ['Período de referência', U().fmtMonth(ym)]]);
     html += kpis([[aulas.length, 'Aulas realizadas'], [U().num(horas, 1) + 'h', 'Horas de aula no mês'], [ativos, 'Alunos ativos'], [ps.freq + '%', 'Frequência média']]);
-    html += sec(`<h2>1. Frequência consolidada do mês</h2>${table([{ t: 'Aluno' }, { t: 'Matrícula' }, { t: 'Pres.', c: 1 }, { t: 'Faltas', c: 1 }, { t: 'Just.', c: 1 }, { t: '%', c: 1 }, { t: 'Situação' }], linhas.map(l => [l.nome, l.matricula, { html: `<span class="P">${l.P}</span>` }, { html: `<span class="F">${l.F}</span>` }, { html: `<span class="J">${l.J}</span>` }, l.freq ?? '—', tagNivel(l.nivel, l.F)]))}`);
-    html += sec(`<h2>2. Registro das aulas</h2>`);
+    // Plano de aula do mês (o plano agora é mensal, preenchido na aba "Plano do mês" da turma)
+    const pm = ICM.api.pedagogico ? await ICM.api.pedagogico.planos.get(turma_id, ym).catch(() => null) : null;
+    const CPL = [['tema', 'Tema / unidade do mês'], ['objetivos', 'Objetivos'], ['conteudos', 'Conteúdos / repertório'], ['metodologia', 'Metodologia e atividades'], ['recursos', 'Recursos e materiais'], ['avaliacao', 'Avaliação'], ['observacoes', 'Observações']];
+    html += sec(`<h2>1. Plano de aula do mês</h2>${pm && CPL.some(([k]) => String(pm[k] || '').trim()) ? CPL.filter(([k]) => String(pm[k] || '').trim()).map(([k, n]) => `<p><b>${n}:</b> <span style="white-space:pre-line">${esc(pm[k])}</span></p>`).join('') + (pm.atualizado_por ? `<p style="font-size:10.5px;color:#5b6788">Preenchido por ${esc(pm.atualizado_por)} em ${esc(U().fmtDate(String(pm.atualizado_em || '').slice(0, 10)))}.</p>` : '') : '<p>Plano de aula do mês não preenchido.</p>'}`);
+    html += sec(`<h2>2. Frequência consolidada do mês</h2>${table([{ t: 'Aluno' }, { t: 'Matrícula' }, { t: 'Pres.', c: 1 }, { t: 'Faltas', c: 1 }, { t: 'Just.', c: 1 }, { t: '%', c: 1 }, { t: 'Situação' }], linhas.map(l => [l.nome, l.matricula, { html: `<span class="P">${l.P}</span>` }, { html: `<span class="F">${l.F}</span>` }, { html: `<span class="J">${l.J}</span>` }, l.freq ?? '—', tagNivel(l.nivel, l.F)]))}`);
+    html += sec(`<h2>3. Registro das aulas</h2>`);
     aulas.forEach((a, i) => {
       const pl = a.plano || {}, rl = a.relatorio || {};
       const pres = Object.entries(a.presencas || {}).map(([id, v]) => ({ n: nome(id), v })).sort((x, y) => x.n.localeCompare(y.n));
       const pf = pres.filter(x => x.v === 'P').length;
       html += sec(`<div class="lesson"><div class="lh"><span>Aula ${i + 1} — ${esc(U().fmtDate(a.data))} (${esc(U().DIAS[U().parseD(a.data).getDay()])})</span><span>${esc(a.inicio)}–${esc(a.fim)} · ${U().num(a.horas, 1)}h</span></div>
         <div style="font-size:11px;color:#5b6788">Professor(a): ${esc((users.find(u => u.id === a.professor_id) || prof).nome)}</div>
-        <h3>Plano de aula</h3><p><b>Tema:</b> ${esc(pl.tema || '—')}<br><b>Objetivos:</b> ${esc(pl.objetivos || '—')}<br><b>Desenvolvimento:</b> ${esc(pl.conteudo || '—')}<br><b>Recursos:</b> ${esc(pl.recursos || '—')}</p>
+        ${pl.tema || pl.objetivos || pl.conteudo ? `<h3>Tema da aula</h3><p>${esc(pl.tema || '')}${pl.objetivos ? `<br><b>Objetivos:</b> ${esc(pl.objetivos)}` : ''}${pl.conteudo ? `<br><b>Desenvolvimento:</b> ${esc(pl.conteudo)}` : ''}</p>` : ''}
         <h3>Relatório da aula</h3><p>${esc(rl.texto || 'Não preenchido.')}</p>${rl.ocorrencias ? `<p><b>Ocorrências:</b> ${esc(rl.ocorrencias)}</p>` : ''}
         <h3>Chamada — ${pf} presentes de ${pres.length}</h3>
         <p style="font-size:11px;columns:2">${pres.map(x => `${esc(x.n)} — <span class="${x.v}">${{ P: 'Presente', F: 'Falta', J: 'Justificada' }[x.v]}</span>`).join('<br>')}</p>
         ${(a.fotos || []).length ? photos(a.fotos, 3) : ''}</div>`);
     });
     if (!aulas.length) html += sec('<p>Nenhuma aula realizada no período.</p>');
-    html += sec(`<h2>3. Registro fotográfico do mês</h2>${photos(fotos, 12)}`);
+    html += sec(`<h2>4. Registro fotográfico do mês</h2>${photos(fotos, 12)}`);
     html += declaracao() + signs(`${prof.nome || 'Professor(a)'} — Professor(a)`, `${coord.nome || 'Coordenação'} — Coordenação`);
     return { title: `Relatório mensal — ${t.nome} — ${U().fmtMonth(ym)}`, html, file: `relatorio-mensal-${t.id}-${ym}` };
   };

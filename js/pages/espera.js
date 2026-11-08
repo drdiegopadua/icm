@@ -107,7 +107,7 @@
           <div class="span-all section-title mt-4">${I('wallet', 18)} Triagem socioeconômica</div>
           ${F({ name: 'renda_familiar', label: 'Renda familiar (R$)', type: 'number', value: c.renda_familiar, attrs: 'min="0"' })}
           ${F({ name: 'pessoas_casa', label: 'Pessoas na casa', type: 'number', value: c.pessoas_casa, attrs: 'min="1"' })}
-          ${F({ name: 'encaminhamento', label: 'Encaminhado por', type: 'select', value: c.encaminhamento, options: ICM.C.ENCAMINHAMENTOS.map(x => [x, x || 'Procura espontânea']) })}
+          ${F({ name: 'encaminhamento', label: 'Encaminhado por', type: 'select', value: c.encaminhamento, options: ICM.C.ENCAMINHAMENTOS.map(x => [x, x || 'Procura espontânea']) , lista: 'ENCAMINHAMENTOS' })}
           ${F({ name: 'cadunico', label: 'Inscrito no CadÚnico', type: 'toggle', value: c.cadunico })}
           ${F({ name: 'beneficio', label: 'Recebe benefício social', type: 'toggle', value: c.beneficio })}
           <div class="span-all field"><span class="label">Situações de vulnerabilidade</span><div class="grid grid-2" style="gap:8px">${Object.entries(V).map(([k, v]) => `<label class="check small"><input type="checkbox" name="vulnerabilidades" value="${k}" data-multi ${(c.vulnerabilidades || []).includes(k) ? 'checked' : ''}> ${esc(v.txt)} <span class="muted">(+${v.pts})</span></label>`).join('')}</div></div>

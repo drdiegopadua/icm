@@ -151,7 +151,7 @@
           ${tipo === 'despesa' ? `<label class="photo-drop span-all" style="aspect-ratio:auto;padding:14px">${I('upload', 22)}<span><b>Importar XML da NF-e</b> — preenche fornecedor, número, data e valor</span><input type="file" accept=".xml,text/xml" data-xml hidden></label>` : ''}
           ${F({ name: 'descricao', label: 'Descrição', value: l.descricao, required: true, cls: 'span-2' })}
           ${F({ name: 'valor', label: 'Valor (R$)', type: 'number', value: l.valor, attrs: 'step="0.01" min="0"' })}
-          ${tipo === 'despesa' ? F({ name: 'rubrica', label: 'Rubrica', type: 'select', value: l.rubrica, options: [['', 'Selecione…'], ...Object.entries(RUB())] }) : F({ name: 'categoria', label: 'Categoria', type: 'select', value: l.categoria, options: Object.entries(CAT()) })}
+          ${tipo === 'despesa' ? F({ name: 'rubrica', label: 'Rubrica', type: 'select', value: l.rubrica, options: [['', 'Selecione…'], ...Object.entries(RUB())] , lista: 'RUBRICAS' }) : F({ name: 'categoria', label: 'Categoria', type: 'select', value: l.categoria, options: Object.entries(CAT()), lista: 'CATEGORIAS_RECEITA' })}
           ${F({ name: 'conta_id', label: 'Conta', type: 'select', value: l.conta_id, options: contas.map(c => [c.id, c.nome]) })}
           ${F({ name: 'projeto_id', label: 'Projeto', type: 'select', value: l.projeto_id, options: [['', 'Institucional'], ...projetos.map(p => [p.id, p.nome])] })}
           ${F({ name: 'vencimento', label: 'Vencimento', type: 'date', value: l.vencimento || ICM.util.today() })}

@@ -624,3 +624,7 @@ body.sens-blur::before { content: 'Conteúdo protegido — volte para esta janel
   .tn-mega .tn-link .grow { flex: none; }
   .tn-mega .tn-ic { width: 30px; height: 30px; border-radius: 10px; }
 }
+
+/* Botão + para criar opção nova numa lista */
+.lbl-mais { display: inline-grid; place-items: center; width: 20px; height: 20px; margin-left: 8px; border-radius: 6px; border: 0; background: var(--primary-soft); color: var(--primary); cursor: pointer; vertical-align: middle; padding: 0; }
+.lbl-mais:hover { background: var(--primary); color: #fff; }

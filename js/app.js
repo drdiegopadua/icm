@@ -310,6 +310,7 @@
   }
 
   async function start(user) {
+    if (ICM.listas) await ICM.listas.carregar();
     shell(user);
     window.addEventListener('hashchange', route);
     await route();

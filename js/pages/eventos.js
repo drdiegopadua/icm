@@ -78,7 +78,7 @@
     const m = ui().modal({
       title: e.id ? 'Editar evento' : 'Novo evento', size: 'wide',
       body: `<form class="grid grid-3">
-        ${F({ name: 'tipo', label: 'Tipo', type: 'select', value: e.tipo, options: Object.entries(ICM.C.TIPOS_EVENTO).map(([k, v]) => [k, v.nome]) })}
+        ${F({ name: 'tipo', label: 'Tipo', type: 'select', value: e.tipo, options: Object.entries(ICM.C.TIPOS_EVENTO).map(([k, v]) => [k, v.nome]) , lista: 'TIPOS_EVENTO' })}
         ${F({ name: 'titulo', label: 'Título', value: e.titulo, required: true, cls: 'span-2' })}
         ${F({ name: 'data', label: 'Data', type: 'date', value: e.data || ICM.util.today(), required: true })}
         ${F({ name: 'horario', label: 'Horário', type: 'time', value: e.horario })}

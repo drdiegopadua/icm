@@ -309,7 +309,7 @@
       const m = ui().modal({
         title: 'Retirar aluno da turma', size: 'sm',
         body: `<form class="col"><p>Retirar <b>${esc(nome)}</b> de <b>${esc(t.nome)}</b>. O histórico de presença é mantido para a prestação de contas.</p>
-          ${ui().field({ name: 'motivo', label: 'Motivo', type: 'select', options: ['', ...ICM.C.MOTIVOS_SAIDA], required: true })}
+          ${ui().field({ name: 'motivo', label: 'Motivo', type: 'select', options: ['', ...ICM.C.MOTIVOS_SAIDA], required: true , lista: 'MOTIVOS_SAIDA' })}
           ${ui().field({ name: 'saida', label: 'Data de saída', type: 'date', value: ICM.util.today() })}
           ${ui().field({ name: 'obs', label: 'Observações', type: 'textarea', rows: 2 })}</form>`,
         foot: `<button class="btn" data-close>Cancelar</button><button class="btn btn-danger solid" data-ok>${I('userX', 18)} Retirar</button>`

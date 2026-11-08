@@ -16,6 +16,8 @@
 
     AREAS: {
       cultura: { nome: 'Cultura', cor: '#8b5cf6', icon: 'music' },
+      musica: { nome: 'Música', cor: '#d946ef', icon: 'music' },
+      artes: { nome: 'Artes', cor: '#e11d48', icon: 'sparkles' },
       esporte: { nome: 'Esporte', cor: '#f97316', icon: 'ball' },
       meio_ambiente: { nome: 'Meio Ambiente', cor: '#10b981', icon: 'leaf' },
       educacao: { nome: 'Educação', cor: '#3b82f6', icon: 'school' },
@@ -63,6 +65,7 @@
       'equipe.gerir': ['admin', 'coordenacao'],
       'equipe.assinaturas': ['admin', 'coordenacao'],
       'pedagogico.gestao': ['admin', 'coordenacao'],
+      'listas.editar': ['admin', 'coordenacao'],
       'equipe.salarios': ['admin'],
       'avisos.enviar': ['admin', 'coordenacao', 'secretaria', 'professor'],
       'avisos.modelos': ['admin', 'coordenacao'],

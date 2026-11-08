@@ -105,8 +105,8 @@
       const m = ui().modal({
         title: i.id ? `Editar ${i.codigo}` : 'Novo item de estoque',
         body: `<form class="grid grid-2">${F({ name: 'nome', label: 'Nome', value: i.nome, required: true, cls: 'span-2', placeholder: 'Ex.: Camiseta do uniforme, Detergente 500 ml' })}
-          ${F({ name: 'variacao', label: 'Variação (tamanho, cor…)', value: i.variacao })}${F({ name: 'categoria', label: 'Categoria', type: 'select', value: i.categoria, options: Object.entries(CAT()).map(([k, v]) => [k, v.nome]) })}
-          ${F({ name: 'unidade', label: 'Unidade', type: 'select', value: i.unidade || 'un', options: ICM.C.UNIDADES })}${F({ name: 'estoque_minimo', label: 'Estoque mínimo', type: 'number', value: i.estoque_minimo ?? 0, attrs: 'min="0"' })}
+          ${F({ name: 'variacao', label: 'Variação (tamanho, cor…)', value: i.variacao })}${F({ name: 'categoria', label: 'Categoria', type: 'select', value: i.categoria, options: Object.entries(CAT()).map(([k, v]) => [k, v.nome]) , lista: 'CATEGORIAS_ESTOQUE' })}
+          ${F({ name: 'unidade', label: 'Unidade', type: 'select', value: i.unidade || 'un', options: ICM.C.UNIDADES , lista: 'UNIDADES' })}${F({ name: 'estoque_minimo', label: 'Estoque mínimo', type: 'number', value: i.estoque_minimo ?? 0, attrs: 'min="0"' })}
           ${F({ name: 'local', label: 'Local de guarda', value: i.local || 'Almoxarifado', cls: 'span-2' })}</form>`,
         foot: `<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" data-ok>${I('check', 18)} Salvar</button>`
       });

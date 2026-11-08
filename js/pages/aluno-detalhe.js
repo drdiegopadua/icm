@@ -192,7 +192,7 @@
       const m = ui().modal({
         title: 'Registrar ocorrência', size: 'sm',
         body: `<form class="col">
-          ${ui().field({ name: 'tipo', label: 'Tipo', type: 'select', options: Object.entries(ICM.C.TIPOS_OCORRENCIA).filter(([k]) => k !== 'atendimento' || sens).map(([k, v]) => [k, v.nome]) })}
+          ${ui().field({ name: 'tipo', label: 'Tipo', type: 'select', options: Object.entries(ICM.C.TIPOS_OCORRENCIA).filter(([k]) => k !== 'atendimento' || sens).map(([k, v]) => [k, v.nome]) , lista: 'TIPOS_OCORRENCIA' })}
           ${ui().field({ name: 'data', label: 'Data', type: 'date', value: ICM.util.today(), required: true })}
           ${ui().field({ name: 'titulo', label: 'Título', required: true, placeholder: 'Resumo do ocorrido' })}
           ${ui().field({ name: 'descricao', label: 'Descrição', type: 'textarea', placeholder: 'Descreva os fatos de forma objetiva, as providências tomadas e se a família foi comunicada.' })}

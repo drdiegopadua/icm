@@ -138,14 +138,14 @@
       title: p.id ? 'Editar projeto' : 'Novo projeto', size: 'wide',
       body: `<form class="grid grid-3">
         ${F({ name: 'nome', label: 'Nome do projeto', value: p.nome, required: true, cls: 'span-2' })}
-        ${F({ name: 'area', label: 'Área de atuação', type: 'select', value: p.area, options: Object.entries(ICM.C.AREAS).map(([k, v]) => [k, v.nome]) })}
+        ${F({ name: 'area', label: 'Área de atuação', type: 'select', value: p.area, options: Object.entries(ICM.C.AREAS).map(([k, v]) => [k, v.nome]) , lista: 'AREAS' })}
         ${F({ name: 'status', label: 'Situação', type: 'select', value: p.status || 'planejamento', options: Object.entries(ICM.C.STATUS_PROJETO).map(([k, v]) => [k, v.nome]) })}
         <div class="field span-all"><label for="f_cor">Cor do projeto</label>
           <div class="cor-opcoes">${ICM.C.CORES_PROJETO.map(c => `<button type="button" class="cor-opcao" data-cor="${c}" style="--c:${c}" aria-label="Usar a cor ${c}"></button>`).join('')}<input class="cor-livre" id="f_cor" type="color" name="cor" value="${esc(corInicial)}" title="Escolher outra cor"></div>
           <span class="hint">Aparece nas turmas, na chamada, na agenda, nos eventos e nos relatórios deste projeto.</span></div>
         ${F({ name: 'inicio', label: 'Início da vigência', type: 'date', value: p.inicio, required: true })}
         ${F({ name: 'fim', label: 'Fim da vigência', type: 'date', value: p.fim, required: true })}
-        ${F({ name: 'fonte', label: 'Fonte de recurso', type: 'select', value: p.fonte, options: Object.entries(ICM.C.FONTES) })}
+        ${F({ name: 'fonte', label: 'Fonte de recurso', type: 'select', value: p.fonte, options: Object.entries(ICM.C.FONTES) , lista: 'FONTES' })}
         ${F({ name: 'financiador', label: 'Financiador / instrumento', value: p.financiador, cls: 'span-2' })}
         ${F({ name: 'numero_termo', label: 'Nº termo / convênio / PRONAC', value: p.numero_termo })}
         ${F({ name: 'valor', label: 'Valor aprovado (R$)', type: 'number', value: p.valor, attrs: 'min="0" step="0.01"' })}

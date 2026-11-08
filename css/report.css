@@ -106,3 +106,17 @@
   .cert-viewer .report-scroll { padding: 0; }
 }
 @media (max-width: 700px) { .cert-title { font-size: 28px; } .cert-nome { font-size: 20px; } .cert-text { font-size: 12px; } .cert-qr svg { width: 56px; height: 56px; } }
+
+/* Plano do mês e textos em tópicos */
+.doc .pl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; }
+.doc .pl-bloco { border: 1px solid #e3e8f2; border-left: 4px solid #2563eb; border-radius: 8px; padding: 8px 12px; break-inside: avoid; }
+.doc .pl-bloco.pl-tema { grid-column: 1 / -1; border-left-color: #0e1838; background: #f5f7fb; }
+.doc .pl-tit { font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #2563eb; margin-bottom: 4px; }
+.doc .pl-tema .pl-tit { color: #5b6788; }
+.doc .pl-tema-t { font-size: 14px; font-weight: 800; color: #0e1838; }
+.doc .tp-sub { font-size: 11.5px; font-weight: 800; color: #0e1838; margin: 8px 0 2px; }
+.doc .tp-sub:first-child { margin-top: 0; }
+.doc ul.tp { margin: 2px 0 4px; padding-left: 16px; }
+.doc ul.tp li { font-size: 11.5px; line-height: 1.45; margin: 1px 0; }
+.doc .tp-p { font-size: 11.5px; margin: 0; }
+@media (max-width: 700px) { .doc .pl-grid { grid-template-columns: 1fr; } }

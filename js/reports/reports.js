@@ -102,6 +102,20 @@
   const barChart = data => { const mx = Math.max(1, ...data.map(d => d.v)); return `<div class="bar-chart">${data.map(d => `<div class="bc"><b>${esc(d.lbl ?? U().num(d.v))}</b><i style="height:${Math.max(2, d.v / mx * 85)}%"></i><small>${esc(d.l)}</small></div>`).join('')}</div>`; };
   const tagNivel = (n, F) => n === 'danger' ? { html: `<span class="tag danger">${F} faltas — desligamento</span>` } : n === 'warn' ? { html: `<span class="tag warn">${F} faltas — alerta</span>` } : { html: '<span class="tag ok">Regular</span>' };
   // Linhas de assinatura: se a pessoa/função tiver assinatura cadastrada (Gestão → Assinaturas da equipe), imprime a imagem
+  // Texto em tópicos: cada linha vira um item; linha terminada em ":" vira subtítulo com os itens abaixo
+  const topicos = t => {
+    const linhas = String(t || '').split(/\r?\n/).map(x => x.trim().replace(/^[-•*·–]\s*/, '')).filter(Boolean);
+    if (!linhas.length) return '';
+    if (linhas.length === 1 && !/:$/.test(linhas[0])) return `<p class="tp-p">${esc(linhas[0])}</p>`;
+    let html = '', aberta = false;
+    const fecha = () => { if (aberta) { html += '</ul>'; aberta = false; } };
+    linhas.forEach(l => {
+      if (/:$/.test(l) && l.length < 90) { fecha(); html += `<div class="tp-sub">${esc(l.slice(0, -1))}</div>`; return; }
+      if (!aberta) { html += '<ul class="tp">'; aberta = true; }
+      html += `<li>${esc(l)}</li>`;
+    });
+    fecha(); return html;
+  };
   const signs = (a, b) => { const AE = ICM.assinaturasEquipe; const bl = r => AE ? AE.bloco(r) : `<div class="sg"><div class="sg-l">${esc(r)}</div></div>`; return sec(`<div class="signs">${bl(a)}${bl(b)}</div>`); };
   const declaracao = () => sec(`<p style="margin-top:18px;font-size:11px;color:#3a4669"><b>Declaração.</b> Declaramos, para fins de prestação de contas, que as informações deste relatório correspondem aos registros de aulas, frequência, fotos e atividades lançados no ICM Sistema, cujos históricos são preservados e auditáveis. Dados pessoais sensíveis foram omitidos conforme a LGPD (Lei 13.709/2018).</p>`);
 
@@ -134,7 +148,8 @@
     // Plano de aula do mês (o plano agora é mensal, preenchido na aba "Plano do mês" da turma)
     const pm = ICM.api.pedagogico ? await ICM.api.pedagogico.planos.get(turma_id, ym).catch(() => null) : null;
     const CPL = [['tema', 'Tema / unidade do mês'], ['objetivos', 'Objetivos'], ['conteudos', 'Conteúdos / repertório'], ['metodologia', 'Metodologia e atividades'], ['recursos', 'Recursos e materiais'], ['avaliacao', 'Avaliação'], ['observacoes', 'Observações']];
-    html += sec(`<h2>1. Plano de aula do mês</h2>${pm && CPL.some(([k]) => String(pm[k] || '').trim()) ? CPL.filter(([k]) => String(pm[k] || '').trim()).map(([k, n]) => `<p><b>${n}:</b> <span style="white-space:pre-line">${esc(pm[k])}</span></p>`).join('') + (pm.atualizado_por ? `<p style="font-size:10.5px;color:#5b6788">Preenchido por ${esc(pm.atualizado_por)} em ${esc(U().fmtDate(String(pm.atualizado_em || '').slice(0, 10)))}.</p>` : '') : '<p>Plano de aula do mês não preenchido.</p>'}`);
+    const temPlano = pm && CPL.some(([k]) => String(pm[k] || '').trim());
+    html += sec(`<h2>1. Plano de aula do mês</h2>${temPlano ? `<div class="pl-grid">${CPL.filter(([k]) => String(pm[k] || '').trim()).map(([k, n]) => `<div class="pl-bloco ${k === 'tema' ? 'pl-tema' : ''}"><div class="pl-tit">${n}</div>${k === 'tema' ? `<div class="pl-tema-t">${esc(pm.tema)}</div>` : topicos(pm[k])}</div>`).join('')}</div>${pm.atualizado_por ? `<p style="font-size:10.5px;color:#5b6788;margin-top:8px">Preenchido por ${esc(pm.atualizado_por)} em ${esc(U().fmtDate(String(pm.atualizado_em || '').slice(0, 10)))}.</p>` : ''}` : '<p>Plano de aula do mês não preenchido.</p>'}`);
     html += sec(`<h2>2. Frequência consolidada do mês</h2>${table([{ t: 'Aluno' }, { t: 'Matrícula' }, { t: 'Pres.', c: 1 }, { t: 'Faltas', c: 1 }, { t: 'Just.', c: 1 }, { t: '%', c: 1 }, { t: 'Situação' }], linhas.map(l => [l.nome, l.matricula, { html: `<span class="P">${l.P}</span>` }, { html: `<span class="F">${l.F}</span>` }, { html: `<span class="J">${l.J}</span>` }, l.freq ?? '—', tagNivel(l.nivel, l.F)]))}`);
     html += sec(`<h2>3. Registro das aulas</h2>`);
     aulas.forEach((a, i) => {
@@ -144,7 +159,7 @@
       html += sec(`<div class="lesson"><div class="lh"><span>Aula ${i + 1} — ${esc(U().fmtDate(a.data))} (${esc(U().DIAS[U().parseD(a.data).getDay()])})</span><span>${esc(a.inicio)}–${esc(a.fim)} · ${U().num(a.horas, 1)}h</span></div>
         <div style="font-size:11px;color:#5b6788">Professor(a): ${esc((users.find(u => u.id === a.professor_id) || prof).nome)}</div>
         ${pl.tema || pl.objetivos || pl.conteudo ? `<h3>Tema da aula</h3><p>${esc(pl.tema || '')}${pl.objetivos ? `<br><b>Objetivos:</b> ${esc(pl.objetivos)}` : ''}${pl.conteudo ? `<br><b>Desenvolvimento:</b> ${esc(pl.conteudo)}` : ''}</p>` : ''}
-        <h3>Relatório da aula</h3><p>${esc(rl.texto || 'Não preenchido.')}</p>${rl.ocorrencias ? `<p><b>Ocorrências:</b> ${esc(rl.ocorrencias)}</p>` : ''}
+        <h3>Relatório da aula</h3>${rl.texto ? topicos(rl.texto) : '<p>Não preenchido.</p>'}${rl.ocorrencias ? `<p><b>Ocorrências:</b> ${esc(rl.ocorrencias)}</p>` : ''}
         <h3>Chamada — ${pf} presentes de ${pres.length}</h3>
         <p style="font-size:11px;columns:2">${pres.map(x => `${esc(x.n)} — <span class="${x.v}">${{ P: 'Presente', F: 'Falta', J: 'Justificada' }[x.v]}</span>`).join('<br>')}</p>
         ${(a.fotos || []).length ? photos(a.fotos, 3) : ''}</div>`);
@@ -505,6 +520,6 @@
 
   ICM.reports = {
     generate, openDialog, register, fichaAluno: id => generate('ficha_aluno', { aluno_id: id }),
-    h: { sec, head, logoDoc, meta, kpis, table, photos, barChart, signs, declaracao, esc, view, animate }, _formsExtra: FORMS_EXTRA
+    h: { sec, head, logoDoc, meta, kpis, table, photos, barChart, signs, declaracao, esc, view, animate, topicos }, _formsExtra: FORMS_EXTRA
   };
 })();

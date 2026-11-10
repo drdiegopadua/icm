@@ -431,6 +431,7 @@
         if (!(i.quantidade >= 1)) throw new Error('Quantidade deve ser 1 ou mais.');
         if (i.id) {
           const atual = await api.patrimonio.get(i.id);
+          if (!atual) throw new Error('Não foi possível conferir este bem agora. Recarregue a página (Ctrl+F5) e tente salvar de novo.');
           if (i.quantidade < atual.emprestados) throw new Error(`Há ${atual.emprestados} unidade(s) emprestada(s); a quantidade não pode ser menor.`);
           const r = await S().update('patrimonio', i.id, i);
           await audit('editar', 'patrimonio', r.id, `${r.tombo} — ${r.nome}`);

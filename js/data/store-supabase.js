@@ -199,6 +199,8 @@
     }
     // Gravação feita neste aparelho durante a busca: a cópia atual já tem a mudança; busca de novo na próxima vez
     if ((escritaEm.get(col) || 0) >= inicio && cache.has(col)) { cache.get(col).em = 0; return cache.get(col).dados; }
+    // Veio vazia, mas a cópia tinha registros (ex.: sessão sendo renovada): mantém a cópia e tenta de novo na próxima vez
+    if (!dados.length && cache.has(col) && cache.get(col).dados.length) { cache.get(col).em = 0; return cache.get(col).dados; }
     cache.set(col, { em: Date.now(), dados });
     return dados;
   }
@@ -272,7 +274,15 @@
     // Busca várias coleções ao mesmo tempo (a tela de Início usa ~25); as que o perfil não pode ler voltam vazias
     async aquecer(cols) { if (modoPublico) return; await Promise.all(cols.map(c => carregar(c).catch(() => null))); },
     async list(col, filter) { const a = await carregar(col); return clone(filter ? a.filter(filter) : a); },
-    async get(col, id) { const a = await carregar(col); const x = a.find(r => r.id === id); return x ? clone(x) : null; },
+    async get(col, id) {
+      const a = await carregar(col); let x = a.find(r => r.id === id);
+      // Não está na cópia da memória (ex.: cópia antiga ou incompleta): confere direto no banco antes de dizer que não existe
+      if (!x && !modoPublico && navigator.onLine !== false && col !== 'usuarios' && col !== 'auditoria') {
+        x = await registroDoBanco(col, id).catch(() => null);
+        if (x) { const c = cache.get(col); if (c) { c.em = 0; if (!c.dados.some(r => r.id === id)) c.dados.push(x); } }   // e recarrega a coleção na próxima vez
+      }
+      return x ? clone(x) : null;
+    },
     async insert(col, obj) {
       if (modoPublico) throw new Error('Operação indisponível.');
       if (col === 'usuarios') return gravarUsuario(obj, true);

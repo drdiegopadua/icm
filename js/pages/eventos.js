@@ -87,8 +87,8 @@
         ${F({ name: 'local', label: 'Local', value: e.local })}
         ${F({ name: 'publico', label: 'Público estimado', type: 'number', value: e.publico, attrs: 'min="0"' })}
         ${F({ name: 'resultado', label: 'Resultado / premiação', value: e.resultado, cls: 'span-2' })}
-        <div class="field span-all"><label>Projetos vinculados <span class="muted" style="font-weight:500">— marque um ou mais; nenhum = ação institucional</span></label>
-          <div class="row wrap" data-projs style="gap:8px">${projetos.map(p => `<label class="proj-chip" style="--c:${esc(p.cor || '#2563eb')}"><input type="checkbox" data-proj value="${esc(p.id)}" ${projSel.has(p.id) ? 'checked' : ''}><span>${esc(p.nome)}</span></label>`).join('')}</div></div>
+        <div class="field span-all"><label for="f_proj_add">Projetos vinculados <span class="muted" style="font-weight:500">— nenhum = ação institucional</span></label>
+          <div class="proj-sel"><select class="select" id="f_proj_add" data-proj-add></select><div class="proj-tags" data-projs></div></div></div>
         ${F({ name: 'descricao', label: 'Descrição', type: 'textarea', value: e.descricao, cls: 'span-all', rows: 3 })}
         ${F({ name: 'app_oculto', label: 'Não mostrar este evento no App do Instituto', type: 'toggle', value: e.app_oculto, cls: 'span-all' })}
         <div class="span-all"><div class="row between wrap"><div class="section-title" style="margin:0">${I('users', 18)} Alunos participantes <span class="badge" data-cnt>${sel.size}</span></div>
@@ -103,17 +103,28 @@
       m.$('[data-cnt]').textContent = sel.size;
     };
     drawAl();
-    m.$$('[data-proj]').forEach(c => c.addEventListener('change', () => { c.checked ? projSel.add(c.value) : projSel.delete(c.value); }));
+    // Projetos: escolhe no dropdown e cada um vira uma etiqueta ao lado (× para tirar)
+    const drawProj = () => {
+      const livres = projetos.filter(p => !projSel.has(p.id));
+      m.$('[data-proj-add]').innerHTML = `<option value="">${livres.length ? 'Adicionar projeto…' : 'Todos os projetos já foram adicionados'}</option>${livres.map(p => `<option value="${esc(p.id)}">${esc(p.nome)}</option>`).join('')}`;
+      m.$('[data-proj-add]').disabled = !livres.length;
+      const ps = [...projSel].map(id => projetos.find(p => p.id === id)).filter(Boolean);
+      m.$('[data-projs]').innerHTML = ps.length ? ps.map(p => `<span class="proj-tag" style="--c:${esc(p.cor || '#2563eb')}"><span class="truncate">${esc(p.nome)}</span><button type="button" data-proj-rm="${esc(p.id)}" aria-label="Tirar ${esc(p.nome)}" title="Tirar">${I('x', 13)}</button></span>`).join('')
+        : '<span class="xs muted">Ação institucional (nenhum projeto)</span>';
+    };
+    drawProj();
+    m.$('[data-proj-add]').addEventListener('change', ev => { if (ev.target.value) { projSel.add(ev.target.value); drawProj(); } });
+    m.$('[data-projs]').addEventListener('click', ev => { const b = ev.target.closest('[data-proj-rm]'); if (b) { projSel.delete(b.dataset.projRm); drawProj(); } });
     m.$('[data-turma]').addEventListener('change', ev => {
       mats.filter(x => x.turma_id === ev.target.value && x.status === 'ativo').forEach(x => sel.add(x.aluno_id));
       // A turma adicionada também vincula o projeto dela
       const tu = turmas.find(x => x.id === ev.target.value);
-      if (tu && tu.projeto_id && !projSel.has(tu.projeto_id)) { projSel.add(tu.projeto_id); const c = m.$(`[data-proj][value="${CSS.escape(tu.projeto_id)}"]`); if (c) c.checked = true; }
+      if (tu && tu.projeto_id && !projSel.has(tu.projeto_id)) { projSel.add(tu.projeto_id); drawProj(); }
       ev.target.value = ''; drawAl();
     });
     m.$('[data-ok]').addEventListener('click', ev => ui().busy(ev.currentTarget, async () => {
       const d = ICM.util.formData(m.$('form'));
-      const projeto_ids = projetos.map(p => p.id).filter(id => projSel.has(id));
+      const projeto_ids = [...projSel].filter(id => projetos.some(p => p.id === id));   // na ordem em que foram adicionados
       const r = await ui().run(() => ICM.api.eventos.save({ ...e, ...d, projeto_ids, alunos: [...sel] }), 'Evento salvo');
       m.close(); location.hash = `#/eventos/${r.id}`; ICM.app.reload();
     }).catch(() => { }));

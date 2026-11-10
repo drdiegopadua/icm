@@ -656,10 +656,14 @@ body.sens-blur::before { content: 'Conteúdo protegido — volte para esta janel
 .money-wrap > span { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--muted); font-weight: 700; font-size: 13px; pointer-events: none; }
 .money-wrap > .input { padding-left: 46px; font-variant-numeric: tabular-nums; }
 
-/* Projetos vinculados ao evento (vários) */
-.proj-chip { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 12px; background: var(--surface-2); box-shadow: var(--sh-out-sm); cursor: pointer; font-size: 13px; font-weight: 600; border: 2px solid transparent; transition: all var(--t) var(--ease); }
-.proj-chip input { accent-color: var(--c); width: 16px; height: 16px; margin: 0; }
-.proj-chip:has(input:checked) { border-color: var(--c); background: color-mix(in srgb, var(--c) 12%, var(--surface-2)); }
+/* Projetos vinculados ao evento (vários): dropdown + etiquetas */
+.proj-sel { display: flex; align-items: flex-start; gap: 12px; }
+.proj-sel > .select { flex: 0 0 300px; max-width: 100%; }
+.proj-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-height: 44px; flex: 1; min-width: 0; }
+.proj-tag { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 6px 6px 6px 12px; border-radius: 999px; font-size: 13px; font-weight: 700; color: var(--text); background: color-mix(in srgb, var(--c) 14%, var(--surface-2)); border: 1.5px solid color-mix(in srgb, var(--c) 55%, transparent); }
+.proj-tag button { display: grid; place-items: center; width: 22px; height: 22px; flex: none; border: 0; border-radius: 50%; background: transparent; color: var(--muted); cursor: pointer; }
+.proj-tag button:hover, .proj-tag button:focus-visible { background: var(--c); color: #fff; outline: none; }
+@media (max-width: 640px) { .proj-sel { flex-direction: column; align-items: stretch; } .proj-sel > .select { flex-basis: auto; } }
 
 /* Gerenciar opções das listas (botão + ao lado do campo) */
 .lst-itens { gap: 6px; max-height: 340px; overflow: auto; padding: 2px; }

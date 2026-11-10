@@ -48,26 +48,114 @@
     const alunos = (await ICM.api.alunos.list({ status: '' })).filter(a => (e.alunos || []).includes(a.id));
     const fotos = (e.fotos || []).map(f => ({ ...f }));
     const canEdit = ICM.auth.can('eventos.editar');
+    // Menor de idade na data do evento (sem data de nascimento: trata como menor, por segurança)
+    const menor = a => { const n = ICM.util.parseD(a.nascimento), d = ICM.util.parseD(e.data); if (!n || !d) return true; let id = d.getFullYear() - n.getFullYear(); if (d.getMonth() < n.getMonth() || (d.getMonth() === n.getMonth() && d.getDate() < n.getDate())) id--; return id < 18; };
+    const menores = alunos.filter(menor);
     el.innerHTML = `<div class="page">
       <div class="card mb-4 project-card" style="--c:${p ? p.cor : t.cor};cursor:default">
         <div class="row between wrap"><div>
           <span class="area-chip" style="--c:${t.cor}">${esc(t.nome)}</span>
           <h1 class="page-title mt-2" style="font-size:28px">${esc(e.titulo)}</h1>
           <div class="meta mt-2"><span>${I('calendar', 15)} ${esc(ICM.util.fmtDateLong(e.data))}${e.horario ? ' · ' + esc(e.horario) : ''}</span><span>${I('pin', 15)} ${esc(e.local || '')}</span>${ps.map(x => `<a href="#/projetos/${esc(x.id)}">${I('folder', 15)} ${esc(x.nome)}</a>`).join('')}</div></div>
-          <div class="row">${canEdit ? `<button class="btn" data-edit>${I('edit', 18)} Editar</button>` : ''}<button class="btn btn-primary" data-rel>${I('fileText', 18)} Relatório do evento</button></div></div>
+          <div class="row wrap">${canEdit ? `<button class="btn" data-edit>${I('edit', 18)} Editar</button>` : ''}${menores.length ? `<button class="btn" data-aut title="Autorização para os pais assinarem, já preenchida com os dados da matrícula">${I('fileText', 18)} Autorizações de viagem <span class="badge">${menores.length}</span></button>` : ''}<button class="btn btn-primary" data-rel>${I('fileText', 18)} Relatório do evento</button></div></div>
       </div>
       <div class="grid grid-2">
         <div class="card"><div class="section-title">${I('info', 18)} Descrição</div><div class="text-block">${esc(e.descricao || 'Sem descrição')}</div>
           <hr class="divider">${ui().kv([['Público estimado', e.publico ? num(e.publico) : ''], ['Alunos participantes', String(alunos.length)], ['Resultado / premiação', e.resultado]])}</div>
         <div class="card"><div class="section-title">${I('users', 18)} Alunos participantes</div>
-          ${alunos.length ? `<div class="col" style="max-height:340px;overflow:auto">${alunos.map(a => `<a class="list-item" href="#/alunos/${esc(a.id)}">${ICM.util.avatar(a.nome, a.foto, 'sm')}<div class="grow"><b>${esc(a.nome)}</b><div class="xs muted">${esc(a.matricula)}</div></div></a>`).join('')}</div>` : ui().empty('Nenhum aluno vinculado', 'users')}</div>
+          ${alunos.length ? `<div class="col" style="max-height:340px;overflow:auto">${alunos.map(a => `<a class="list-item" href="#/alunos/${esc(a.id)}">${ICM.util.avatar(a.nome, a.foto, 'sm')}<div class="grow"><b>${esc(a.nome)}</b><div class="xs muted">${esc(a.matricula)}</div></div>${menor(a) ? ui().badge('Menor', 'warn') : ''}</a>`).join('')}</div>` : ui().empty('Nenhum aluno vinculado', 'users')}</div>
+        <div class="card span-all"><div class="card-head"><div class="section-title" style="margin:0">${I('clipboard', 18)} Checklist do evento <span class="badge" data-ck-cnt></span></div></div>
+          <div class="progress ok mb-4"><span data-ck-bar style="width:0%"></span></div><div data-checklist></div></div>
         <div class="card span-all"><div class="card-head"><div class="section-title" style="margin:0">${I('camera', 18)} Fotos</div>${canEdit ? `<button class="btn btn-sm btn-primary" data-savefotos>${I('check', 16)} Salvar fotos</button>` : ''}</div><div data-fotos></div></div>
       </div></div>`;
     ui().photoPicker(el.querySelector('[data-fotos]'), fotos, () => { }, { editable: canEdit });
-    const sf = el.querySelector('[data-savefotos]'); if (sf) sf.addEventListener('click', ev => ui().busy(ev.currentTarget, () => ui().run(() => ICM.api.eventos.save({ ...e, fotos }), 'Fotos salvas')).catch(() => { }));
+    // Só as fotos: não sobrescreve o checklist nem outros campos gravados nesta tela
+    const sf = el.querySelector('[data-savefotos]'); if (sf) sf.addEventListener('click', ev => ui().busy(ev.currentTarget, async () => { await ui().run(() => ICM.api.eventos.atualizar(e.id, { fotos }), 'Fotos salvas'); e.fotos = fotos; }).catch(() => { }));
+    checklist(el.querySelector('[data-checklist]'), e, canEdit);
+    const ab = el.querySelector('[data-aut]'); if (ab) ab.addEventListener('click', () => autorizacoes(e, menores, canEdit));
     const eb = el.querySelector('[data-edit]'); if (eb) eb.addEventListener('click', () => eventoForm(e));
     el.querySelector('[data-rel]').addEventListener('click', () => ICM.reports.generate('evento', { evento_id: e.id }));
   };
+
+  // ---------- Checklist do evento ----------
+  // Começa com a lista padrão (ICM.C.CHECKLIST_EVENTO); ela só é gravada no evento na primeira alteração.
+  function checklist(box, e, canEdit) {
+    const card = box.closest('.card');
+    let itens = Array.isArray(e.checklist) ? e.checklist.map(x => ({ ...x })) : ICM.C.CHECKLIST_EVENTO.map(t => ({ id: ICM.util.uid('ck_'), t, ok: false }));
+    let editando = null;
+    const salvar = async () => { await ICM.api.eventos.atualizar(e.id, { checklist: itens }); e.checklist = itens.map(x => ({ ...x })); };
+    const draw = () => {
+      const feitos = itens.filter(x => x.ok).length;
+      card.querySelector('[data-ck-cnt]').textContent = `${feitos}/${itens.length}`;
+      card.querySelector('[data-ck-bar]').style.width = itens.length ? `${Math.round(feitos / itens.length * 100)}%` : '0%';
+      box.innerHTML = `<div class="ck-lista">${itens.map(x => editando === x.id
+        ? `<div class="ck-item editando"><input class="input grow" data-ck-texto value="${esc(x.t)}" maxlength="200" aria-label="Texto do item"><button type="button" class="btn btn-sm btn-primary" data-ck-ok="${esc(x.id)}">${I('check', 14)} Salvar</button><button type="button" class="btn btn-sm" data-ck-cancelar>Cancelar</button></div>`
+        : `<div class="ck-item ${x.ok ? 'feito' : ''}"><label class="ck-check"><input type="checkbox" data-ck="${esc(x.id)}" ${x.ok ? 'checked' : ''} ${canEdit ? '' : 'disabled'}><span>${esc(x.t)}</span></label>
+          ${canEdit ? `<button type="button" class="btn btn-sm btn-icon" data-ck-editar="${esc(x.id)}" title="Editar" aria-label="Editar item">${I('edit', 15)}</button><button type="button" class="btn btn-sm btn-icon lst-del" data-ck-excluir="${esc(x.id)}" title="Excluir" aria-label="Excluir item">${I('trash', 15)}</button>` : ''}</div>`).join('') || '<div class="xs muted">Nenhum item no checklist.</div>'}</div>
+        ${canEdit ? `<div class="row mt-4" style="gap:8px"><input class="input grow" data-ck-novo maxlength="200" placeholder="Novo item do checklist (ex.: levar extensão elétrica)" aria-label="Novo item do checklist"><button type="button" class="btn btn-primary" data-ck-add>${I('plus', 16)} Adicionar</button></div>` : ''}`;
+      const ed = box.querySelector('[data-ck-texto]');
+      if (ed) { ed.focus(); ed.addEventListener('keydown', ev => { if (ev.key === 'Enter') box.querySelector('[data-ck-ok]').click(); else if (ev.key === 'Escape') { editando = null; draw(); } }); }
+      const novo = box.querySelector('[data-ck-novo]');
+      if (novo) novo.addEventListener('keydown', ev => { if (ev.key === 'Enter') box.querySelector('[data-ck-add]').click(); });
+    };
+    box.addEventListener('change', async ev => {
+      const c = ev.target.closest('[data-ck]'); if (!c) return;
+      const x = itens.find(i => i.id === c.dataset.ck); x.ok = c.checked; draw();
+      try { await salvar(); } catch (er) { x.ok = !c.checked; draw(); ui().toast(er.message, 'danger'); }
+    });
+    box.addEventListener('click', async ev => {
+      const b = ev.target.closest('button'); if (!b) return;
+      const antes = itens.map(x => ({ ...x }));
+      try {
+        if (b.dataset.ckEditar) { editando = b.dataset.ckEditar; draw(); return; }
+        if (b.hasAttribute('data-ck-cancelar')) { editando = null; draw(); return; }
+        if (b.dataset.ckOk) { const t = box.querySelector('[data-ck-texto]').value.trim(); if (!t) return ui().toast('Escreva o texto do item.', 'warn'); itens.find(i => i.id === b.dataset.ckOk).t = t; editando = null; }
+        else if (b.dataset.ckExcluir) { itens = itens.filter(i => i.id !== b.dataset.ckExcluir); }
+        else if (b.hasAttribute('data-ck-add')) { const t = box.querySelector('[data-ck-novo]').value.trim(); if (!t) return; itens.push({ id: ICM.util.uid('ck_'), t, ok: false }); }
+        else return;
+        draw(); await salvar();
+        if (b.hasAttribute('data-ck-add')) box.querySelector('[data-ck-novo]').focus();
+      } catch (er) { itens = antes; draw(); ui().toast(er.message, 'danger'); }
+    });
+    draw();
+  }
+
+  // ---------- Autorizações de viagem (menores de idade) ----------
+  function autorizacoes(e, menores, canEdit) {
+    const F = o => ui().field(o);
+    const D = ICM.C.AUTORIZACAO_VIAGEM, v = e.viagem || {};
+    const t = ICM.C.TIPOS_EVENTO[e.tipo] || { nome: 'Evento' };
+    const progPadrao = [
+      'Saída de Afonso Cláudio: saída da pracinha da grama às ____, seguindo a rota dos pontos habituais das aulas',
+      'Almoço: horário e local (informar se terá custo)',
+      `${t.nome}: ${[e.horario && `às ${e.horario}`, e.local].filter(Boolean).join(' — ') || 'horário e local'}`,
+      'Retorno a Afonso Cláudio: chegada prevista às ____ (avisaremos assim que sairmos e o horário previsto de chegada), deixando os alunos no mesmo ponto da rota de embarque'
+    ].join('\n');
+    const m = ui().modal({
+      title: 'Autorizações de viagem', size: 'wide',
+      body: `<form class="col" onsubmit="return false">
+        <p class="small muted">Uma autorização por aluno menor de idade, já preenchida com os dados da matrícula (nome e documento do responsável, cidade, parentesco, alergias e medicação). O que faltar no cadastro sai em branco para o responsável completar. Os textos abaixo ficam salvos neste evento.</p>
+        ${F({ name: 'responsaveis', label: 'Responsáveis pela viagem', type: 'textarea', rows: 2, value: v.responsaveis ?? D.responsaveis })}
+        ${F({ name: 'programacao', label: 'Programação (um item por linha)', type: 'textarea', rows: 5, value: v.programacao ?? progPadrao })}
+        ${F({ name: 'compromisso', label: 'Compromisso do responsável', type: 'textarea', rows: 4, value: v.compromisso ?? D.compromisso, hint: '{data} é trocado pela data do evento.' })}
+        ${F({ name: 'lembretes', label: 'Dicas e lembretes para o aluno (um por linha)', type: 'textarea', rows: 5, value: v.lembretes ?? D.lembretes })}
+        <div class="row between wrap"><div class="section-title" style="margin:0">${I('users', 18)} Alunos menores de idade <span class="badge" data-aut-cnt>${menores.length}</span></div>
+          <label class="check small"><input type="checkbox" data-aut-todos checked> Marcar todos</label></div>
+        <div class="grid grid-3" data-aut-alunos style="max-height:220px;overflow:auto;gap:8px">${menores.map(a => `<label class="check small"><input type="checkbox" value="${esc(a.id)}" checked> ${esc(a.nome)}</label>`).join('')}</div>
+      </form>`,
+      foot: `<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" data-ok>${I('sparkles', 18)} Gerar autorizações</button>`
+    });
+    const marcados = () => [...m.$$('[data-aut-alunos] input:checked')].map(c => c.value);
+    const conta = () => { m.$('[data-aut-cnt]').textContent = marcados().length; };
+    m.$('[data-aut-alunos]').addEventListener('change', conta);
+    m.$('[data-aut-todos]').addEventListener('change', ev => { m.$$('[data-aut-alunos] input').forEach(c => { c.checked = ev.target.checked; }); conta(); });
+    m.$('[data-ok]').addEventListener('click', ev => ui().busy(ev.currentTarget, async () => {
+      const ids = marcados(); if (!ids.length) return ui().toast('Marque pelo menos um aluno.', 'warn');
+      const viagem = ICM.util.formData(m.$('form'));
+      if (canEdit) { try { await ICM.api.eventos.atualizar(e.id, { viagem }); e.viagem = viagem; } catch (er) { /* sem permissão de gravar: gera mesmo assim */ } }
+      m.close(); setTimeout(() => ICM.reports.generate('autorizacao_viagem', { evento_id: e.id, alunos: ids, viagem }), 250);
+    }).catch(() => { }));
+  }
 
   async function eventoForm(e = {}) {
     const F = o => ui().field(o);

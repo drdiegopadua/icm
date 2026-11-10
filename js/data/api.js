@@ -382,6 +382,8 @@
         await audit(e.id ? 'editar' : 'criar', 'eventos', r.id, `${ICM.C.TIPOS_EVENTO[r.tipo].nome}: ${r.titulo}`);
         return r;
       },
+      // Grava só alguns campos (checklist, textos da viagem) sem reenviar o evento inteiro
+      async atualizar(id, patch) { need('eventos.editar'); return S().update('eventos', id, patch); },
       async remove(id) { need('eventos.editar'); await S().remove('eventos', id); await audit('excluir', 'eventos', id, 'Evento excluído'); }
     },
 

@@ -326,6 +326,31 @@
 
     DIAS_SEMANA: [{ v: 1, n: 'Seg' }, { v: 2, n: 'Ter' }, { v: 3, n: 'Qua' }, { v: 4, n: 'Qui' }, { v: 5, n: 'Sex' }, { v: 6, n: 'Sáb' }, { v: 0, n: 'Dom' }],
 
+    // Checklist que todo evento começa tendo (cada evento pode incluir, editar e excluir itens)
+    CHECKLIST_EVENTO: [
+      'Data, horário e local confirmados com a organização do evento',
+      'Transporte contratado e confirmado (veículo, motorista e horários)',
+      'Lista final de alunos participantes e telefone dos responsáveis',
+      'Autorizações de viagem assinadas por todos os menores de idade',
+      'Documento com foto de cada aluno',
+      'Uniforme completo conferido (camisa do Instituto, calça e sapato fechado)',
+      'Instrumentos, estantes, partituras e acessórios conferidos',
+      'Passagem de som / estrutura do palco combinada com a organização',
+      'Alimentação e água garantidas (almoço/lanche)',
+      'Kit de primeiros socorros e lista de alergias e medicações dos alunos',
+      'Responsáveis e acompanhantes da viagem definidos',
+      'Aviso no grupo oficial com horário de saída e de retorno',
+      'Autorização de uso de imagem conferida antes de publicar fotos',
+      'Retorno: avisar aos responsáveis o horário previsto de chegada'
+    ],
+
+    // Textos padrão da autorização de viagem (editáveis em cada evento). {data} vira a data do evento.
+    AUTORIZACAO_VIAGEM: {
+      responsaveis: 'o Presidente e Maestro do Instituto, Marcelo Dutra Coutinho, (27) 99628-6330, o Assistente Administrativo Marcelo Silva Ferreira e a Secretária Juliete Fernandes, que acompanharão os alunos durante o percurso e nas atividades programadas.',
+      compromisso: 'Como responsável pelo(a) aluno(a), você se compromete a buscá-lo(a) no respectivo ponto de embarque no horário avisado do dia {data}, acompanhando as atualizações enviadas no grupo oficial. O(A) aluno(a) deve estar 100% uniformizado(a): camisa do Instituto, calça e sapato fechado. Fica ciente, ainda, de que o Instituto Cultural das Montanhas e os responsáveis pela viagem não se responsabilizam por quaisquer situações decorrentes de o(a) aluno(a) permanecer sozinho(a) no ponto de retorno.',
+      lembretes: 'Autorização de viagem assinada pelo responsável (OBRIGATÓRIO)\nDocumento pessoal com foto (OBRIGATÓRIO)\nLevar roupa de frio, roupa extra, toalha de rosto e remédios essenciais (dor de cabeça e febre)\nTomar ANTES DE SAIR DE CASA remédio de enjoo e levar para a volta (caso passe mal)\nGarrafinha de água e/ou dinheiro para alimentação extra, se achar necessário'
+    },
+
     // Regra de assiduidade (configurável em Configurações)
     ASSIDUIDADE: { alerta: 2, desligamento: 3, periodo: 'mes' }
   };

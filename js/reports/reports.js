@@ -335,6 +335,42 @@
     return { title: `${t.nome} — ${e.titulo}`, html, file: `evento-${e.id}` };
   };
 
+  // Autorização de viagem e participação em evento: uma página por aluno, já preenchida com a matrícula.
+  // O que não estiver no cadastro sai como linha em branco para o responsável completar à mão.
+  B.autorizacao_viagem = async ({ evento_id, alunos: ids, viagem = {} }) => {
+    const e = await api().eventos.get(evento_id); const t = ICM.C.TIPOS_EVENTO[e.tipo] || { nome: 'Evento' };
+    const todosProj = await api().projetos.list();
+    const ps = U().projetosEvento(e).map(id => todosProj.find(x => x.id === id)).filter(Boolean);
+    const alunos = (await api().alunos.list({ status: '' })).filter(a => (ids || []).includes(a.id)).sort((a, b) => a.nome.localeCompare(b.nome));
+    const D = ICM.C.AUTORIZACAO_VIAGEM;
+    const dataLonga = U().fmtDateLong(e.data);
+    const txt = k => String(viagem[k] ?? D[k] ?? '').replace(/\{data\}/g, dataLonga);
+    const campo = (v, larg = 46) => v ? `<b>${esc(v)}</b>` : `<span class="aut-linha" style="min-width:${larg}mm"></span>`;
+    const evento = `${t.nome.toLowerCase()} <b>${esc(e.titulo)}</b>${ps.length ? ` (${esc(ps.map(p => p.nome).join(', '))})` : ''}${e.local ? `, em <b>${esc(e.local)}</b>` : ''}, no dia <b>${esc(dataLonga)}</b>${e.horario ? `, às <b>${esc(e.horario)}</b>` : ''}`;
+    const paginas = alunos.map((a, i) => {
+      const r = a.responsavel || {}, s = a.saude || {}, end = a.endereco || {};
+      // Sem responsável de verdade no cadastro (vazio, "Não informado" ou o próprio aluno): deixa as linhas em branco
+      const proprio = !r.nome || /^n[ãa]o informado$/i.test(r.nome.trim()) || r.nome.trim() === a.nome.trim() || /pr[óo]pri/i.test(r.parentesco || '');
+      const par = proprio || /^contato$/i.test(r.parentesco || '') ? '' : (r.parentesco || '');
+      const docAluno = a.rg ? `RG ${a.rg}` : a.cpf ? `CPF ${a.cpf}` : '';
+      const obs = [s.alergias && `Alergias: ${s.alergias}`, s.medicamentos && `Medicação: ${s.medicamentos}`, s.condicoes && `Condições de saúde: ${s.condicoes}`, s.contato_emergencia && `Contato de emergência: ${s.contato_emergencia}`].filter(Boolean);
+      let h = `<div class="aut-pagina${i ? ' page-break' : ''}">`;
+      h += head('Autorização de viagem e participação em evento', e.titulo, { inverter: true, extra: `${dataLonga}${e.local ? ' · ' + e.local : ''}` });
+      h += sec(`<p class="aut-p">Eu, ${campo(proprio ? '' : r.nome, 90)}, portador(a) do documento ${campo(r.cpf ? `CPF ${r.cpf}` : '', 40)}, morador(a) da cidade de ${campo(end.cidade, 45)}, Estado ${campo(end.uf || end.estado, 20)}, responsável pelo(a) aluno(a) <b>${esc(a.nome)}</b>, portador(a) do documento ${campo(docAluno, 40)}, na condição de ${par ? `<b>${esc(par)}</b>` : `${campo('', 30)} (pai, mãe, avô etc.)`}, autorizo a sua participação na ${evento}, estando ciente das informações descritas abaixo.</p>`);
+      if (txt('responsaveis').trim()) h += sec(`<h2>Responsáveis pela viagem</h2><p class="aut-p">Os responsáveis pela viagem são ${esc(txt('responsaveis'))}</p>`);
+      if (txt('programacao').trim()) h += sec(`<h2>Programação — ${esc(dataLonga)}</h2>${topicos(txt('programacao'))}`);
+      if (txt('compromisso').trim()) h += sec(`<h2>Compromisso do responsável</h2><p class="aut-p">${esc(txt('compromisso'))}</p>`);
+      if (txt('lembretes').trim()) h += sec(`<h2>Para o(a) aluno(a): dicas e lembretes</h2>${topicos(txt('lembretes'))}`);
+      h += sec(`<h2>Observações importantes do(a) aluno(a)</h2><p class="aut-p xs-nota">Ex.: uso de medicação regular, alergias, restrições alimentares.</p>${obs.length ? `<ul class="tp">${obs.map(o => `<li>${esc(o)}</li>`).join('')}</ul>` : ''}<div class="aut-linhas"><span></span><span></span>${obs.length ? '' : '<span></span>'}</div>`);
+      h += sec(`<p class="aut-p" style="margin-top:14px">Eu, como responsável pelo(a) aluno(a), declaro ter ciência das informações deste documento e autorizo a participação do(a) aluno(a) nas atividades e na viagem.</p>
+        <div class="aut-assina"><div><span class="aut-linha"></span><small>Assinatura do responsável</small></div><div><span class="aut-linha curta"></span><small>Data</small></div></div>
+        <p class="aut-p xs-nota">Telefone do responsável: ${campo(proprio ? '' : r.telefone, 40)}</p>`);
+      return h + '</div>';
+    });
+    const html = paginas.join('') || sec('<p>Nenhum aluno selecionado.</p>');
+    return { title: `Autorizações de viagem — ${e.titulo}`, html, file: `autorizacoes-${e.id}` };
+  };
+
   B.ficha_aluno = async ({ aluno_id }) => {
     const a = await api().alunos.get(aluno_id);
     const turmas = await api().alunos.turmas(aluno_id);
@@ -469,9 +505,10 @@
     assiduidade: ['Lendo chamadas', 'Contando faltas', 'Aplicando regra de alerta', 'Montando documento'],
     osc_anual: ['Reunindo todos os projetos', 'Somando horas e aulas', 'Contando beneficiários e famílias', 'Consolidando eventos e conquistas', 'Calculando transparência de recursos', 'Montando relatório de impacto'],
     evento: ['Carregando evento', 'Listando participantes', 'Montando documento'],
+    autorizacao_viagem: ['Carregando evento', 'Lendo matrículas dos alunos', 'Preenchendo autorizações'],
     ficha_aluno: ['Carregando cadastro', 'Consolidando frequência', 'Montando ficha']
   };
-  const TITLES = { termo_emprestimo: 'Termo de empréstimo', termo_devolucao: 'Termo de devolução e recebimento', pat_inventario: 'Inventário patrimonial', pat_emprestimos: 'Relatório de empréstimos', pat_por_projeto: 'Bens por projeto', turma_mensal: 'Relatório mensal da turma', turma_anual: 'Relatório anual da turma', projeto: 'Relatório do projeto', projeto_anual: 'Relatório anual do projeto', assiduidade: 'Relatório de assiduidade', osc_anual: 'Relatório anual de atividades', evento: 'Relatório do evento', ficha_aluno: 'Ficha do aluno' };
+  const TITLES = { autorizacao_viagem: 'Autorizações de viagem', termo_emprestimo: 'Termo de empréstimo', termo_devolucao: 'Termo de devolução e recebimento', pat_inventario: 'Inventário patrimonial', pat_emprestimos: 'Relatório de empréstimos', pat_por_projeto: 'Bens por projeto', turma_mensal: 'Relatório mensal da turma', turma_anual: 'Relatório anual da turma', projeto: 'Relatório do projeto', projeto_anual: 'Relatório anual do projeto', assiduidade: 'Relatório de assiduidade', osc_anual: 'Relatório anual de atividades', evento: 'Relatório do evento', ficha_aluno: 'Ficha do aluno' };
 
   async function generate(kind, params) {
     try {

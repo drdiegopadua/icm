@@ -678,3 +678,13 @@ body.sens-blur::before { content: 'Conteúdo protegido — volte para esta janel
 .busca-aluno { position: relative; min-width: 220px; }
 .busca-aluno > svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
 .busca-aluno > .input { padding-left: 40px; }
+
+/* Checklist do evento */
+.ck-lista { display: flex; flex-direction: column; gap: 6px; }
+.ck-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 12px; background: var(--surface-2); box-shadow: var(--sh-out-sm); }
+.ck-check { display: flex; align-items: flex-start; gap: 10px; flex: 1; min-width: 0; cursor: pointer; font-size: 14px; font-weight: 600; line-height: 1.35; }
+.ck-check input { width: 18px; height: 18px; margin: 1px 0 0; flex: none; accent-color: var(--ok, #10b981); }
+.ck-item.feito .ck-check span { color: var(--muted); text-decoration: line-through; font-weight: 500; }
+.ck-item .btn-icon { opacity: .55; }
+.ck-item:hover .btn-icon, .ck-item .btn-icon:focus-visible { opacity: 1; }
+@media (hover: none) { .ck-item .btn-icon { opacity: 1; } }

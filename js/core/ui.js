@@ -96,6 +96,7 @@
     const id = 'f_' + name.replace(/\W/g, '_');
     let ctl;
     if (type === 'select') {
+      if (lista && ICM.listas && ICM.listas.filtrar) options = ICM.listas.filtrar(lista, options || [], value);   // sem as opções excluídas da lista
       ctl = `<select class="select" id="${id}" name="${esc(name)}" ${required ? 'required' : ''} ${attrs}>${(options || []).map(o => { const [v, t] = Array.isArray(o) ? o : [o, o]; return `<option value="${esc(v)}" ${String(v) === String(value ?? '') ? 'selected' : ''}>${esc(t)}</option>`; }).join('')}</select>`;
     } else if (type === 'textarea') {
       ctl = `<textarea class="textarea" id="${id}" name="${esc(name)}" rows="${rows}" placeholder="${esc(placeholder)}" ${required ? 'required' : ''} ${attrs}>${esc(value)}</textarea>`;

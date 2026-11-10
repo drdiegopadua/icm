@@ -61,7 +61,11 @@
       </div>
       <div class="grid grid-2">
         <div class="card"><div class="section-title">${I('info', 18)} Descrição</div><div class="text-block">${esc(e.descricao || 'Sem descrição')}</div>
-          <hr class="divider">${ui().kv([['Público estimado', e.publico ? num(e.publico) : ''], ['Alunos participantes', String(alunos.length)], ['Resultado / premiação', e.resultado]])}</div>
+          <hr class="divider">${ui().kv([['Público estimado', e.publico ? num(e.publico) : ''], ['Alunos participantes', String(alunos.length)], ['Resultado / premiação', e.resultado]])}
+          <hr class="divider"><div class="grid grid-2" style="gap:14px"><div>${transporteHtml(e.transporte)}</div><div><div class="xs bold muted" style="text-transform:uppercase;letter-spacing:.04em">${I('heart', 13)} Alimentação</div>
+            <div class="small mt-2">${(e.alimentacao || {}).tipo ? `<b>${esc(ICM.C.ALIMENTACAO_EVENTO[e.alimentacao.tipo] || e.alimentacao.tipo)}</b>${e.alimentacao.detalhes ? `<div class="xs muted">${esc(e.alimentacao.detalhes)}</div>` : ''}` : '<span class="muted">Não informado</span>'}</div></div></div>
+          <hr class="divider"><div class="grid grid-2" style="gap:14px">${[['Equipe do Instituto presente', e.equipe_presente], ['Acompanham os alunos', e.acompanhantes]].map(([tit, ps]) => `<div><div class="xs bold muted" style="text-transform:uppercase;letter-spacing:.04em">${esc(tit)}</div>
+            ${(ps || []).length ? `<div class="col mt-2" style="gap:6px">${ps.map(x => `<div class="small"><b>${esc(x.nome)}</b>${descPessoa(x) ? `<div class="xs muted">${esc(descPessoa(x))}</div>` : ''}</div>`).join('')}</div>` : `<div class="small muted mt-2">Não informado${canEdit ? ' — use Editar' : ''}</div>`}</div>`).join('')}</div></div>
         <div class="card"><div class="section-title">${I('users', 18)} Alunos participantes</div>
           ${alunos.length ? `<div class="col" style="max-height:340px;overflow:auto">${alunos.map(a => `<a class="list-item" href="#/alunos/${esc(a.id)}">${ICM.util.avatar(a.nome, a.foto, 'sm')}<div class="grow"><b>${esc(a.nome)}</b><div class="xs muted">${esc(a.matricula)}</div></div>${menor(a) ? ui().badge('Menor', 'warn') : ''}</a>`).join('')}</div>` : ui().empty('Nenhum aluno vinculado', 'users')}</div>
         <div class="card span-all"><div class="card-head"><div class="section-title" style="margin:0">${I('clipboard', 18)} Checklist do evento <span class="badge" data-ck-cnt></span></div></div>
@@ -124,19 +128,36 @@
   function autorizacoes(e, menores, canEdit) {
     const F = o => ui().field(o);
     const D = ICM.C.AUTORIZACAO_VIAGEM, v = e.viagem || {};
+    // Texto dos responsáveis montado com quem acompanha os alunos (cadastrado no evento)
+    const doEvento = (e.acompanhantes || []).length ? `${textoPessoas(e.acompanhantes)}, que acompanharão os alunos durante o percurso e nas atividades programadas.` : '';
     const t = ICM.C.TIPOS_EVENTO[e.tipo] || { nome: 'Evento' };
-    const progPadrao = [
-      'Saída de Afonso Cláudio: saída da pracinha da grama às ____, seguindo a rota dos pontos habituais das aulas',
-      'Almoço: horário e local (informar se terá custo)',
-      `${t.nome}: ${[e.horario && `às ${e.horario}`, e.local].filter(Boolean).join(' — ') || 'horário e local'}`,
-      'Retorno a Afonso Cláudio: chegada prevista às ____ (avisaremos assim que sairmos e o horário previsto de chegada), deixando os alunos no mesmo ponto da rota de embarque'
-    ].join('\n');
+    // Programação montada com o transporte cadastrado no evento (o que faltar fica "____" para completar)
+    const tr = e.transporte || {};
+    const hora = h => h ? h.replace(':', 'h') : '____';
+    const evLinha = `${t.nome}: ${[e.horario && `às ${hora(e.horario)}`, e.local].filter(Boolean).join(' — ') || 'horário e local'}`;
+    const al = e.alimentacao || {};
+    const alLinha = al.tipo === 'cedida' ? `Alimentação: cedida, sem custo para o aluno${al.detalhes ? ` — ${al.detalhes}` : ''}`
+      : al.tipo === 'aluno' ? `Alimentação: por conta do aluno${al.detalhes ? ` — ${al.detalhes}` : ' (levar lanche e/ou dinheiro para alimentação)'}`
+      : al.tipo === 'nao_ha' ? `Alimentação: não haverá refeição${al.detalhes ? ` — ${al.detalhes}` : ''}`
+      : 'Alimentação: horário e local (informar se terá custo)';
+    const progPadrao = (tr.tem ? [
+      `Saída: ${tr.saida_local || '____'}, às ${hora(tr.saida_hora)}${tr.tipo ? ` (${tr.tipo})` : ''}`,
+      alLinha,
+      evLinha,
+      `Retorno: chegada prevista às ${hora(tr.chegada_hora)} em ${tr.chegada_local || tr.saida_local || '____'} (avisaremos assim que sairmos e o horário previsto de chegada)`
+    ] : [
+      'Transporte: por conta do responsável (o Instituto não oferecerá transporte para este evento)',
+      alLinha,
+      evLinha
+    ]).join('\n');
     const m = ui().modal({
       title: 'Autorizações de viagem', size: 'wide',
       body: `<form class="col" onsubmit="return false">
         <p class="small muted">Uma autorização por aluno menor de idade, já preenchida com os dados da matrícula (nome e documento do responsável, cidade, parentesco, alergias e medicação). O que faltar no cadastro sai em branco para o responsável completar. Os textos abaixo ficam salvos neste evento.</p>
-        ${F({ name: 'responsaveis', label: 'Responsáveis pela viagem', type: 'textarea', rows: 2, value: v.responsaveis ?? D.responsaveis })}
-        ${F({ name: 'programacao', label: 'Programação (um item por linha)', type: 'textarea', rows: 5, value: v.programacao ?? progPadrao })}
+        ${F({ name: 'responsaveis', label: 'Responsáveis pela viagem', type: 'textarea', rows: 2, value: v.responsaveis || doEvento || D.responsaveis })}
+        ${doEvento ? `<div class="row" style="margin-top:-6px"><button type="button" class="btn btn-sm" data-usar-acomp>${I('refresh', 14)} Usar quem acompanha os alunos (cadastrado no evento)</button></div>` : `<div class="xs muted" style="margin-top:-6px">Dica: em Editar evento, preencha "Quem acompanha os alunos" e este texto passa a ser montado sozinho.</div>`}
+        ${F({ name: 'programacao', label: 'Programação (um item por linha)', type: 'textarea', rows: 5, value: v.programacao || progPadrao })}
+        <div class="row" style="margin-top:-6px"><button type="button" class="btn btn-sm" data-usar-prog>${I('refresh', 14)} Montar com o transporte e o horário do evento</button></div>
         ${F({ name: 'compromisso', label: 'Compromisso do responsável', type: 'textarea', rows: 4, value: v.compromisso ?? D.compromisso, hint: '{data} é trocado pela data do evento.' })}
         ${F({ name: 'lembretes', label: 'Dicas e lembretes para o aluno (um por linha)', type: 'textarea', rows: 5, value: v.lembretes ?? D.lembretes })}
         <div class="row between wrap"><div class="section-title" style="margin:0">${I('users', 18)} Alunos menores de idade <span class="badge" data-aut-cnt>${menores.length}</span></div>
@@ -145,6 +166,8 @@
       </form>`,
       foot: `<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" data-ok>${I('sparkles', 18)} Gerar autorizações</button>`
     });
+    const ua = m.$('[data-usar-acomp]'); if (ua) ua.addEventListener('click', () => { m.$('[name=responsaveis]').value = doEvento; });
+    m.$('[data-usar-prog]').addEventListener('click', () => { m.$('[name=programacao]').value = progPadrao; });
     const marcados = () => [...m.$$('[data-aut-alunos] input:checked')].map(c => c.value);
     const conta = () => { m.$('[data-aut-cnt]').textContent = marcados().length; };
     m.$('[data-aut-alunos]').addEventListener('change', conta);
@@ -157,6 +180,51 @@
     }).catch(() => { }));
   }
 
+  // ---------- Pessoas do Instituto no evento ----------
+  // Usuários do sistema + equipe (RH, só para quem pode ver) — sem repetir nomes. Guardamos no evento
+  // só nome, cargo e telefone, para todos que veem o evento saberem quem vai.
+  async function pessoasDoInstituto() {
+    const sem = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+    const us = await ICM.api.usuarios.list().catch(() => []);
+    const eq = ICM.auth.can('equipe.gerir') ? await ICM.api.equipe.list().catch(() => []) : [];
+    const mapa = new Map();
+    [...eq.filter(p => !/deslig|inativ/i.test(p.status || '')).map(p => ({ nome: p.nome, cargo: p.cargo || '', telefone: p.telefone || '' })),
+      ...us.filter(u => u.ativo !== false && !u.convite).map(u => ({ nome: u.nome, cargo: u.cargo || (ICM.C.PAPEIS && ICM.C.PAPEIS[u.papel] ? ICM.C.PAPEIS[u.papel].nome : ''), telefone: u.telefone || '' }))]
+      .filter(p => p.nome).forEach(p => { const k = sem(p.nome); const j = mapa.get(k); mapa.set(k, j ? { ...p, ...Object.fromEntries(Object.entries(j).filter(([, v]) => v)) } : p); });
+    return [...mapa.values()].sort((a, b) => a.nome.localeCompare(b.nome));
+  }
+  const descPessoa = p => [p.cargo, p.telefone].filter(Boolean).join(' · ');
+  // Bloco "Transporte" da página do evento
+  function transporteHtml(tr) {
+    tr = tr || {};
+    const tit = `<div class="xs bold muted" style="text-transform:uppercase;letter-spacing:.04em">${I('pin', 13)} Transporte</div>`;
+    if (!tr.tem) return `${tit}<div class="small muted mt-2">Sem transporte do Instituto (ou não informado)</div>`;
+    return `${tit}${ui().kv([['Tipo', tr.tipo], ['Sai de', tr.saida_local], ['Previsão de saída', tr.saida_hora], ['Previsão de chegada (volta)', tr.chegada_hora ? `${tr.chegada_hora}${tr.chegada_local ? ' — ' + tr.chegada_local : ''}` : '']])}`;
+  }
+  // Lista suspensa + etiquetas; "Outra pessoa…" permite digitar um nome que não está no sistema
+  function pessoasPicker(box, pessoas, sel, rotulo) {
+    const draw = (digitando = false) => {
+      const livres = pessoas.filter(p => !sel.some(s => s.nome === p.nome));
+      box.innerHTML = `<div class="proj-sel">${digitando
+        ? `<div class="row" style="gap:6px;flex:0 0 300px;max-width:100%"><input class="input grow" data-outra placeholder="Nome (e função, se quiser)" maxlength="80" aria-label="Nome da pessoa"><button type="button" class="btn btn-sm btn-primary" data-outra-ok>${I('check', 14)}</button></div>`
+        : `<select class="select" data-add aria-label="${esc(rotulo)}"><option value="">${esc(rotulo)}</option>${livres.map((p, i) => `<option value="${i}">${esc(p.nome)}${p.cargo ? ` — ${esc(p.cargo)}` : ''}</option>`).join('')}<option value="__outra">Outra pessoa (digitar o nome)…</option></select>`}
+        <div class="proj-tags">${sel.length ? sel.map((p, i) => `<span class="proj-tag" style="--c:#2563eb" title="${esc(descPessoa(p))}"><span class="truncate">${esc(p.nome)}${p.cargo ? ` <small class="muted">· ${esc(p.cargo)}</small>` : ''}</span><button type="button" data-rm="${i}" aria-label="Tirar ${esc(p.nome)}" title="Tirar">${I('x', 13)}</button></span>`).join('') : '<span class="xs muted">Ninguém adicionado</span>'}</div></div>`;
+      const s = box.querySelector('[data-add]');
+      if (s) s.addEventListener('change', () => { if (s.value === '__outra') return draw(true); if (s.value !== '') { sel.push({ ...livres[+s.value] }); draw(); } });
+      const inp = box.querySelector('[data-outra]');
+      if (inp) {
+        inp.focus();
+        const ok = () => { const nome = inp.value.trim(); if (nome) sel.push({ nome, cargo: '', telefone: '' }); draw(); };
+        box.querySelector('[data-outra-ok]').addEventListener('click', ok);
+        inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); ok(); } else if (ev.key === 'Escape') { ev.stopPropagation(); draw(); } });
+      }
+      box.querySelectorAll('[data-rm]').forEach(b => b.addEventListener('click', () => { sel.splice(+b.dataset.rm, 1); draw(); }));
+    };
+    draw();
+  }
+  // "Fulano (Maestro, (27) 9...), Ciclano (Secretária)" — usado nas autorizações de viagem
+  const textoPessoas = ps => ps.map(p => `${p.nome}${descPessoa(p) ? ` (${descPessoa(p)})` : ''}`).join(', ').replace(/, ([^,]*)$/, ' e $1');
+
   async function eventoForm(e = {}) {
     const F = o => ui().field(o);
     const projetos = await ICM.api.projetos.list();
@@ -165,6 +233,10 @@
     const mats = await ICM.api.raw('matriculas');
     const sel = new Set(e.alunos || []);
     const projSel = new Set(ICM.util.projetosEvento(e));
+    const pessoas = await pessoasDoInstituto();
+    const presentes = (e.equipe_presente || []).map(x => ({ ...x }));
+    const acompanhantes = (e.acompanhantes || []).map(x => ({ ...x }));
+    const tr = e.transporte || {};
     const m = ui().modal({
       title: e.id ? 'Editar evento' : 'Novo evento', size: 'wide',
       body: `<form class="grid grid-3">
@@ -177,6 +249,18 @@
         ${F({ name: 'resultado', label: 'Resultado / premiação', value: e.resultado, cls: 'span-2' })}
         <div class="field span-all"><label for="f_proj_add">Projetos vinculados <span class="muted" style="font-weight:500">— nenhum = ação institucional</span></label>
           <div class="proj-sel"><select class="select" id="f_proj_add" data-proj-add></select><div class="proj-tags" data-projs></div></div></div>
+        ${F({ name: 'transporte.tem', label: 'Haverá transporte do Instituto para os alunos', type: 'toggle', value: tr.tem, cls: 'span-all' })}
+        <div class="span-all grid grid-3" data-transp ${tr.tem ? '' : 'hidden'} style="gap:12px 16px">
+          ${F({ name: 'transporte.tipo', label: 'Tipo de transporte', value: tr.tipo, placeholder: 'Ex.: ônibus, van do Instituto' })}
+          ${F({ name: 'transporte.saida_local', label: 'Local de saída', value: tr.saida_local, placeholder: 'Ex.: pracinha da grama', cls: 'span-2' })}
+          ${F({ name: 'transporte.saida_hora', label: 'Previsão de saída', type: 'time', value: tr.saida_hora })}
+          ${F({ name: 'transporte.chegada_hora', label: 'Previsão de chegada (volta)', type: 'time', value: tr.chegada_hora })}
+          ${F({ name: 'transporte.chegada_local', label: 'Local de chegada', value: tr.chegada_local, placeholder: 'Vazio = o mesmo local de saída' })}
+        </div>
+        ${F({ name: 'alimentacao.tipo', label: 'Alimentação', type: 'select', value: (e.alimentacao || {}).tipo || '', options: [['', 'Não informado'], ...Object.entries(ICM.C.ALIMENTACAO_EVENTO)] })}
+        ${F({ name: 'alimentacao.detalhes', label: 'Detalhes da alimentação', value: (e.alimentacao || {}).detalhes, cls: 'span-2', placeholder: 'Ex.: almoço às 11h30 no local do evento / levar lanche e dinheiro' })}
+        <div class="field span-all"><label>${I('users', 15)} Equipe do Instituto presente no evento</label><div data-pessoas="presentes"></div></div>
+        <div class="field span-all"><label>${I('userCheck', 15)} Quem acompanha os alunos <span class="muted" style="font-weight:500">— na viagem e durante o evento; aparece nas autorizações de viagem</span></label><div data-pessoas="acompanhantes"></div></div>
         ${F({ name: 'descricao', label: 'Descrição', type: 'textarea', value: e.descricao, cls: 'span-all', rows: 3 })}
         ${F({ name: 'app_oculto', label: 'Não mostrar este evento no App do Instituto', type: 'toggle', value: e.app_oculto, cls: 'span-all' })}
         <div class="span-all"><div class="row between wrap"><div class="section-title" style="margin:0">${I('users', 18)} Alunos participantes <span class="badge" data-cnt>${sel.size}</span></div>
@@ -211,6 +295,9 @@
         : '<span class="xs muted">Ação institucional (nenhum projeto)</span>';
     };
     drawProj();
+    m.$('[name="transporte.tem"]').addEventListener('change', ev => { m.$('[data-transp]').hidden = !ev.target.checked; });
+    pessoasPicker(m.$('[data-pessoas="presentes"]'), pessoas, presentes, 'Adicionar pessoa presente…');
+    pessoasPicker(m.$('[data-pessoas="acompanhantes"]'), pessoas, acompanhantes, 'Adicionar acompanhante…');
     m.$('[data-proj-add]').addEventListener('change', ev => { if (ev.target.value) { projSel.add(ev.target.value); drawProj(); } });
     m.$('[data-projs]').addEventListener('click', ev => { const b = ev.target.closest('[data-proj-rm]'); if (b) { projSel.delete(b.dataset.projRm); drawProj(); } });
     m.$('[data-turma]').addEventListener('change', ev => {
@@ -223,7 +310,7 @@
     m.$('[data-ok]').addEventListener('click', ev => ui().busy(ev.currentTarget, async () => {
       const d = ICM.util.formData(m.$('form'));
       const projeto_ids = [...projSel].filter(id => projetos.some(p => p.id === id));   // na ordem em que foram adicionados
-      const r = await ui().run(() => ICM.api.eventos.save({ ...e, ...d, projeto_ids, alunos: [...sel] }), 'Evento salvo');
+      const r = await ui().run(() => ICM.api.eventos.save({ ...e, ...d, projeto_ids, alunos: [...sel], equipe_presente: presentes, acompanhantes }), 'Evento salvo');
       m.close(); location.hash = `#/eventos/${r.id}`; ICM.app.reload();
     }).catch(() => { }));
     const del = m.$('[data-del]');

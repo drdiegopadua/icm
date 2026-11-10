@@ -328,6 +328,15 @@
     const alunos = (await api().alunos.list({ status: '' })).filter(a => (e.alunos || []).includes(a.id));
     let html = head(`Relatório de ${t.nome}`, e.titulo);
     html += meta([['Data', U().fmtDateLong(e.data)], ['Horário', e.horario], ['Local', e.local], [ps.length > 1 ? 'Projetos' : 'Projeto', ps.length ? ps.map(x => x.nome).join(', ') : 'Ação institucional'], ['Público estimado', e.publico ? U().num(e.publico) : '—'], ['Resultado', e.resultado]]);
+    // Logística: transporte, alimentação e equipe do Instituto
+    const tr = e.transporte || {}, al = e.alimentacao || {};
+    const nomes = ps2 => (ps2 || []).map(x => x.nome + (x.cargo ? ` (${x.cargo})` : '')).join(', ');
+    html += meta([
+      ['Transporte', tr.tem ? [tr.tipo, tr.saida_local && `saída de ${tr.saida_local}`, tr.saida_hora && `às ${tr.saida_hora}`, tr.chegada_hora && `chegada prevista às ${tr.chegada_hora}${tr.chegada_local ? ` em ${tr.chegada_local}` : ''}`].filter(Boolean).join(', ') || 'Sim' : 'Sem transporte do Instituto'],
+      ['Alimentação', al.tipo ? `${(ICM.C.ALIMENTACAO_EVENTO[al.tipo] || al.tipo)}${al.detalhes ? ` — ${al.detalhes}` : ''}` : 'Não informado'],
+      ['Equipe presente', nomes(e.equipe_presente) || 'Não informado'],
+      ['Acompanham os alunos', nomes(e.acompanhantes) || 'Não informado']
+    ]);
     html += sec(`<h2>Descrição</h2><p>${esc(e.descricao || '—')}</p>`);
     html += sec(`<h2>Alunos participantes (${alunos.length})</h2>${table([{ t: '#', c: 1 }, { t: 'Aluno' }, { t: 'Matrícula' }], alunos.map((a, i) => [i + 1, a.nome, a.matricula]))}`);
     html += sec(`<h2>Registro fotográfico</h2>${photos(e.fotos || [], 12)}`);

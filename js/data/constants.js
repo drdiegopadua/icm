@@ -344,6 +344,9 @@
       'Retorno: avisar aos responsáveis o horário previsto de chegada'
     ],
 
+    // Alimentação no evento
+    ALIMENTACAO_EVENTO: { cedida: 'Cedida (sem custo para o aluno)', aluno: 'Por conta do aluno', nao_ha: 'Não haverá refeição (evento curto)' },
+
     // Textos padrão da autorização de viagem (editáveis em cada evento). {data} vira a data do evento.
     AUTORIZACAO_VIAGEM: {
       responsaveis: 'o Presidente e Maestro do Instituto, Marcelo Dutra Coutinho, (27) 99628-6330, o Assistente Administrativo Marcelo Silva Ferreira e a Secretária Juliete Fernandes, que acompanharão os alunos durante o percurso e nas atividades programadas.',

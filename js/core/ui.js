@@ -115,20 +115,59 @@
     }));
   }
 
-  // Seletor de fotos (upload + compressão)
+  // Foto ampliada (clique na miniatura): setas ou ← → para navegar, Esc ou clique fora para fechar
+  function photoViewer(fotos, inicio = 0) {
+    if (!fotos.length) return;
+    let i = inicio;
+    const el = document.createElement('div');
+    el.className = 'photo-viewer';
+    el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', 'Foto ampliada');
+    const varias = fotos.length > 1;
+    el.innerHTML = `<button type="button" class="pv-btn pv-close" data-x aria-label="Fechar">${I('x', 22)}</button>
+      ${varias ? `<button type="button" class="pv-btn pv-prev" data-nav="-1" aria-label="Foto anterior">${I('chevronLeft', 26)}</button><button type="button" class="pv-btn pv-next" data-nav="1" aria-label="Próxima foto">${I('chevronRight', 26)}</button>` : ''}
+      <figure><img alt=""><figcaption></figcaption></figure>`;
+    const img = el.querySelector('img'), cap = el.querySelector('figcaption');
+    const mostrar = () => {
+      const f = fotos[i];
+      img.src = f.src; img.alt = f.legenda || 'Foto';
+      cap.innerHTML = `${f.legenda ? esc(f.legenda) : '<span class="pv-sem">Sem legenda</span>'}${varias ? `<span class="pv-n">${i + 1} de ${fotos.length}</span>` : ''}`;
+    };
+    const ir = d => { i = (i + d + fotos.length) % fotos.length; mostrar(); };
+    const fechar = () => { window.removeEventListener('keydown', onKey, true); el.remove(); };
+    // Captura antes do modal: o Esc fecha só a foto, não a janela da aula
+    const onKey = e => {
+      if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); fechar(); }
+      else if (varias && e.key === 'ArrowLeft') { e.stopImmediatePropagation(); ir(-1); }
+      else if (varias && e.key === 'ArrowRight') { e.stopImmediatePropagation(); ir(1); }
+    };
+    el.addEventListener('click', e => {
+      const nav = e.target.closest('[data-nav]');
+      if (nav) ir(+nav.dataset.nav);
+      else if (e.target.closest('[data-x]') || e.target === el || e.target.tagName === 'FIGURE') fechar();
+    });
+    window.addEventListener('keydown', onKey, true);
+    mostrar();
+    document.body.appendChild(el);
+    el.querySelector('[data-x]').focus();
+  }
+
+  // Seletor de fotos (upload + compressão), com legenda e ampliação ao clicar
   function photoPicker(container, fotos, onChange, { editable = true } = {}) {
     function render() {
       container.innerHTML = `<div class="photo-grid">
-        ${fotos.map((f, i) => `<div class="photo"><img src="${esc(f.src)}" alt="${esc(f.legenda || 'Foto')}" loading="lazy">${editable ? `<button class="rm" data-rm="${i}" aria-label="Remover foto">${I('x', 14)}</button>` : ''}</div>`).join('')}
+        ${fotos.map((f, i) => `<div class="photo-item"><div class="photo"><button type="button" class="photo-open" data-ver="${i}" aria-label="Ampliar foto"><img src="${esc(f.src)}" alt="${esc(f.legenda || 'Foto')}" loading="lazy"></button>${editable ? `<button type="button" class="rm" data-rm="${i}" aria-label="Remover foto">${I('x', 14)}</button>` : ''}</div>
+          ${editable ? `<input class="input photo-leg" data-leg="${i}" value="${esc(f.legenda || '')}" placeholder="Legenda (opcional)" maxlength="200" aria-label="Legenda da foto">` : f.legenda ? `<div class="photo-cap">${esc(f.legenda)}</div>` : ''}</div>`).join('')}
         ${editable ? `<label class="photo-drop">${I('camera', 26)}<span>Adicionar fotos</span><input type="file" accept="image/jpeg,image/png,image/webp" multiple hidden></label>` : ''}
       </div>${!fotos.length && !editable ? empty('Nenhuma foto registrada', 'image') : ''}`;
+      container.querySelectorAll('[data-ver]').forEach(b => b.addEventListener('click', () => photoViewer(fotos, +b.dataset.ver)));
+      container.querySelectorAll('[data-leg]').forEach(inp => { inp.addEventListener('input', () => { fotos[+inp.dataset.leg].legenda = inp.value.trim(); onChange(fotos); }); inp.addEventListener('keydown', e => { if (e.key === 'Enter') e.preventDefault(); }); });
       container.querySelectorAll('[data-rm]').forEach(b => b.addEventListener('click', () => { fotos.splice(+b.dataset.rm, 1); onChange(fotos); render(); }));
       const inp = container.querySelector('input[type=file]');
       const drop = container.querySelector('.photo-drop');
       if (inp) {
         const add = async files => {
           for (const f of files) {
-            try { const src = await ICM.util.compressImage(f); fotos.push({ id: ICM.util.uid('fot_'), src, legenda: f.name.replace(/\.\w+$/, '') }); }
+            try { const src = await ICM.util.compressImage(f); fotos.push({ id: ICM.util.uid('fot_'), src, legenda: '' }); }
             catch (e) { toast(e.message, 'danger'); }
           }
           onChange(fotos); render();
@@ -159,5 +198,5 @@
       <div class="legend">${data.map(d => `<div><span class="sw" style="background:${d.c}"></span>${esc(d.l)} — <b>${d.v}</b></div>`).join('')}</div></div>`;
   }
 
-  ICM.ui = { toast, modal, confirm, busy, run, badge, areaChip, statusAluno, statusProjeto, empty, kv, field, tabs, photoPicker, countUp, donut, nivelPill };
+  ICM.ui = { toast, modal, confirm, busy, run, badge, areaChip, statusAluno, statusProjeto, empty, kv, field, tabs, photoPicker, photoViewer, countUp, donut, nivelPill };
 })();

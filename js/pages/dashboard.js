@@ -25,7 +25,11 @@
   }
   const freqDe = aulas => { let P = 0, T = 0; aulas.forEach(a => Object.values(a.presencas || {}).forEach(v => { T++; if (v !== 'F') P++; })); return T ? Math.round(P / T * 100) : null; };
 
+  // Tudo o que a tela de Início lê (direto ou pela Rotina do dia): buscado em paralelo, não um depois do outro
+  const COLECOES = ['turmas', 'projetos', 'aulas', 'alunos', 'matriculas', 'eventos', 'reunioes', 'calendario', 'planos_mensais', 'espera', 'equipe', 'voluntarios', 'associados', 'doadores', 'doacoes', 'doacoes_online', 'docs_inst', 'emprestimos', 'patrimonio', 'estoque_itens', 'estoque_mov', 'mandatos', 'mensalidades', 'avisos_log', 'assinaturas', 'usuarios'];
+  ICM.pages.colecoesInicio = COLECOES;
   async function carregar() {
+    if (ICM.store.aquecer) await ICM.store.aquecer(COLECOES);
     const can = p => ICM.auth.can(p);
     const hoje = U().today();
     const R = intervalos(periodo);

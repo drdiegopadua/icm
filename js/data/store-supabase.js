@@ -10,7 +10,10 @@
   });
   const clone = o => JSON.parse(JSON.stringify(o));
   const TTL = 20000;              // recarrega cada coleção no máximo a cada 20 s
+  const MAX_VELHO = 15 * 60000;   // até 15 min: entrega a cópia na hora e atualiza por trás
   const cache = new Map();        // colecao → { em, dados: [] }
+  const buscando = new Map();     // colecao → busca em andamento (duas telas pedindo a mesma coleção fazem uma busca só)
+  const escritaEm = new Map();    // colecao → hora da última gravação feita neste aparelho
   let modoPublico = null;         // snapshot usado no Portal da Família (sem login)
 
   // ---------- Separação de dados sensíveis ----------
@@ -151,6 +154,7 @@
     const loc = lerLocal(OFF + op.col) || []; const j = loc.findIndex(x => x.id === op.id);
     const rec = j >= 0 ? { ...loc[j], ...(op.patch || op.rec) } : { ...(op.rec || op.patch), id: op.id };
     if (j >= 0) loc[j] = rec; else loc.push(rec); gravarLocal(OFF + op.col, loc);
+    escritaEm.set(op.col, Date.now());
     const c = cache.get(op.col); if (c) { const k = c.dados.findIndex(x => x.id === op.id); if (k >= 0) c.dados[k] = rec; else c.dados.push(rec); }
     return rec;
   }
@@ -159,10 +163,10 @@
     if (modoPublico) return percorrer(modoPublico[col] || [], v => v.startsWith(REF) ? '' : v);
     const c = cache.get(col);
     if (c && Date.now() - c.em < TTL) return c.dados;
+    // Cópia recente: a tela abre na hora e a coleção é atualizada em segundo plano
+    if (c && Date.now() - c.em < MAX_VELHO && navigator.onLine !== false) { buscar(col).catch(() => { }); return c.dados; }
     try {
-      const dados = await carregarDoBanco(col);
-      if (OFF_COLS[col]) gravarLocal(OFF + col, OFF_COLS[col](dados));
-      return dados;
+      return await buscar(col);
     } catch (e) {
       const loc = OFF_COLS[col] && erroDeRede(e) ? lerLocal(OFF + col) : null;
       if (loc) return loc;
@@ -170,16 +174,31 @@
       throw e;
     }
   }
+  // Um registro só, direto do banco (com a parte sensível e os links das fotos)
+  async function registroDoBanco(col, id) {
+    const um = async c => { const { data, error } = await sb.from('registros').select('id,dados').eq('colecao', c).eq('id', id).maybeSingle(); if (error) throw traduzir(error); return data ? { ...data.dados, id: data.id } : null; };
+    const [pub, priv] = await Promise.all([um(col), PRIVADO[col] ? um(col + '_privado').catch(() => null) : null]);
+    if (!pub) return null;
+    return (await resolverArquivos([priv ? juntar(col, pub, priv) : pub]))[0];
+  }
+  function buscar(col) {
+    if (!buscando.has(col)) buscando.set(col, carregarDoBanco(col).then(dados => { if (OFF_COLS[col]) gravarLocal(OFF + col, OFF_COLS[col](dados)); return dados; }).finally(() => buscando.delete(col)));
+    return buscando.get(col);
+  }
   async function carregarDoBanco(col) {
-    const c = cache.get(col);
+    const inicio = Date.now();
     let dados;
     if (col === 'usuarios') dados = await usuarios();
     else if (col === 'auditoria') { const { data, error } = await sb.from('auditoria').select('*').order('em', { ascending: false }).limit(2000); if (error) throw traduzir(error); dados = data.map(x => ({ ...x, id: String(x.id) })); }
     else {
-      dados = await buscarColecao(col);
-      if (PRIVADO[col]) { const priv = await buscarColecao(col + '_privado').catch(() => []); const m = new Map(priv.map(p => [p.id, p])); dados = dados.map(d => juntar(col, d, m.get(d.id))); }
+      // Parte pública e parte sensível em paralelo
+      const [pub, priv] = await Promise.all([buscarColecao(col), PRIVADO[col] ? buscarColecao(col + '_privado').catch(() => []) : null]);
+      dados = pub;
+      if (priv) { const m = new Map(priv.map(p => [p.id, p])); dados = dados.map(d => juntar(col, d, m.get(d.id))); }
       dados = await resolverArquivos(dados);
     }
+    // Gravação feita neste aparelho durante a busca: a cópia atual já tem a mudança; busca de novo na próxima vez
+    if ((escritaEm.get(col) || 0) >= inicio && cache.has(col)) { cache.get(col).em = 0; return cache.get(col).dados; }
     cache.set(col, { em: Date.now(), dados });
     return dados;
   }
@@ -203,6 +222,7 @@
   }
   async function gravar(col, rec) {
     const { id, ...dados } = rec;
+    escritaEm.set(col, Date.now());   // buscas já em andamento não sobrescrevem esta gravação
     const c = cache.get(col), antigo = c && c.dados.find(x => x.id === id);
     const tinha = !!antigo && JSON.stringify(antigo).includes('/object/sign/arquivos/');
     if (PRIVADO[col]) {
@@ -212,7 +232,9 @@
       const podePriv = col !== 'equipe' || (ICM.auth && ICM.auth.can('equipe.salarios'));
       if (podePriv && Object.keys(priv).length) await gravarParte(col + '_privado', id, priv, tinha);
     } else await gravarParte(col, id, dados, tinha);
-    if (c) { const i = c.dados.findIndex(x => x.id === id); if (i >= 0) c.dados[i] = rec; else c.dados.push(rec); }
+    escritaEm.set(col, Date.now());
+    const atual = cache.get(col);   // a cópia pode ter sido trocada por uma busca durante a gravação
+    if (atual) { const i = atual.dados.findIndex(x => x.id === id); if (i >= 0) atual.dados[i] = rec; else atual.dados.push(rec); }
   }
   function traduzir(e) {
     const m = String(e.message || e);
@@ -247,6 +269,8 @@
     async init() { /* nada a carregar: os dados vêm sob demanda */ },
     async reset() { throw new Error('Na versão com banco não há "dados de demonstração" para restaurar.'); },
     invalidar(col) { if (col) cache.delete(col); else cache.clear(); },
+    // Busca várias coleções ao mesmo tempo (a tela de Início usa ~25); as que o perfil não pode ler voltam vazias
+    async aquecer(cols) { if (modoPublico) return; await Promise.all(cols.map(c => carregar(c).catch(() => null))); },
     async list(col, filter) { const a = await carregar(col); return clone(filter ? a.filter(filter) : a); },
     async get(col, id) { const a = await carregar(col); const x = a.find(r => r.id === id); return x ? clone(x) : null; },
     async insert(col, obj) {
@@ -264,7 +288,10 @@
     },
     async update(col, id, patch) {
       if (col === 'usuarios') { const atual = (await carregar('usuarios')).find(u => u.id === id) || {}; const r = await gravarUsuario({ ...atual, ...patch, id }, false); cache.delete('usuarios'); return r; }
-      let atual = (await carregar(col)).find(r => r.id === id) || (await buscarColecao(col).catch(() => [])).find(r => r.id === id);
+      // Cópia da memória com mais de 20 s: parte da versão atual do banco, para não desfazer a edição de outra pessoa
+      const c0 = cache.get(col);
+      let atual = navigator.onLine && (!c0 || Date.now() - c0.em >= TTL) ? await registroDoBanco(col, id).catch(() => null) : null;
+      if (!atual) atual = (await carregar(col)).find(r => r.id === id) || (await buscarColecao(col).catch(() => [])).find(r => r.id === id);
       if (!atual) throw new Error('Registro não encontrado');
       // Cópia do aparelho (sem fotos): com internet, busca a versão do banco antes de gravar
       if (atual._semFotos && navigator.onLine) { const srv = (await buscarColecao(col).catch(() => [])).find(r => r.id === id); if (srv) atual = srv; }
@@ -310,6 +337,7 @@
       const { error } = await sb.from('registros').delete().eq('colecao', col).eq('id', id);
       if (error) throw traduzir(error);
       if (PRIVADO[col]) await sb.from('registros').delete().eq('colecao', col + '_privado').eq('id', id);
+      escritaEm.set(col, Date.now());
       const c = cache.get(col); if (c) c.dados = c.dados.filter(r => r.id !== id);
     },
     async getConfig() {

@@ -342,7 +342,15 @@
     // Ao sair: apaga as cópias do aparelho (a fila de chamadas não enviadas é mantida)
     limparCopias() { Object.keys(OFF_COLS).forEach(c => { try { localStorage.removeItem(OFF + c); } catch (e) { /* */ } }); },
     async remove(col, id) {
-      if (col === 'usuarios') throw new Error('Para tirar o acesso, desative o usuário.');
+      if (col === 'usuarios') {
+        // Login + perfil (ou convite) apagados pela função do banco, que confere se quem pede é o administrador
+        const { error } = await sb.rpc('excluir_usuario', { p_id: String(id) });
+        if (error) {
+          if (/excluir_usuario/.test(error.message) && /function|schema cache|not find/i.test(error.message)) throw new Error('O banco precisa de uma atualização: rode o arquivo supabase/icm_v10_excluir_usuario.sql no SQL Editor do Supabase.');
+          throw new Error(error.message);
+        }
+        cache.delete('usuarios'); return;
+      }
       for (const cc of PRIVADO[col] ? [col, col + '_privado'] : [col]) await limparArquivos(cc, id, new Set()).catch(() => { });
       const { error } = await sb.from('registros').delete().eq('colecao', col).eq('id', id);
       if (error) throw traduzir(error);

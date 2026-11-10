@@ -404,6 +404,17 @@
         const r = x.id ? await S().update('usuarios', x.id, patch) : await S().insert('usuarios', { ativo: true, ...patch });
         await audit(x.id ? 'editar' : 'criar', 'usuarios', r.id, `Usuário ${r.nome} (${ICM.C.PAPEIS[r.papel].nome})`);
         const { senha_hash, ...out } = r; return out;
+      },
+      // Exclui o usuário (ou o convite). Turmas em que a pessoa é professora precisam de outro professor antes.
+      async excluir(id) {
+        need('usuarios.gerenciar');
+        if (id === me().id) throw new Error('Você não pode excluir o próprio usuário.');
+        const x = (await S().list('usuarios')).find(o => o.id === id);
+        if (!x) throw new Error('Usuário não encontrado.');
+        const turmas = (await S().list('turmas')).filter(t => t.professor_id === id && t.status !== 'encerrada');
+        if (turmas.length) throw new Error(`${x.nome} é professor(a) de ${turmas.length === 1 ? 'uma turma' : turmas.length + ' turmas'} em andamento (${turmas.map(t => t.nome).join(', ')}). Troque o professor dessas turmas antes de excluir, ou só desative o acesso.`);
+        await S().remove('usuarios', id);
+        await audit('excluir', 'usuarios', id, `Usuário ${x.nome} (${x.email}) excluído`);
       }
     },
 

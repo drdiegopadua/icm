@@ -130,6 +130,7 @@ supabase/icm_v2_arquivos_2fa.sql  Atualização 2: pasta privada de arquivos + d
 supabase/icm_v3_professor.sql  Atualização 3: campo "Também dá aulas" nos usuários
 supabase/icm_v4_chat_tempo_real.sql  Atualização 4: chat instantâneo (Realtime)
 supabase/icm_v9_eventos_projetos.sql  Atualização 9: App do Instituto mostra todos os projetos de cada apresentação
+supabase/icm_v10_excluir_usuario.sql  Atualização 10: administrador pode excluir usuários e cancelar convites
 automacoes/ICM-Automacoes.gs  Apps Script: backup diário no Drive + e-mail de avisos
 docs/ROTEIRO-DE-TESTE.md  Roteiro para testar com a equipe
 js/data/api.js          Regras de negócio + controle de acesso (as telas só usam isto)

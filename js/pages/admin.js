@@ -38,7 +38,15 @@
           ${F({ name: 'opera_van', label: 'Opera a van (inicia e encerra rotas no App do Instituto)', type: 'toggle', value: u.opera_van, cls: 'span-2' })}
           ${F({ name: 'ativo', label: 'Acesso ativo', type: 'toggle', value: u.id ? u.ativo : true })}
         </form>`,
-        foot: `<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" data-ok>${I('check', 18)} Salvar</button>`
+        foot: `${u.id && u.id !== ICM.auth.user().id ? `<button class="btn btn-danger" data-del style="margin-right:auto">${I('trash', 18)} ${u.convite ? 'Cancelar convite' : 'Excluir usuário'}</button>` : ''}<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" data-ok>${I('check', 18)} Salvar</button>`
+      });
+      const del = m.$('[data-del]');
+      if (del) del.addEventListener('click', async () => {
+        const txt = u.convite
+          ? `Cancelar o convite de ${u.nome} (${u.email})? A pessoa não conseguirá mais criar o acesso pelo "Primeiro acesso".`
+          : `Excluir ${u.nome} (${u.email})? O login é apagado de vez e não dá para desfazer. O que essa pessoa já registrou (aulas, chamadas, histórico) continua no sistema. Se for só para impedir o acesso por um tempo, desligue "Acesso ativo" em vez de excluir.`;
+        if (!(await ui().confirm({ title: u.convite ? 'Cancelar convite' : 'Excluir usuário', text: txt, ok: u.convite ? 'Cancelar convite' : 'Excluir de vez', danger: true }))) return;
+        try { await ui().run(() => ICM.api.usuarios.excluir(u.id), u.convite ? 'Convite cancelado' : 'Usuário excluído'); m.close(); ICM.app.reload(); } catch (er) { /* aviso já mostrado */ }
       });
       m.$('[data-ok]').addEventListener('click', e => ui().busy(e.currentTarget, async () => {
         const d = ICM.util.formData(m.$('form'));

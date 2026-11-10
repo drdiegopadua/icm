@@ -93,16 +93,26 @@
         ${F({ name: 'app_oculto', label: 'Não mostrar este evento no App do Instituto', type: 'toggle', value: e.app_oculto, cls: 'span-all' })}
         <div class="span-all"><div class="row between wrap"><div class="section-title" style="margin:0">${I('users', 18)} Alunos participantes <span class="badge" data-cnt>${sel.size}</span></div>
           <div class="row"><select class="select" data-turma style="width:240px"><option value="">Adicionar turma inteira…</option>${turmas.map(t => `<option value="${esc(t.id)}">${esc(t.nome)}</option>`).join('')}</select></div></div>
+          <div class="row wrap mt-4" style="gap:10px"><div class="busca-aluno grow">${I('search', 16)}<input class="input" type="search" data-busca placeholder="Procurar aluno pelo nome…" aria-label="Procurar aluno pelo nome" autocomplete="off"></div>
+            <label class="check small"><input type="checkbox" data-so-sel> Só os selecionados</label></div>
           <div class="grid grid-3 mt-4" data-alunos style="max-height:260px;overflow:auto;gap:8px"></div></div>
       </form>`,
       foot: `${e.id ? `<button class="btn btn-danger" data-del style="margin-right:auto">${I('trash', 18)} Excluir</button>` : ''}<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" data-ok>${I('check', 18)} Salvar</button>`
     });
+    // Busca pelo nome sem diferenciar acento nem maiúscula
+    const sem = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
     const drawAl = () => {
-      m.$('[data-alunos]').innerHTML = alunos.map(a => `<label class="check small"><input type="checkbox" value="${esc(a.id)}" ${sel.has(a.id) ? 'checked' : ''}> ${esc(a.nome)}</label>`).join('');
+      const q = sem(m.$('[data-busca]').value.trim()), soSel = m.$('[data-so-sel]').checked;
+      const vis = alunos.filter(a => (!q || sem(a.nome).includes(q)) && (!soSel || sel.has(a.id)));
+      m.$('[data-alunos]').innerHTML = vis.length ? vis.map(a => `<label class="check small"><input type="checkbox" value="${esc(a.id)}" ${sel.has(a.id) ? 'checked' : ''}> ${esc(a.nome)}</label>`).join('')
+        : `<div class="xs muted" style="grid-column:1/-1">${soSel && !sel.size ? 'Nenhum aluno selecionado ainda.' : 'Nenhum aluno encontrado com esse nome.'}</div>`;
       m.$$('[data-alunos] input').forEach(c => c.addEventListener('change', () => { c.checked ? sel.add(c.value) : sel.delete(c.value); m.$('[data-cnt]').textContent = sel.size; }));
       m.$('[data-cnt]').textContent = sel.size;
     };
     drawAl();
+    m.$('[data-busca]').addEventListener('input', drawAl);
+    m.$('[data-busca]').addEventListener('keydown', ev => { if (ev.key === 'Enter') ev.preventDefault(); });
+    m.$('[data-so-sel]').addEventListener('change', drawAl);
     // Projetos: escolhe no dropdown e cada um vira uma etiqueta ao lado (× para tirar)
     const drawProj = () => {
       const livres = projetos.filter(p => !projSel.has(p.id));

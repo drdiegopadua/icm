@@ -673,3 +673,8 @@ body.sens-blur::before { content: 'Conteúdo protegido — volte para esta janel
 .lst-item.excluida .btn { text-decoration: none; }
 .lst-cor { width: 14px; height: 14px; border-radius: 5px; background: var(--c); flex: none; }
 .lst-del:hover { color: var(--danger); }
+
+/* Busca de alunos no formulário de evento */
+.busca-aluno { position: relative; min-width: 220px; }
+.busca-aluno > svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+.busca-aluno > .input { padding-left: 40px; }

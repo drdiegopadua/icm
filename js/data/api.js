@@ -272,7 +272,7 @@
         const atendidos = new Set(mats.map(m => m.aluno_id));
         let P = 0, T = 0; aulas.forEach(a => Object.values(a.presencas || {}).forEach(v => { T++; if (v !== 'F') P++; }));
         const horas = aulas.reduce((s, a) => s + (a.horas || 0), 0);
-        const eventos = await S().list('eventos', e => e.projeto_id === id && (!de || e.data >= de) && (!ate || e.data <= ate));
+        const eventos = await S().list('eventos', e => ICM.util.projetosEvento(e).includes(id) && (!de || e.data >= de) && (!ate || e.data <= ate));
         const fotos = aulas.reduce((s, a) => s + (a.fotos || []).length, 0);
         // Indicadores de resultado: frequência por aluno, permanência, famílias e certificados
         const porAluno = {}; aulas.forEach(a => Object.entries(a.presencas || {}).forEach(([id, v]) => { const x = porAluno[id] || (porAluno[id] = { P: 0, T: 0 }); x.T++; if (v !== 'F') x.P++; }));
@@ -376,6 +376,8 @@
       async save(e) {
         need('eventos.editar');
         if (!e.titulo) throw new Error('Informe o título.');
+        // Vários projetos em projeto_ids; projeto_id guarda o primeiro (App do Instituto e eventos antigos)
+        if (Array.isArray(e.projeto_ids)) { e.projeto_ids = [...new Set(e.projeto_ids.filter(Boolean))]; e.projeto_id = e.projeto_ids[0] || ''; }
         const r = e.id ? await S().update('eventos', e.id, e) : await S().insert('eventos', { fotos: [], alunos: [], ...e });
         await audit(e.id ? 'editar' : 'criar', 'eventos', r.id, `${ICM.C.TIPOS_EVENTO[r.tipo].nome}: ${r.titulo}`);
         return r;

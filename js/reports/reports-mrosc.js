@@ -32,7 +32,7 @@
       const aulas = [];
       for (const t of turmas) (await api().aulas.list(t.id)).filter(a => a.status === 'realizada' && a.data >= de && a.data <= ate).forEach(a => aulas.push({ ...a, turma: t }));
       aulas.sort((a, b) => a.data.localeCompare(b.data));
-      const eventos = (await api().eventos.list()).filter(e => e.projeto_id === projeto_id && e.data >= de && e.data <= ate).sort((a, b) => a.data.localeCompare(b.data));
+      const eventos = (await api().eventos.list()).filter(e => U().projetosEvento(e).includes(projeto_id) && e.data >= de && e.data <= ate).sort((a, b) => a.data.localeCompare(b.data));
       const mats = []; for (const t of turmas) (await api().turmas.alunos(t.id)).forEach(m => mats.push({ ...m, turma: t }));
       const saidas = mats.filter(m => m.saida && m.saida >= de && m.saida <= ate);
       const pesq = (await tenta(() => api().pesquisas.list(), [])).filter(x => (!x.projeto_id || x.projeto_id === projeto_id) && x.res && x.res.n);

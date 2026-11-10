@@ -32,6 +32,8 @@
   function age(s) { const d = parseD(s); if (!d) return null; const n = new Date(); let a = n.getFullYear() - d.getFullYear(); const m = n.getMonth() - d.getMonth(); if (m < 0 || (m === 0 && n.getDate() < d.getDate())) a--; return a; }
   function addDays(s, n) { const d = parseD(s); d.setDate(d.getDate() + n); return iso(d); }
   function money(v) { return Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
+  // Projetos de um evento: vários em projeto_ids; eventos antigos têm só projeto_id
+  function projetosEvento(e) { return e && e.projeto_ids && e.projeto_ids.length ? e.projeto_ids : e && e.projeto_id ? [e.projeto_id] : []; }
   // Campo de valor em reais: "100.000,50" ⇄ 100000.5 (ponto = milhar, vírgula = centavos)
   function moneyField(v) { return v === '' || v == null || isNaN(Number(v)) ? '' : Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
   function parseMoney(s) { const t = String(s ?? '').replace(/[^\d,]/g, ''); if (!t) return null; const n = Number(t.replace(/,(?=.*,)/g, '').replace(',', '.')); return isNaN(n) ? null : n; }
@@ -123,6 +125,6 @@
   ICM.util = {
     esc, uid, parseD, iso, today, fmtDate, fmtDateLong, fmtDateShort, fmtMonth, age, addDays, money, num, pct,
     initials, hoursBetween, colorFor, avatar, debounce, sleep, formData, getPath, setPath, compressImage, sha256,
-    cpfValido, maskCPF, moneyField, parseMoney, maskMoney, MESES, MESES_C, DIAS, DIAS_C
+    cpfValido, maskCPF, projetosEvento, moneyField, parseMoney, maskMoney, MESES, MESES_C, DIAS, DIAS_C
   };
 })();

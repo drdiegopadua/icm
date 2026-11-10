@@ -291,7 +291,7 @@ Ifes`
       add({ tipo: 'div', sec: S, cor: a.cor, cor2, html: () => `${foto(d, { area: a.k })}<div class="t">${esc(a.nome)}</div><div class="s">${a.projetos.length} projeto(s) · ${N(a.alunos)} pessoas atendidas</div>` });
       const tids = d.turmas.filter(t => a.projetos.some(p => p.id === t.projeto_id));
       const aulasA = d.aulas.filter(x => tids.some(t => t.id === x.turma_id));
-      const evA = d.eventos.filter(e => a.projetos.some(p => p.id === e.projeto_id));
+      const evA = d.eventos.filter(e => a.projetos.some(p => U().projetosEvento(e).includes(p.id)));
       const idsA = new Set(d.mats.filter(m => tids.some(t => t.id === m.turma_id)).map(m => m.aluno_id));
       const alA = d.alunos.filter(x => idsA.has(x.id));
       const freqA = (() => { let P = 0, T = 0; aulasA.forEach(x => Object.values(x.presencas || {}).forEach(v => { T++; if (v !== 'F') P++; })); return T ? Math.round(P / T * 100) : 0; })();

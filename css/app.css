@@ -655,3 +655,8 @@ body.sens-blur::before { content: 'Conteúdo protegido — volte para esta janel
 .money-wrap { position: relative; }
 .money-wrap > span { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--muted); font-weight: 700; font-size: 13px; pointer-events: none; }
 .money-wrap > .input { padding-left: 46px; font-variant-numeric: tabular-nums; }
+
+/* Projetos vinculados ao evento (vários) */
+.proj-chip { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 12px; background: var(--surface-2); box-shadow: var(--sh-out-sm); cursor: pointer; font-size: 13px; font-weight: 600; border: 2px solid transparent; transition: all var(--t) var(--ease); }
+.proj-chip input { accent-color: var(--c); width: 16px; height: 16px; margin: 0; }
+.proj-chip:has(input:checked) { border-color: var(--c); background: color-mix(in srgb, var(--c) 12%, var(--surface-2)); }

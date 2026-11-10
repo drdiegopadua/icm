@@ -225,7 +225,7 @@
     }
     const allAulas = []; for (const t of turmas) (await api().aulas.list(t.id)).filter(a => a.status === 'realizada' && a.data >= de && a.data <= ate).forEach(a => allAulas.push(a));
     const meses = ymRange(de, ate < U().today() ? ate : U().today());
-    const eventos = (await api().eventos.list()).filter(e => e.projeto_id === projeto_id && e.data >= de && e.data <= ate).sort((a, b) => a.data.localeCompare(b.data));
+    const eventos = (await api().eventos.list()).filter(e => U().projetosEvento(e).includes(projeto_id) && e.data >= de && e.data <= ate).sort((a, b) => a.data.localeCompare(b.data));
     const perfil = await perfilBeneficiarios(alunoIds);
     const saidas = mats.filter(m => m.saida && m.saida >= de && m.saida <= ate);
     let html = head(titulo || 'Relatório de Execução do Projeto', `${p.nome} — ${U().fmtDate(de)} a ${U().fmtDate(ate)}`);
@@ -324,10 +324,10 @@
 
   B.evento = async ({ evento_id }) => {
     const e = await api().eventos.get(evento_id); const t = ICM.C.TIPOS_EVENTO[e.tipo];
-    const p = e.projeto_id ? await api().projetos.get(e.projeto_id) : null;
+    const todosProj = await api().projetos.list(); const ps = U().projetosEvento(e).map(id => todosProj.find(x => x.id === id)).filter(Boolean);
     const alunos = (await api().alunos.list({ status: '' })).filter(a => (e.alunos || []).includes(a.id));
     let html = head(`Relatório de ${t.nome}`, e.titulo);
-    html += meta([['Data', U().fmtDateLong(e.data)], ['Horário', e.horario], ['Local', e.local], ['Projeto', p ? p.nome : 'Ação institucional'], ['Público estimado', e.publico ? U().num(e.publico) : '—'], ['Resultado', e.resultado]]);
+    html += meta([['Data', U().fmtDateLong(e.data)], ['Horário', e.horario], ['Local', e.local], [ps.length > 1 ? 'Projetos' : 'Projeto', ps.length ? ps.map(x => x.nome).join(', ') : 'Ação institucional'], ['Público estimado', e.publico ? U().num(e.publico) : '—'], ['Resultado', e.resultado]]);
     html += sec(`<h2>Descrição</h2><p>${esc(e.descricao || '—')}</p>`);
     html += sec(`<h2>Alunos participantes (${alunos.length})</h2>${table([{ t: '#', c: 1 }, { t: 'Aluno' }, { t: 'Matrícula' }], alunos.map((a, i) => [i + 1, a.nome, a.matricula]))}`);
     html += sec(`<h2>Registro fotográfico</h2>${photos(e.fotos || [], 12)}`);

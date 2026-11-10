@@ -21,13 +21,13 @@
       <div class="grid grid-3 stagger" data-list></div></div>`;
     const render = () => {
       const l = list.filter(e => (!tipo || e.tipo === tipo) && (quando === 'todos' || (quando === 'futuros' ? e.data >= hoje : e.data < hoje)));
-      el.querySelector('[data-list]').innerHTML = l.length ? l.map(e => { const t = ICM.C.TIPOS_EVENTO[e.tipo]; const p = projetos.find(x => x.id === e.projeto_id); const fut = e.data >= hoje; return `
+      el.querySelector('[data-list]').innerHTML = l.length ? l.map(e => { const t = ICM.C.TIPOS_EVENTO[e.tipo]; const ps = ICM.util.projetosEvento(e).map(id => projetos.find(x => x.id === id)).filter(Boolean); const p = ps[0]; const fut = e.data >= hoje; return `
         <div class="card project-card hoverable" style="--c:${p ? p.cor : t.cor}" data-href="#/eventos/${esc(e.id)}">
           ${(e.fotos || [])[0] ? `<div class="photo" style="margin:-8px -8px 0;aspect-ratio:16/8"><img src="${esc(e.fotos[0].src)}" alt=""></div>` : ''}
           <div class="row between"><span class="area-chip" style="--c:${t.cor}">${esc(t.nome)}</span>${fut ? ui().badge('Programado', '', true) : ui().badge('Realizado', 'ok', true)}</div>
           <div class="name">${esc(e.titulo)}</div>
           <div class="meta"><span>${I('calendar', 15)} ${esc(fmtDate(e.data))}${e.horario ? ' · ' + esc(e.horario) : ''}</span><span>${I('pin', 15)} ${esc(e.local || '')}</span></div>
-          <div class="meta"><span>${I('users', 15)} ${(e.alunos || []).length} alunos</span>${e.publico ? `<span>${I('eye', 15)} ${num(e.publico)} público</span>` : ''}${p ? `<span>${I('folder', 15)} ${esc(p.nome)}</span>` : ''}</div>
+          <div class="meta"><span>${I('users', 15)} ${(e.alunos || []).length} alunos</span>${e.publico ? `<span>${I('eye', 15)} ${num(e.publico)} público</span>` : ''}${ps.length ? `<span>${I('folder', 15)} ${esc(ps.length > 1 ? `${ps.length} projetos` : p.nome)}</span>` : ''}</div>
           ${e.resultado ? `<div class="small bold" style="color:${t.cor}">${I('award', 15)} ${esc(e.resultado)}</div>` : ''}
         </div>`; }).join('') : `<div class="span-all">${ui().empty('Nenhum evento', 'star')}</div>`;
       el.querySelectorAll('[data-href]').forEach(c => c.addEventListener('click', () => { location.hash = c.dataset.href; }));
@@ -43,7 +43,8 @@
     if (!e) { el.innerHTML = ui().empty('Evento não encontrado'); return; }
     ICM.app.setCrumbs([['Eventos', '#/eventos'], [e.titulo]]);
     const t = ICM.C.TIPOS_EVENTO[e.tipo];
-    const p = e.projeto_id ? await ICM.api.projetos.get(e.projeto_id) : null;
+    const todosProj = await ICM.api.projetos.list();
+    const ps = ICM.util.projetosEvento(e).map(id => todosProj.find(x => x.id === id)).filter(Boolean); const p = ps[0];
     const alunos = (await ICM.api.alunos.list({ status: '' })).filter(a => (e.alunos || []).includes(a.id));
     const fotos = (e.fotos || []).map(f => ({ ...f }));
     const canEdit = ICM.auth.can('eventos.editar');
@@ -52,7 +53,7 @@
         <div class="row between wrap"><div>
           <span class="area-chip" style="--c:${t.cor}">${esc(t.nome)}</span>
           <h1 class="page-title mt-2" style="font-size:28px">${esc(e.titulo)}</h1>
-          <div class="meta mt-2"><span>${I('calendar', 15)} ${esc(ICM.util.fmtDateLong(e.data))}${e.horario ? ' · ' + esc(e.horario) : ''}</span><span>${I('pin', 15)} ${esc(e.local || '')}</span>${p ? `<a href="#/projetos/${esc(p.id)}">${I('folder', 15)} ${esc(p.nome)}</a>` : ''}</div></div>
+          <div class="meta mt-2"><span>${I('calendar', 15)} ${esc(ICM.util.fmtDateLong(e.data))}${e.horario ? ' · ' + esc(e.horario) : ''}</span><span>${I('pin', 15)} ${esc(e.local || '')}</span>${ps.map(x => `<a href="#/projetos/${esc(x.id)}">${I('folder', 15)} ${esc(x.nome)}</a>`).join('')}</div></div>
           <div class="row">${canEdit ? `<button class="btn" data-edit>${I('edit', 18)} Editar</button>` : ''}<button class="btn btn-primary" data-rel>${I('fileText', 18)} Relatório do evento</button></div></div>
       </div>
       <div class="grid grid-2">
@@ -75,6 +76,7 @@
     const alunos = await ICM.api.alunos.list({ status: 'ativo' });
     const mats = await ICM.api.raw('matriculas');
     const sel = new Set(e.alunos || []);
+    const projSel = new Set(ICM.util.projetosEvento(e));
     const m = ui().modal({
       title: e.id ? 'Editar evento' : 'Novo evento', size: 'wide',
       body: `<form class="grid grid-3">
@@ -83,9 +85,10 @@
         ${F({ name: 'data', label: 'Data', type: 'date', value: e.data || ICM.util.today(), required: true })}
         ${F({ name: 'horario', label: 'Horário', type: 'time', value: e.horario })}
         ${F({ name: 'local', label: 'Local', value: e.local })}
-        ${F({ name: 'projeto_id', label: 'Projeto vinculado', type: 'select', value: e.projeto_id, options: [['', 'Nenhum (ação institucional)'], ...projetos.map(p => [p.id, p.nome])] })}
         ${F({ name: 'publico', label: 'Público estimado', type: 'number', value: e.publico, attrs: 'min="0"' })}
-        ${F({ name: 'resultado', label: 'Resultado / premiação', value: e.resultado })}
+        ${F({ name: 'resultado', label: 'Resultado / premiação', value: e.resultado, cls: 'span-2' })}
+        <div class="field span-all"><label>Projetos vinculados <span class="muted" style="font-weight:500">— marque um ou mais; nenhum = ação institucional</span></label>
+          <div class="row wrap" data-projs style="gap:8px">${projetos.map(p => `<label class="proj-chip" style="--c:${esc(p.cor || '#2563eb')}"><input type="checkbox" data-proj value="${esc(p.id)}" ${projSel.has(p.id) ? 'checked' : ''}><span>${esc(p.nome)}</span></label>`).join('')}</div></div>
         ${F({ name: 'descricao', label: 'Descrição', type: 'textarea', value: e.descricao, cls: 'span-all', rows: 3 })}
         ${F({ name: 'app_oculto', label: 'Não mostrar este evento no App do Instituto', type: 'toggle', value: e.app_oculto, cls: 'span-all' })}
         <div class="span-all"><div class="row between wrap"><div class="section-title" style="margin:0">${I('users', 18)} Alunos participantes <span class="badge" data-cnt>${sel.size}</span></div>
@@ -100,10 +103,18 @@
       m.$('[data-cnt]').textContent = sel.size;
     };
     drawAl();
-    m.$('[data-turma]').addEventListener('change', ev => { mats.filter(x => x.turma_id === ev.target.value && x.status === 'ativo').forEach(x => sel.add(x.aluno_id)); ev.target.value = ''; drawAl(); });
+    m.$$('[data-proj]').forEach(c => c.addEventListener('change', () => { c.checked ? projSel.add(c.value) : projSel.delete(c.value); }));
+    m.$('[data-turma]').addEventListener('change', ev => {
+      mats.filter(x => x.turma_id === ev.target.value && x.status === 'ativo').forEach(x => sel.add(x.aluno_id));
+      // A turma adicionada também vincula o projeto dela
+      const tu = turmas.find(x => x.id === ev.target.value);
+      if (tu && tu.projeto_id && !projSel.has(tu.projeto_id)) { projSel.add(tu.projeto_id); const c = m.$(`[data-proj][value="${CSS.escape(tu.projeto_id)}"]`); if (c) c.checked = true; }
+      ev.target.value = ''; drawAl();
+    });
     m.$('[data-ok]').addEventListener('click', ev => ui().busy(ev.currentTarget, async () => {
       const d = ICM.util.formData(m.$('form'));
-      const r = await ui().run(() => ICM.api.eventos.save({ ...e, ...d, alunos: [...sel] }), 'Evento salvo');
+      const projeto_ids = projetos.map(p => p.id).filter(id => projSel.has(id));
+      const r = await ui().run(() => ICM.api.eventos.save({ ...e, ...d, projeto_ids, alunos: [...sel] }), 'Evento salvo');
       m.close(); location.hash = `#/eventos/${r.id}`; ICM.app.reload();
     }).catch(() => { }));
     const del = m.$('[data-del]');

@@ -105,7 +105,7 @@
         await ICM.impacto.abaProjeto(panel, p, s, recarregar);
       },
       async eventos() {
-        const evs = (await ICM.api.eventos.list()).filter(e => e.projeto_id === p.id);
+        const evs = (await ICM.api.eventos.list()).filter(e => ICM.util.projetosEvento(e).includes(p.id));
         panel.innerHTML = `<div class="card tab-panel">${evs.length ? evs.map(e => { const t = ICM.C.TIPOS_EVENTO[e.tipo]; return `<a class="list-item" href="#/eventos/${esc(e.id)}"><div class="avatar sm" style="--c:${t.cor}">${I(t.icon, 15)}</div><div class="grow"><div class="bold">${esc(e.titulo)}</div><div class="xs muted">${esc(t.nome)} · ${esc(fmtDate(e.data))} · ${(e.alunos || []).length} alunos</div></div>${I('chevronRight', 16)}</a>`; }).join('') : ui().empty('Nenhum evento vinculado', 'star')}</div>`;
       }
     };

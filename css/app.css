@@ -650,3 +650,8 @@ body.sens-blur::before { content: 'Conteúdo protegido — volte para esta janel
 /* Botão + para criar opção nova numa lista */
 .lbl-mais { display: inline-grid; place-items: center; width: 20px; height: 20px; margin-left: 8px; border-radius: 6px; border: 0; background: var(--primary-soft); color: var(--primary); cursor: pointer; vertical-align: middle; padding: 0; }
 .lbl-mais:hover { background: var(--primary); color: #fff; }
+
+/* Campo em reais (type: money) */
+.money-wrap { position: relative; }
+.money-wrap > span { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--muted); font-weight: 700; font-size: 13px; pointer-events: none; }
+.money-wrap > .input { padding-left: 46px; font-variant-numeric: tabular-nums; }

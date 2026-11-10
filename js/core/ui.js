@@ -101,11 +101,24 @@
       ctl = `<textarea class="textarea" id="${id}" name="${esc(name)}" rows="${rows}" placeholder="${esc(placeholder)}" ${required ? 'required' : ''} ${attrs}>${esc(value)}</textarea>`;
     } else if (type === 'toggle') {
       return `<div class="field ${cls}"><label class="toggle"><input type="checkbox" name="${esc(name)}" ${value ? 'checked' : ''} ${attrs}><span class="track"></span><span class="label">${esc(label)}</span></label></div>`;
+    } else if (type === 'money') {
+      // Valor em reais com máscara (100.000,00); formData devolve número
+      ctl = `<div class="money-wrap"><span>R$</span><input class="input" id="${id}" type="text" inputmode="decimal" data-money name="${esc(name)}" value="${esc(ICM.util.moneyField(value))}" placeholder="${esc(placeholder || '0,00')}" ${required ? 'required' : ''} autocomplete="off"></div>`;
     } else {
       ctl = `<input class="input" id="${id}" type="${type}" name="${esc(name)}" value="${esc(value)}" placeholder="${esc(placeholder)}" ${required ? 'required' : ''} ${attrs} autocomplete="off">`;
     }
     return `<div class="field ${cls}"><label for="${id}">${esc(label)}${required ? ' *' : ''}${lista && ICM.listas ? ICM.listas.botao(lista) : ''}</label>${ctl}${hint ? `<span class="hint">${esc(hint)}</span>` : ''}</div>`;
   }
+
+  // Máscara dos campos em reais (type: 'money'), para todas as telas. Em captura, para os cálculos da tela já lerem o valor formatado
+  document.addEventListener('input', e => {
+    const el = e.target; if (!el.matches || !el.matches('[data-money]')) return;
+    const antes = el.value.slice(0, el.selectionStart).replace(/[^\d,]/g, '').length;   // dígitos antes do cursor
+    el.value = ICM.util.maskMoney(el.value);
+    let p = 0, k = 0; while (p < el.value.length && k < antes) { if (/[\d,]/.test(el.value[p])) k++; p++; }
+    el.setSelectionRange(p, p);
+  }, true);
+  document.addEventListener('focusout', e => { const el = e.target; if (el.matches && el.matches('[data-money]') && el.value) el.value = ICM.util.moneyField(ICM.util.parseMoney(el.value)); });
 
   // Abas: html de botões + lógica
   function tabs(el, onChange) {

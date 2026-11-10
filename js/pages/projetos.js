@@ -148,7 +148,7 @@
         ${F({ name: 'fonte', label: 'Fonte de recurso', type: 'select', value: p.fonte, options: Object.entries(ICM.C.FONTES) , lista: 'FONTES' })}
         ${F({ name: 'financiador', label: 'Financiador / instrumento', value: p.financiador, cls: 'span-2' })}
         ${F({ name: 'numero_termo', label: 'Nº termo / convênio / PRONAC', value: p.numero_termo })}
-        ${F({ name: 'valor', label: 'Valor aprovado (R$)', type: 'number', value: p.valor, attrs: 'min="0" step="0.01"' })}
+        ${F({ name: 'valor', label: 'Valor aprovado (R$)', type: 'money', value: p.valor, attrs: 'min="0" step="0.01"' })}
         ${F({ name: 'local', label: 'Local de execução', value: p.local })}
         ${F({ name: 'publico_alvo', label: 'Público-alvo', value: p.publico_alvo, cls: 'span-all' })}
         ${F({ name: 'justificativa', label: 'Justificativa', type: 'textarea', value: p.justificativa, cls: 'span-all', rows: 4 })}

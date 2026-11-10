@@ -105,7 +105,7 @@
           ${F({ name: 'rede', label: 'Rede de ensino', type: 'select', value: c.rede, options: ['', 'Municipal', 'Estadual', 'Federal', 'Particular', 'Não estuda'] })}
           <div class="field span-all"><span class="label">Turmas de interesse</span><div class="row wrap">${turmas.map(t => `<label class="check"><input type="checkbox" name="interesses" value="${esc(t.id)}" data-multi ${(c.interesses || []).includes(t.id) ? 'checked' : ''}> ${esc(t.nome)}</label>`).join('')}</div></div>
           <div class="span-all section-title mt-4">${I('wallet', 18)} Triagem socioeconômica</div>
-          ${F({ name: 'renda_familiar', label: 'Renda familiar (R$)', type: 'number', value: c.renda_familiar, attrs: 'min="0"' })}
+          ${F({ name: 'renda_familiar', label: 'Renda familiar (R$)', type: 'money', value: c.renda_familiar, attrs: 'min="0"' })}
           ${F({ name: 'pessoas_casa', label: 'Pessoas na casa', type: 'number', value: c.pessoas_casa, attrs: 'min="1"' })}
           ${F({ name: 'encaminhamento', label: 'Encaminhado por', type: 'select', value: c.encaminhamento, options: ICM.C.ENCAMINHAMENTOS.map(x => [x, x || 'Procura espontânea']) , lista: 'ENCAMINHAMENTOS' })}
           ${F({ name: 'cadunico', label: 'Inscrito no CadÚnico', type: 'toggle', value: c.cadunico })}

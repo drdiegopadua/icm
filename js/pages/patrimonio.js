@@ -189,7 +189,7 @@
         ${F({ name: 'estado', label: 'Estado de conservação', type: 'select', value: i.estado || 'bom', options: Object.entries(ICM.C.ESTADOS_PAT) })}
         ${F({ name: 'projeto_id', label: 'Adquirido com recurso do projeto', type: 'select', value: i.projeto_id || (i.origem ? 'origem:' + i.origem : ''), options: [['', 'Recursos próprios / doação'], ...projetos.map(p => [p.id, p.nome]), ...Object.entries(ICM.C.ORIGENS_PAT).map(([k, v]) => ['origem:' + k, v])], lista: 'ORIGENS_PAT' })}
         ${F({ name: 'data_aquisicao', label: 'Data de aquisição', type: 'date', value: i.data_aquisicao })}
-        ${F({ name: 'valor_unitario', label: 'Valor unitário (R$)', type: 'number', value: i.valor_unitario, attrs: 'min="0" step="0.01"' })}
+        ${F({ name: 'valor_unitario', label: 'Valor unitário (R$)', type: 'money', value: i.valor_unitario, attrs: 'min="0" step="0.01"' })}
         ${F({ name: 'nota_fiscal', label: 'Nota fiscal', value: i.nota_fiscal })}
         ${F({ name: 'fornecedor', label: 'Fornecedor / doador', value: i.fornecedor, cls: 'span-2' })}
         ${F({ name: 'emprestavel', label: 'Pode ser emprestado (alunos/terceiros)', type: 'toggle', value: i.emprestavel })}

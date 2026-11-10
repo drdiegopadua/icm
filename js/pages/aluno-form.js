@@ -85,11 +85,11 @@
           ${F({ name: 'social.cadunico', label: 'Família inscrita no CadÚnico', type: 'toggle', value: s.cadunico, hint: 'Alunos fora do CadÚnico participam como associados (mensalidade).', cls: 'span-2' })}          <div class="field span-all"><span class="label">Benefícios sociais</span><div class="row wrap">${BENEF.map(b => `<label class="check"><input type="checkbox" name="social.beneficios" value="${esc(b)}" data-multi ${(s.beneficios || []).includes(b) ? 'checked' : ''}> ${esc(b)}</label>`).join('')}</div></div>
           ${F({ name: 'social.vulnerabilidades', label: 'Situações de vulnerabilidade', type: 'textarea', value: s.vulnerabilidades, cls: 'span-all', rows: 3 })}
           <div class="span-all section-title mt-4">${I('wallet', 18)} Situação financeira</div>
-          ${F({ name: 'financeiro.renda_familiar', label: 'Renda familiar mensal (R$)', type: 'number', value: fi.renda_familiar, attrs: 'min="0" step="0.01"' })}
+          ${F({ name: 'financeiro.renda_familiar', label: 'Renda familiar mensal (R$)', type: 'money', value: fi.renda_familiar, attrs: 'min="0" step="0.01"' })}
           ${F({ name: 'financeiro.fonte_renda', label: 'Principal fonte de renda', type: 'select', value: fi.fonte_renda, options: ['', 'Trabalho formal', 'Trabalho informal', 'Benefícios', 'Aposentadoria/pensão', 'Sem renda'] })}
           <div class="field"><span class="label">Renda per capita</span><div class="input" data-percapita style="display:flex;align-items:center">—</div></div>
           ${F({ name: 'financeiro.isencao', label: 'Isento(a) de contribuição', type: 'toggle', value: fi.isencao })}
-          ${F({ name: 'financeiro.contribuicao_mensal', label: 'Contribuição mensal (R$)', type: 'number', value: fi.contribuicao_mensal, attrs: 'min="0" step="0.01"' })}
+          ${F({ name: 'financeiro.contribuicao_mensal', label: 'Contribuição mensal (R$)', type: 'money', value: fi.contribuicao_mensal, attrs: 'min="0" step="0.01"' })}
           ${F({ name: 'financeiro.observacoes', label: 'Observações financeiras', value: fi.observacoes })}
         </section>
 
@@ -168,7 +168,7 @@
     el.querySelector('[data-next]').addEventListener('click', () => { if (validate(step)) go(step + 1); });
 
     // Renda per capita automática
-    const pc = () => { const r = Number(form['financeiro.renda_familiar'].value || 0), p = Number(form['social.pessoas_casa'].value || 0); el.querySelector('[data-percapita]').textContent = r && p ? ICM.util.money(r / p) : '—'; };
+    const pc = () => { const r = ICM.util.parseMoney(form['financeiro.renda_familiar'].value) || 0, p = Number(form['social.pessoas_casa'].value || 0); el.querySelector('[data-percapita]').textContent = r && p ? ICM.util.money(r / p) : '—'; };
     form['financeiro.renda_familiar'].addEventListener('input', pc); form['social.pessoas_casa'].addEventListener('input', pc); pc();
 
     // Máscara CPF

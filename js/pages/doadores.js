@@ -112,7 +112,7 @@
         ${F({ name: 'doador_id', label: 'Doador', type: 'select', value: o.doador_id, options: [['', 'Selecione…'], ...doadores.map(d => [d.id, d.nome])], cls: 'span-2' })}
         ${F({ name: 'data', label: 'Data', type: 'date', value: ICM.util.today() })}
         ${F({ name: 'tipo', label: 'Tipo', type: 'select', value: 'dinheiro', options: Object.entries(ICM.C.TIPOS_DOACAO), lista: 'TIPOS_DOACAO' })}
-        ${F({ name: 'valor', label: 'Valor (R$) — estimado se bens/serviços', type: 'number', attrs: 'min="0" step="0.01"' })}
+        ${F({ name: 'valor', label: 'Valor (R$) — estimado se bens/serviços', type: 'money', attrs: 'min="0" step="0.01"' })}
         ${F({ name: 'forma', label: 'Forma de pagamento', type: 'select', options: ['', ...ICM.C.FORMAS_PAGTO] , lista: 'FORMAS_PAGTO' })}
         ${F({ name: 'projeto_id', label: 'Destinação', type: 'select', options: [['', 'Institucional (livre)'], ...projetos.map(p => [p.id, p.nome])], cls: 'span-2' })}
         ${F({ name: 'descricao', label: 'Descrição', cls: 'span-2', placeholder: 'Ex.: doação mensal, 20 bolas de futsal, reforma do telhado…' })}

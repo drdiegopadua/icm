@@ -109,7 +109,7 @@
         ${F({ name: 'titular', label: 'Titular (responsável)', value: a.titular, required: true, cls: 'span-2' })}
         ${F({ name: 'cpf', label: 'CPF do titular', value: a.cpf })}${F({ name: 'telefone', label: 'Telefone', value: a.telefone })}
         ${F({ name: 'email', label: 'E-mail', type: 'email', value: a.email })}${F({ name: 'data_adesao', label: 'Data de adesão', type: 'date', value: a.data_adesao || ICM.util.today() })}
-        ${F({ name: 'valor_mensal', label: 'Mensalidade (R$)', type: 'number', value: a.valor_mensal ?? 30, attrs: 'min="0" step="0.01"' })}
+        ${F({ name: 'valor_mensal', label: 'Mensalidade (R$)', type: 'money', value: a.valor_mensal ?? 30, attrs: 'min="0" step="0.01"' })}
         ${F({ name: 'dia_vencimento', label: 'Dia de vencimento', type: 'number', value: a.dia_vencimento || 10, attrs: 'min="1" max="28"' })}
         ${F({ name: 'status', label: 'Situação', type: 'select', value: a.status || 'ativo', options: [['ativo', 'Ativo'], ['suspenso', 'Suspenso'], ['desligado', 'Desligado']] })}
         ${F({ name: 'observacoes', label: 'Observações', value: a.observacoes })}

@@ -32,6 +32,16 @@
   function age(s) { const d = parseD(s); if (!d) return null; const n = new Date(); let a = n.getFullYear() - d.getFullYear(); const m = n.getMonth() - d.getMonth(); if (m < 0 || (m === 0 && n.getDate() < d.getDate())) a--; return a; }
   function addDays(s, n) { const d = parseD(s); d.setDate(d.getDate() + n); return iso(d); }
   function money(v) { return Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
+  // Campo de valor em reais: "100.000,50" ⇄ 100000.5 (ponto = milhar, vírgula = centavos)
+  function moneyField(v) { return v === '' || v == null || isNaN(Number(v)) ? '' : Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  function parseMoney(s) { const t = String(s ?? '').replace(/[^\d,]/g, ''); if (!t) return null; const n = Number(t.replace(/,(?=.*,)/g, '').replace(',', '.')); return isNaN(n) ? null : n; }
+  // Máscara enquanto digita: só dígitos e uma vírgula, milhar com ponto, até 2 casas
+  function maskMoney(s) {
+    let t = String(s ?? '').replace(/[^\d,]/g, ''); const i = t.indexOf(',');
+    let int = (i < 0 ? t : t.slice(0, i)).replace(/^0+(?=\d)/, ''); const dec = i < 0 ? null : t.slice(i + 1).replace(/,/g, '').slice(0, 2);
+    if (!int && dec !== null) int = '0';
+    return int.replace(/\B(?=(\d{3})+(?!\d))/g, '.') + (dec !== null ? ',' + dec : '');
+  }
   function num(v, dec = 0) { return Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: dec, maximumFractionDigits: dec }); }
   function pct(a, b) { return b ? Math.round((a / b) * 100) : 0; }
   function initials(n) { return String(n || '?').trim().split(/\s+/).filter(Boolean).slice(0, 2).map(p => p[0]).join('').toUpperCase(); }
@@ -59,6 +69,7 @@
         v = el.checked;
       } else if (el.type === 'radio') { if (!el.checked) return; v = el.value; }
       else if (el.type === 'number') v = el.value === '' ? null : Number(el.value);
+      else if (el.dataset.money !== undefined) v = parseMoney(el.value);
       else v = el.value.trim();
       setPath(out, el.name, v);
     });
@@ -112,6 +123,6 @@
   ICM.util = {
     esc, uid, parseD, iso, today, fmtDate, fmtDateLong, fmtDateShort, fmtMonth, age, addDays, money, num, pct,
     initials, hoursBetween, colorFor, avatar, debounce, sleep, formData, getPath, setPath, compressImage, sha256,
-    cpfValido, maskCPF, MESES, MESES_C, DIAS, DIAS_C
+    cpfValido, maskCPF, moneyField, parseMoney, maskMoney, MESES, MESES_C, DIAS, DIAS_C
   };
 })();

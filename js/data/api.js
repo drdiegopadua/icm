@@ -164,7 +164,8 @@
           const t = await S().get('turmas', m.turma_id);
           const ymNow = u().today().slice(0, 7);
           const fMes = aulas.filter(a => a.data.startsWith(ymNow) && a.presencas[alunoId] === 'F').length;
-          out.push({ turma: t, ...c, total: aulas.length, freq: aulas.length ? Math.round((c.P + c.J) / aulas.length * 100) : null, faltas_mes: fMes, nivel: nivelFaltas(fMes, await cfgAssid()), aulas });
+          const justificadas = aulas.filter(a => a.presencas[alunoId] === 'J').map(a => ({ data: a.data, motivo: (a.justificativas || {})[alunoId] || '' })).sort((x, y) => y.data.localeCompare(x.data));
+          out.push({ turma: t, ...c, total: aulas.length, freq: aulas.length ? Math.round((c.P + c.J) / aulas.length * 100) : null, faltas_mes: fMes, nivel: nivelFaltas(fMes, await cfgAssid()), aulas, justificadas });
         }
         return out;
       },
@@ -356,6 +357,8 @@
         if (!(await podeTurma(a.turma_id))) deny('Você só pode registrar aulas das suas turmas.');
         if (!a.data) throw new Error('Informe a data da aula.');
         a.horas = u().hoursBetween(a.inicio, a.fim);
+        // Motivo da falta justificada: guarda só o de quem ficou com J e tem texto
+        a.justificativas = Object.fromEntries(Object.entries(a.justificativas || {}).filter(([id, txt]) => (a.presencas || {})[id] === 'J' && String(txt || '').trim()).map(([id, txt]) => [id, String(txt).trim().slice(0, 300)]));
         const r = a.id ? await S().update('aulas', a.id, a) : await S().insert('aulas', { presencas: {}, fotos: [], status: 'planejada', ...a });
         await audit(a.id ? 'editar' : 'criar', 'aulas', r.id, `Aula de ${u().fmtDate(r.data)}`);
         return r;

@@ -53,6 +53,7 @@
       let a = aulaId ? await ICM.api.aulas.get(aulaId) : { turma_id: t.id, data, inicio: t.inicio, fim: t.fim, plano: {}, relatorio: {}, presencas: {}, fotos: [], status: 'planejada', professor_id: t.professor_id };
       const mats = (await ICM.api.turmas.alunos(t.id)).filter(m => m.entrada <= data && (!m.saida || m.saida > data));
       const pres = { ...(a.presencas || {}) };
+      const just = { ...(a.justificativas || {}) };   // motivo de cada falta justificada (J)
       const ov = document.createElement('div'); ov.className = 'report-viewer chamada-full';
       ov.innerHTML = `<div class="report-toolbar"><button class="btn btn-sm" data-x>${I('arrowLeft', 16)} Voltar</button><div class="title truncate">${esc(t.nome)} · ${esc(fmtDate(data))}</div><span class="badge" data-cnt></span></div>
         <div class="report-scroll"><div style="max-width:720px;margin:0 auto">
@@ -68,8 +69,9 @@
       ov.querySelector('[data-x]').addEventListener('click', fechar);
       const CICLO = { undefined: 'P', P: 'F', F: 'J', J: undefined };
       const draw = () => {
-        ov.querySelector('[data-alunos]').innerHTML = mats.map(m => { const v = pres[m.aluno_id]; return `<button class="ch-aluno ${v || ''}" data-al="${esc(m.aluno_id)}">${ICM.util.avatar(m.aluno.nome, m.aluno.foto, 'sm')}<span class="grow" style="text-align:left"><b>${esc(m.aluno.nome)}</b>${m.aluno.saude && m.aluno.saude.alergias ? `<br><span class="xs" style="color:var(--danger)">Alergia: ${esc(m.aluno.saude.alergias)}</span>` : ''}</span><span class="ch-v">${v === 'P' ? 'Presente' : v === 'F' ? 'Falta' : v === 'J' ? 'Justificada' : '—'}</span></button>`; }).join('') || ui().empty('Sem alunos ativos nesta data', 'users');
+        ov.querySelector('[data-alunos]').innerHTML = mats.map(m => { const v = pres[m.aluno_id]; return `<button class="ch-aluno ${v || ''}" data-al="${esc(m.aluno_id)}">${ICM.util.avatar(m.aluno.nome, m.aluno.foto, 'sm')}<span class="grow" style="text-align:left"><b>${esc(m.aluno.nome)}</b>${m.aluno.saude && m.aluno.saude.alergias ? `<br><span class="xs" style="color:var(--danger)">Alergia: ${esc(m.aluno.saude.alergias)}</span>` : ''}</span><span class="ch-v">${v === 'P' ? 'Presente' : v === 'F' ? 'Falta' : v === 'J' ? 'Justificada' : '—'}</span></button>${v === 'J' ? `<input class="input ch-just" data-just="${esc(m.aluno_id)}" value="${esc(just[m.aluno_id] || '')}" placeholder="Motivo da justificativa (ex.: atestado médico)" maxlength="300" aria-label="Motivo da falta justificada de ${esc(m.aluno.nome)}">` : ''}`; }).join('') || ui().empty('Sem alunos ativos nesta data', 'users');
         ov.querySelectorAll('[data-al]').forEach(b => b.addEventListener('click', () => { const id = b.dataset.al; const nv = CICLO[pres[id]]; if (nv) pres[id] = nv; else delete pres[id]; draw(); }));
+        ov.querySelectorAll('[data-just]').forEach(inp => inp.addEventListener('input', () => { just[inp.dataset.just] = inp.value.trim(); }));
         const p = Object.values(pres).filter(v => v === 'P').length; ov.querySelector('[data-cnt]').textContent = `${p}/${mats.length} presentes`;
       };
       draw();
@@ -113,7 +115,7 @@
         const faltam = mats.length - Object.keys(pres).length;
         if (faltam && !(await ui().confirm({ title: 'Chamada incompleta', text: `${faltam} aluno(s) sem marcação. Marcar como falta e salvar?`, ok: 'Marcar falta e salvar' }))) return;
         mats.forEach(m => { if (!pres[m.aluno_id]) pres[m.aluno_id] = 'F'; });
-        const payload = { ...a, presencas: pres, status: data <= ICM.util.today() ? 'realizada' : a.status, plano: { ...(a.plano || {}), tema: ov.querySelector('[name=tema]').value.trim() || (a.plano || {}).tema }, relatorio: { ...(a.relatorio || {}), texto: ov.querySelector('[name=relato]').value.trim() || (a.relatorio || {}).texto } };
+        const payload = { ...a, presencas: pres, justificativas: just, status: data <= ICM.util.today() ? 'realizada' : a.status, plano: { ...(a.plano || {}), tema: ov.querySelector('[name=tema]').value.trim() || (a.plano || {}).tema }, relatorio: { ...(a.relatorio || {}), texto: ov.querySelector('[name=relato]').value.trim() || (a.relatorio || {}).texto } };
         const r = await ui().run(() => ICM.api.aulas.save(payload));
         if (!navigator.onLine) ICM.api.offline.enfileirar({ tipo: 'chamada', aula_id: r.id, turma: t.nome, data });
         ui().toast(navigator.onLine ? 'Chamada salva!' : 'Chamada salva no aparelho — será enviada quando a internet voltar', 'ok', 4000);

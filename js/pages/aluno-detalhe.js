@@ -96,6 +96,7 @@
             <div class="card-head"><div><div class="card-title">${esc(f.turma.nome)}</div><div class="card-sub">${f.total} aulas registradas</div></div>${ui().nivelPill(f.nivel, f.faltas_mes) || ui().badge(`${f.freq ?? '—'}% presença`, f.freq >= 75 ? 'ok' : 'warn')}</div>
             <div class="progress ${f.freq >= 75 ? 'ok' : f.freq >= 60 ? 'warn' : 'danger'}"><span style="width:${f.freq || 0}%"></span></div>
             <div class="row mt-4 small"><span class="badge ok">${f.P} presenças</span><span class="badge danger">${f.F} faltas</span><span class="badge warn">${f.J} justificadas</span><span class="muted">· ${f.faltas_mes} falta(s) neste mês</span></div>
+            ${f.justificadas.length ? `<details class="mt-4 small"><summary class="bold" style="cursor:pointer">Faltas justificadas e motivos</summary><div class="mt-2">${f.justificadas.map(j => `<div class="row" style="gap:10px;align-items:baseline;padding:4px 0"><span class="badge warn">${esc(fmtDate(j.data))}</span><span>${j.motivo ? esc(j.motivo) : '<i class="muted">motivo não informado</i>'}</span></div>`).join('')}</div></details>` : ''}
           </div>`).join('')}</div>` : ''}
           <div class="card"><div class="section-title">${I('history', 18)} Histórico de participação em turmas</div>
             ${mats.length ? `<div class="table-wrap"><table class="table"><thead><tr><th>Turma</th><th>Projeto</th><th>Entrada</th><th>Saída</th><th>Motivo</th><th>Situação</th></tr></thead><tbody>

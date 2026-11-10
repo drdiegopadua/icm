@@ -142,7 +142,7 @@
           <div class="card-head"><div><div class="card-title">Mapa de frequência — ${esc(ICM.util.fmtMonth(ym))}</div><div class="card-sub">P = presente · F = falta · J = falta justificada · Alerta com ${cfg.alerta} faltas, desligamento com ${cfg.desligamento}</div></div>
             <button class="btn btn-sm" data-relassid>${I('fileText', 16)} Relatório de assiduidade</button></div>
           ${aulas.length ? `<div class="table-wrap"><table class="table att-matrix"><thead><tr><th>Aluno</th>${aulas.map(a => `<th class="c">${esc(ICM.util.fmtDateShort(a.data).split(' ')[0])}</th>`).join('')}<th class="c">P</th><th class="c">F</th><th class="c">J</th><th class="c">%</th><th>Situação</th></tr></thead><tbody>
-            ${linhas.map(l => `<tr><td><b>${esc(l.nome)}</b>${l.status_turma !== 'ativo' ? ' <span class="xs muted">(saiu)</span>' : ''}</td>${aulas.map(a => { const v = (a.presencas || {})[l.aluno_id] || ''; return `<td class="c ${v}">${v || '·'}</td>`; }).join('')}
+            ${linhas.map(l => `<tr><td><b>${esc(l.nome)}</b>${l.status_turma !== 'ativo' ? ' <span class="xs muted">(saiu)</span>' : ''}</td>${aulas.map(a => { const v = (a.presencas || {})[l.aluno_id] || ''; const mot = v === 'J' ? `Justificada: ${(a.justificativas || {})[l.aluno_id] || 'motivo não informado'}` : ''; return `<td class="c ${v}"${mot ? ` title="${esc(mot)}" style="cursor:help"` : ''}>${v || '·'}</td>`; }).join('')}
               <td class="c P">${l.P}</td><td class="c F">${l.F}</td><td class="c J">${l.J}</td><td class="c">${l.freq ?? '—'}</td><td>${l.nivel === 'ok' ? ui().badge('Regular', 'ok') : ui().nivelPill(l.nivel, l.F)}</td></tr>`).join('')}
           </tbody></table></div>` : ui().empty('Nenhuma aula realizada neste mês', 'userCheck')}</div>`;
         panel.querySelector('[data-relassid]').addEventListener('click', () => ICM.reports.generate('assiduidade', { turma_id: t.id, ym }));
@@ -189,6 +189,7 @@
       // Alunos ativos que entraram na turma depois da data desta aula (não aparecem na chamada)
       let depois = todosMats.filter(m => m.status === 'ativo' && m.entrada > a.data);
       const pres = { ...(a.presencas || {}) };
+      const just = { ...(a.justificativas || {}) };   // motivo de cada falta justificada (J), por aluno
       const fotos = (a.fotos || []).map(f => ({ ...f }));
       const canEdit = ICM.auth.can('aulas.registrar');
       const F = o => ui().field({ ...o, attrs: (o.attrs || '') + (canEdit ? '' : ' disabled') });
@@ -223,9 +224,16 @@
       const semImg = new Set(mats.filter(x => x.aluno.autorizacoes && x.aluno.autorizacoes.imagem === false).map(x => x.aluno.nome));
       const drawChamada = () => {
         const box = m.$('[data-chamada]');
-        box.innerHTML = mats.length ? mats.map(x => `<div class="att-row">${ICM.util.avatar(x.aluno.nome, x.aluno.foto, 'sm')}<div class="grow"><b>${esc(x.aluno.nome)}</b>${x.aluno.saude && x.aluno.saude.alergias ? `<div class="xs" style="color:var(--danger)">Alergia: ${esc(x.aluno.saude.alergias)}</div>` : ''}</div>
+        const motivo = id => pres[id] !== 'J' ? '' : canEdit
+          ? `<input class="input att-just" data-just="${esc(id)}" value="${esc(just[id] || '')}" placeholder="Motivo da justificativa (ex.: atestado médico, viagem)" maxlength="300" aria-label="Motivo da falta justificada">`
+          : `<div class="xs att-just-txt">Justificativa: ${just[id] ? esc(just[id]) : '<i>não informada</i>'}</div>`;
+        box.innerHTML = mats.length ? mats.map(x => `<div class="att-row">${ICM.util.avatar(x.aluno.nome, x.aluno.foto, 'sm')}<div class="grow"><b>${esc(x.aluno.nome)}</b>${x.aluno.saude && x.aluno.saude.alergias ? `<div class="xs" style="color:var(--danger)">Alergia: ${esc(x.aluno.saude.alergias)}</div>` : ''}${motivo(x.aluno_id)}</div>
           <div class="att-opts">${['P', 'F', 'J'].map(v => `<button type="button" class="att-opt ${pres[x.aluno_id] === v ? 'on' : ''}" data-a="${esc(x.aluno_id)}" data-v="${v}" title="${{ P: 'Presente', F: 'Falta', J: 'Falta justificada' }[v]}" ${canEdit ? '' : 'disabled'}>${v}</button>`).join('')}</div></div>`).join('') : ui().empty('Nenhum aluno ativo nesta data', 'users');
-        box.querySelectorAll('.att-opt').forEach(b => b.addEventListener('click', () => { pres[b.dataset.a] = pres[b.dataset.a] === b.dataset.v ? undefined : b.dataset.v; if (!pres[b.dataset.a]) delete pres[b.dataset.a]; drawChamada(); }));
+        box.querySelectorAll('.att-opt').forEach(b => b.addEventListener('click', () => {
+          pres[b.dataset.a] = pres[b.dataset.a] === b.dataset.v ? undefined : b.dataset.v; if (!pres[b.dataset.a]) delete pres[b.dataset.a]; drawChamada();
+          if (pres[b.dataset.a] === 'J') { const inp = box.querySelector(`[data-just="${CSS.escape(b.dataset.a)}"]`); if (inp && !inp.value) inp.focus(); }
+        }));
+        box.querySelectorAll('[data-just]').forEach(inp => { inp.addEventListener('input', () => { just[inp.dataset.just] = inp.value.trim(); }); inp.addEventListener('keydown', e => { if (e.key === 'Enter') e.preventDefault(); }); });
       };
       drawChamada();
       const drawDepois = () => {
@@ -255,7 +263,7 @@
         if (d.status === 'realizada' && marcados < mats.length) {
           if (!(await ui().confirm({ title: 'Chamada incompleta', text: `${mats.length - marcados} aluno(s) sem marcação. Salvar mesmo assim?`, ok: 'Salvar' }))) return;
         }
-        const payload = { ...a, ...d, plano: { ...pl, ...d.plano }, relatorio: { ...rl, ...d.relatorio }, presencas: pres, fotos, turma_id: t.id, professor_id: a.professor_id || t.professor_id };
+        const payload = { ...a, ...d, plano: { ...pl, ...d.plano }, relatorio: { ...rl, ...d.relatorio }, presencas: pres, justificativas: just, fotos, turma_id: t.id, professor_id: a.professor_id || t.professor_id };
         await ui().run(() => ICM.api.aulas.save(payload), 'Aula salva');
         m.close(); ICM.app.refreshAlerts(); R[cur]();
         ICM.pages._avisosFaltas(t.id, pres);

@@ -214,6 +214,8 @@
 /* ---------- Presença ---------- */
 .att-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px; background: var(--surface-2); box-shadow: var(--sh-out-sm); }
 .att-row + .att-row { margin-top: 8px; }
+.att-just { margin-top: 6px; height: 34px; padding: 6px 10px; font-size: 12.5px; }
+.att-just-txt { margin-top: 4px; color: #b45309; }
 .att-opts { display: flex; gap: 6px; margin-left: auto; }
 .att-opt { width: 40px; height: 36px; border-radius: 11px; border: 0; cursor: pointer; font-weight: 800; background: var(--surface-sunken); box-shadow: var(--sh-in); color: var(--muted); transition: all var(--t) var(--ease-spring); }
 .att-opt:hover { transform: translateY(-1px); }
@@ -410,6 +412,7 @@ span.ag-chip { display: inline-block; }
 .ch-aluno.P { border-color: rgba(16,185,129,.6); } .ch-aluno.P .ch-v { background: linear-gradient(135deg, #059669, #34d399); color: #fff; }
 .ch-aluno.F { border-color: rgba(239,68,68,.6); } .ch-aluno.F .ch-v { background: linear-gradient(135deg, #dc2626, #f87171); color: #fff; }
 .ch-aluno.J { border-color: rgba(245,158,11,.6); } .ch-aluno.J .ch-v { background: linear-gradient(135deg, #d97706, #fbbf24); color: #fff; }
+.ch-just { margin: -2px 0 12px; }
 .scanner { position: fixed; inset: 0; z-index: 260; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; }
 .scanner video { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; }
 .scan-frame { position: relative; width: min(70vw, 300px); aspect-ratio: 1; border: 4px solid #fff; border-radius: 24px; box-shadow: 0 0 0 9999px rgba(0,0,0,.45); }

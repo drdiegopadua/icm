@@ -371,8 +371,15 @@
     },
 
     eventos: {
-      async list() { return (await S().list('eventos')).sort((a, b) => b.data.localeCompare(a.data)); },
-      async get(id) { return S().get('eventos', id); },
+      async list() {
+        let l = await S().list('eventos');
+        if (isProf()) {   // professor: só eventos dos projetos das turmas dele ou com alunos dele
+          const ts = await S().list('turmas', t => t.professor_id === me().id); const pids = new Set(ts.map(t => t.projeto_id)); const vis = await alunosVisiveisIds();
+          l = l.filter(e => pids.has(e.projeto_id) || (e.projeto_ids || []).some(id => pids.has(id)) || (e.alunos || []).some(id => vis.has(id)));
+        }
+        return l.sort((a, b) => b.data.localeCompare(a.data));
+      },
+      async get(id) { if (isProf()) { const e = (await api.eventos.list()).find(x => x.id === id); if (!e) deny('Evento de outra turma.'); return e; } return S().get('eventos', id); },
       async save(e) {
         need('eventos.editar');
         if (!e.titulo) throw new Error('Informe o título.');

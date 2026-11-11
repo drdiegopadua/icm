@@ -68,7 +68,7 @@
     const vis = await H().alunosVisiveisIds();
     (await S().list('alunos', a => a.status === 'ativo' && (!vis || vis.has(a.id)))).forEach(a => add('Alunos', { id: a.id, nome: a.nome, nasc: a.nascimento, telefone: (a.responsavel || {}).telefone, destinatario: (a.responsavel || {}).nome, modelo: 'aniv_aluno', href: `#/alunos/${a.id}`, legenda: `responsável: ${(a.responsavel || {}).nome || '—'}` }));
     if (can('equipe.gerir')) (await S().list('equipe', p => p.status === 'ativo')).forEach(p => add('Equipe', { id: p.id, nome: p.nome, nasc: p.nascimento, telefone: p.telefone, modelo: 'aniv_equipe', href: `#/equipe/${p.id}`, legenda: p.cargo }));
-    (await S().list('voluntarios', v => v.status === 'ativo')).forEach(v => add('Voluntários', { id: v.id, nome: v.nome, nasc: v.nascimento, telefone: v.telefone, modelo: 'aniv_voluntario', href: `#/voluntarios/${v.id}`, legenda: v.area }));
+    if (!vis) (await S().list('voluntarios', v => v.status === 'ativo')).forEach(v => add('Voluntários', { id: v.id, nome: v.nome, nasc: v.nascimento, telefone: v.telefone, modelo: 'aniv_voluntario', href: `#/voluntarios/${v.id}`, legenda: v.area }));
     if (can('associados.gerir')) (await S().list('associados', a => a.status === 'ativo')).forEach(a => add('Associados', { id: a.id, nome: a.titular, nasc: a.nascimento, telefone: a.telefone, modelo: 'aniv_associado', href: `#/associados/${a.id}`, legenda: a.numero }));
     if (can('doadores.gerir')) {
       const doacoes = await S().list('doacoes');

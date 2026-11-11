@@ -218,7 +218,9 @@
           push('lembrete_recorrente', fake, { nome: d.nome.split(' ')[0], valor: u().money(ult.valor), pix: pix.chave ? `chave ${pix.chave}` : '' }, `recor:${did}:${hoje.slice(0, 7)}`, `Doador(a) mensal — último Pix em ${u().fmtDate(ult.confirmado_em)}`);
         });
       }
-      return out;
+      // Professor: só os avisos das famílias dos alunos das turmas dele
+      const visProf = await H().alunosVisiveisIds();
+      return visProf ? out.filter(x => visProf.has(x.aluno_id)) : out;
     }
   };
 

@@ -10,7 +10,10 @@
     const gerais = ICM.auth.can('relatorios.gerais');
     const ym = ICM.util.today().slice(0, 7);
     const alertas = await ICM.api.assiduidade.alertas(ym);
-    const card = ICM.pages._repCard;
+    // Professor: só os relatórios da própria turma (os outros cartões nem aparecem)
+    const prof = ICM.app.ehProf && ICM.app.ehProf();
+    const SO_TURMA = new Set(['turma_mensal', 'turma_anual', 'assiduidade']);
+    const card = (...a) => prof && !SO_TURMA.has(a[4]) ? '' : ICM.pages._repCard(...a);
 
     el.innerHTML = `<div class="page">
       <div class="page-head"><div><h1 class="page-title">Relatórios</h1><div class="page-sub">Documentos completos para prestação de contas, gerados a partir dos registros do sistema</div></div></div>
@@ -30,7 +33,7 @@
         ${card('Relatório anual da turma', 'Aulas e horas por mês, frequência anual por aluno, movimentação, conteúdos, eventos e galeria.', 'chart', '#8b5cf6', 'turma_anual')}
         ${card('Relatório de assiduidade', 'Faltas por aluno e turma no mês, com alertas e encaminhamentos sugeridos.', 'userCheck', '#f97316', 'assiduidade')}
         ${ICM.auth.can('alunos.sensivel') ? `<a class="card hoverable report-card" style="--c:#0891b2;color:inherit;text-decoration:none" href="#/mapa-atendidos"><div class="ic">${I('pin', 24)}</div><div class="card-title">Localização dos atendidos</div><div class="small muted">Mapa de onde moram os alunos (por matrícula, sem nomes), com filtros por projeto e turma e contagem por bairro. Imprimível para a prestação de contas.</div><div class="row" style="color:var(--primary);font-weight:700">${I('pin', 16)} Abrir mapa</div></a>
-        <a class="card hoverable report-card" style="--c:#10b981;color:inherit;text-decoration:none" href="#/mapa-atendidos/relatorio"><div class="ic">${I('folder', 24)}</div><div class="card-title">Mapa por projeto (prestação de contas)</div><div class="small muted">Uma folha por projeto com o mapa do território atendido e a tabela de atendidos por bairro. Sem nomes. Pronto para imprimir ou salvar em PDF.</div><div class="row" style="color:var(--primary);font-weight:700">${I('sparkles', 16)} Gerar relatório</div></a>` : ''}
+        <a class="card hoverable report-card" style="--c:#10b981;color:inherit;text-decoration:none" href="#/mapa-atendidos/relatorio" ${ICM.auth.can('alunos.sensivel') ? '' : 'hidden'}><div class="ic">${I('folder', 24)}</div><div class="card-title">Mapa por projeto (prestação de contas)</div><div class="small muted">Uma folha por projeto com o mapa do território atendido e a tabela de atendidos por bairro. Sem nomes. Pronto para imprimir ou salvar em PDF.</div><div class="row" style="color:var(--primary);font-weight:700">${I('sparkles', 16)} Gerar relatório</div></a>` : ''}
       </div>
       ${gerais ? `<div class="section-title">${I('folder', 18)} Projetos e instituição</div>
       <div class="grid grid-3 stagger">
@@ -40,7 +43,7 @@
         ${card('Relatório de impacto', 'Matriz de indicadores (produto, resultado e impacto), ODS, números do período e histórias — para conselho e financiadores.', 'target', '#16a34a', 'impacto')}
         ${card('Relatório anual de atividades da OSC', 'Todos os números de impacto do Instituto: atendidos, famílias, horas, áreas, conquistas e origem dos recursos.', 'sparkles', '#ec4899', 'osc_anual')}
       </div>` : ''}
-      <div class="section-title mt-6">${I('users', 18)} Comunidade</div>
+      <div class="section-title mt-6" ${prof ? 'hidden' : ''}>${I('users', 18)} Comunidade</div>
       <div class="grid grid-3 stagger">
         ${ICM.auth.can('espera.gerir') ? card('Lista de espera — classificação', 'Ranking pela triagem socioeconômica, com os critérios publicados (identificação por protocolo e iniciais).', 'list', '#2563eb', 'espera_classificacao') : ''}
         ${card('Horas voluntárias', 'Horas doadas por voluntário e atividade, valoradas como contrapartida para editais.', 'heart', '#10b981', 'voluntarios_horas')}

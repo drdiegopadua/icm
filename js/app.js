@@ -129,7 +129,15 @@
       { href: '#/config', icon: 'settings', label: 'Configurações', match: /^\/config/ }
     ] },
     { href: '#/chat', icon: 'chat', label: 'Chat', match: /^\/chat/, count: 'chat' }
-  ].map(n => n.itens ? { ...n, itens: n.itens.filter(Boolean).map(x => ({ ...x, secao: SECOES[x.href] || '' })) } : n);
+  ].map(n => n.itens ? { ...n, itens: n.itens.filter(Boolean).filter(x => permitidoProf(x.href)).map(x => ({ ...x, secao: SECOES[x.href] || '' })) } : n)
+    .filter(n => n.itens ? n.itens.length : permitidoProf(n.href));
+  // Professor: só o que é pertinente às próprias turmas (o banco também limita os dados — supabase/icm_v12)
+  const PROF_PAGINAS = new Set(['dashboard', 'alunos', 'alunoDetalhe', 'turmasLista', 'turma', 'projetos', 'projetoDetalhe', 'eventos', 'eventoDetalhe',
+    'relatorios', 'verificarApp', 'rotina', 'chamada', 'aniversariantes', 'avisos', 'reunioes', 'reuniao', 'calendarioLetivo', 'gradeSemanal',
+    'compras', 'config', 'minhaAssinatura', 'chat']);
+  const ehProf = () => { const u = ICM.auth.user(); return !!u && u.papel === 'professor'; };
+  const paginaDe = href => { const p = String(href || '').replace(/^#/, '').split('?')[0]; const r = routes.find(x => x.re.test(p)); return r ? r.page : ''; };
+  const permitidoProf = href => !ehProf() || PROF_PAGINAS.has(paginaDe(href));
   // Menus grandes abrem em colunas por assunto
   const SECOES = {
     '#/gestao-pedagogica': 'Acompanhamento', '#/rotina': 'Acompanhamento',
@@ -279,6 +287,7 @@
     for (const r of routes) { const m = path.match(r.re); if (m) { match = r; (r.keys || []).forEach((k, i) => params[k] = m[i + 1]); break; } }
     window.scrollTo({ top: 0 });
     if (!match) { view.innerHTML = `<div class="page">${ICM.ui.empty('Página não encontrada', 'alert')}</div>`; return; }
+    if (ehProf() && !PROF_PAGINAS.has(match.page)) { view.innerHTML = `<div class="page">${ICM.ui.empty('Acesso restrito: o perfil de professor vê só o que é das próprias turmas.', 'lock')}</div>`; return; }
     if (match.perm && !ICM.auth.can(match.perm)) { view.innerHTML = `<div class="page">${ICM.ui.empty('Acesso restrito ao seu perfil.', 'lock')}</div>`; return; }
     view.innerHTML = `<div class="page"><div class="card" style="height:120px;background:linear-gradient(90deg,var(--surface) 0,var(--surface-2) 50%,var(--surface) 100%);background-size:800px 100%;animation:shimmer 1.2s linear infinite"></div></div>`;
     try {
@@ -350,7 +359,7 @@
     box.appendChild(t); setTimeout(sair, 8000);
   }
 
-  ICM.app = { setCrumbs, refreshAlerts, refreshChat, go: h => { location.hash = h; }, reload: route };
+  ICM.app = { ehProf, setCrumbs, refreshAlerts, refreshChat, go: h => { location.hash = h; }, reload: route };
 
   // ---------- Inicialização ----------
   (async function boot() {

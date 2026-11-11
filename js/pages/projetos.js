@@ -101,7 +101,7 @@
           <div class="card" data-vols><div class="section-title">${I('heart', 18)} Voluntários do projeto</div><div class="small muted">Carregando…</div></div>
         </div>`;
         // Voluntários vinculados a este projeto (cadastro do voluntário → "Projetos em que atua")
-        ICM.api.voluntarios.list().then(vs => {
+        (ICM.app.ehProf() ? Promise.reject() : ICM.api.voluntarios.list()).then(vs => {
           const l = vs.filter(v => (v.projeto_ids || []).includes(p.id));
           const ano = String(new Date().getFullYear());
           const horas = v => (v.horas || []).filter(h => h.projeto_id === p.id && String(h.data).startsWith(ano)).reduce((s, h) => s + Number(h.horas || 0), 0);

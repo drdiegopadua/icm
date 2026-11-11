@@ -80,8 +80,15 @@
 
   // ================= Reuniões de pais =================
   const reunioes = {
-    async list() { return (await S().list('reunioes')).sort((a, b) => b.data.localeCompare(a.data)); },
-    async get(id) { return S().get('reunioes', id); },
+    async list() {
+      let l = await S().list('reunioes');
+      if (H().isProf()) {   // professor: só reuniões das turmas/projetos dele
+        const ts = await S().list('turmas', t => t.professor_id === H().me().id); const tids = new Set(ts.map(t => t.id)); const pids = new Set(ts.map(t => t.projeto_id));
+        l = l.filter(r => tids.has(r.turma_id) || pids.has(r.projeto_id));
+      }
+      return l.sort((a, b) => b.data.localeCompare(a.data));
+    },
+    async get(id) { if (H().isProf()) { const r = (await reunioes.list()).find(x => x.id === id); if (!r) H().deny('Reunião de outra turma.'); return r; } return S().get('reunioes', id); },
     // Famílias convidadas: alunos ativos do projeto/turma (ou todos)
     async convidados(r) {
       const mats = await S().list('matriculas', m => m.status === 'ativo');

@@ -196,7 +196,7 @@
       }
       // Assinaturas pendentes (um aviso por aluno)
       if (can('assinaturas.solicitar')) {
-        const pend = await S().list('assinaturas', x => x.status === 'pendente');
+        const pend = await S().list('assinaturas', x => x.status === 'pendente' && x.aluno_id);
         [...new Set(pend.map(p => p.aluno_id))].forEach(aid => push('assinatura', al(aid), { link: linkApp('/portal') }, `assin:${aid}:${pend.filter(p => p.aluno_id === aid).length}`, `${pend.filter(p => p.aluno_id === aid).length} documento(s) para assinar`));
       }
       // Régua de relacionamento com doadores: agradecer doações recentes e lembrar doadores mensais
@@ -299,8 +299,38 @@
     if (tipo === 'emprestimo') return cab + `<p>Declaro ter recebido, em regime de <b>comodato gratuito</b>, o bem descrito no Termo de Empréstimo nº ${u().esc((ref && ref.numero) || '')} (${u().esc((ref && ref.item) || '')}), comprometendo-me a zelar por sua guarda e conservação, utilizá-lo apenas para as atividades do projeto, devolvê-lo na data prevista ou quando solicitado, e comunicar dano, perda ou furto em até 48 horas.</p>`;
     return cab;
   }
+  // Termo de Adesão ao Serviço Voluntário (Lei 9.608/1998) — o mesmo texto do termo impresso
+  function clausulasVoluntario() {
+    const org = ICM.C.ORG;
+    return `<ol style="padding-left:18px">
+      <li>O(A) VOLUNTÁRIO(A) prestará serviço voluntário ao ${u().esc(org.razao)}, CNPJ ${u().esc(org.cnpj)}, na área acima descrita, nos termos da Lei nº 9.608/1998.</li>
+      <li>O serviço voluntário é atividade não remunerada e <b>não gera vínculo empregatício</b>, nem obrigação de natureza trabalhista, previdenciária ou afim.</li>
+      <li>O(A) voluntário(a) poderá ser ressarcido(a) por despesas que comprovadamente realizar no desempenho das atividades, desde que previamente autorizadas pela instituição.</li>
+      <li>O(A) voluntário(a) compromete-se a cumprir as normas internas, o Estatuto da Criança e do Adolescente (ECA) e a manter <b>sigilo sobre os dados pessoais</b> de alunos e famílias a que tiver acesso (LGPD).</li>
+      <li>É vedado ao(à) voluntário(a) fotografar, filmar ou divulgar imagens de alunos sem autorização expressa da instituição.</li>
+      <li>As horas dedicadas serão registradas pela instituição e poderão ser certificadas.</li>
+      <li>Este termo pode ser rescindido a qualquer tempo, por qualquer das partes, mediante comunicação.</li></ol>`;
+  }
+  function textoVoluntario(v) {
+    const linha = (k, x) => x ? `<b>${k}:</b> ${u().esc(x)}<br>` : '';
+    return `<p>${linha('Voluntário(a)', v.nome)}${linha('CPF', v.cpf)}${linha('Nascimento', v.nascimento ? u().fmtDate(v.nascimento) : '')}${linha('Telefone', v.telefone)}${linha('E-mail', v.email)}${linha('Profissão', v.profissao)}${linha('Área de atuação', v.area)}${linha('Disponibilidade', v.disponibilidade)}${linha('Início', v.inicio ? u().fmtDate(v.inicio) : '')}<b>Término previsto:</b> ${v.fim ? u().esc(u().fmtDate(v.fim)) : 'indeterminado'}</p>${clausulasVoluntario()}`;
+  }
+  const doVoluntario = (x, v) => ({ ...x, voluntario: v, aluno: { nome: v.nome, matricula: '', responsavel: v.nome }, signatario: v.nome, html: textoVoluntario(v), titulo: ICM.C.DOCS_ASSINATURA.voluntariado || 'Termo de adesão ao serviço voluntário' });
   const assinaturas = {
-    textoDocumento,
+    textoDocumento, clausulasVoluntario,
+    // Pede ao voluntário a assinatura do termo de adesão (reaproveita o pedido pendente, se houver)
+    async solicitarVoluntario(voluntario_id) {
+      need('voluntarios.gerir');
+      const v = await S().get('voluntarios', voluntario_id);
+      if (!v) throw new Error('Voluntário não encontrado.');
+      const ja = (await S().list('assinaturas', x => x.voluntario_id === voluntario_id && x.status === 'pendente'))[0];
+      if (ja) return ja;
+      const b = new Uint8Array(12); crypto.getRandomValues(b);
+      const x = await S().insert('assinaturas', { token: Array.from(b, y => y.toString(16).padStart(2, '0')).join(''), tipo: 'voluntariado', voluntario_id, aluno_id: '', referencia_id: '', status: 'pendente', solicitado_em: u().today(), criado_por: me().id });
+      await audit('solicitar_assinatura', 'voluntarios', voluntario_id, `Termo de adesão ao serviço voluntário — ${v.nome}`);
+      return x;
+    },
+    async doVoluntario(voluntario_id) { return (await S().list('assinaturas', x => x.voluntario_id === voluntario_id && x.status !== 'cancelado')).sort((a, b) => (b.assinado_em || b.solicitado_em || '').localeCompare(a.assinado_em || a.solicitado_em || '')); },
     linkAssinar: token => linkApp(`/assinar/${token}`),
     async list({ aluno_id, status } = {}) {
       const l = await S().list('assinaturas', x => (!aluno_id || x.aluno_id === aluno_id) && (!status || x.status === status));
@@ -326,11 +356,13 @@
       if (S().modo === 'supabase') {
         const r = await S().rpc('assinatura_por_token', { p_token: String(token || '') });
         if (!r) return null;
+        if (r.voluntario) return doVoluntario(r.assinatura, r.voluntario);
         const x = r.assinatura, a = r.aluno;
         return { ...x, aluno: { nome: a.nome, matricula: a.matricula, responsavel: (a.responsavel || {}).nome }, html: textoDocumento(x.tipo, a, r.ref), titulo: ICM.C.DOCS_ASSINATURA[x.tipo] };
       }
       const x = (await S().list('assinaturas')).find(s => s.token === token);
       if (!x) return null;
+      if (x.voluntario_id) { const v = await S().get('voluntarios', x.voluntario_id); return v ? doVoluntario(x, v) : null; }
       const a = await S().get('alunos', x.aluno_id);
       let ref = null;
       if (x.tipo === 'emprestimo' && x.referencia_id) { const e = await S().get('emprestimos', x.referencia_id); const it = e ? await S().get('patrimonio', e.item_id) : null; ref = { numero: e && e.numero, item: it ? `${e.quantidade}x ${it.nome} (${it.tombo})` : '' }; }
@@ -350,6 +382,11 @@
         return hash;
       }
       await S().update('assinaturas', d.id, { status: 'assinado', assinado_em: new Date().toISOString(), signatario_nome: nome.trim(), signatario_cpf: String(cpf).replace(/\D/g, ''), assinatura_img: imagem, doc_hash: hash, doc_html: d.html, user_agent: navigator.userAgent.slice(0, 200) });
+      if (d.voluntario_id) {
+        await S().update('voluntarios', d.voluntario_id, { termo_assinado: true, termo_assinado_em: u().today(), termo_assinatura_id: d.id });
+        await S().insert('auditoria', { em: new Date().toISOString(), usuario_id: 'voluntario', usuario_nome: nome.trim(), acao: 'assinar', entidade: 'assinaturas', entidade_id: d.id, resumo: `${d.titulo} — ${d.voluntario.nome} (hash ${hash.slice(0, 12)}…)` });
+        return hash;
+      }
       const a = await S().get('alunos', d.aluno_id); const aut = { ...(a.autorizacoes || {}) };
       if (d.tipo === 'lgpd') { aut.lgpd = true; aut.data_termo = u().today(); }
       if (d.tipo === 'imagem') { aut.imagem = true; aut.data_termo = aut.data_termo || u().today(); }

@@ -72,15 +72,7 @@
       const v = await api().voluntarios.get(voluntario_id);
       let html = head('Termo de Adesão ao Serviço Voluntário', 'Lei nº 9.608, de 18 de fevereiro de 1998');
       html += meta([['Voluntário(a)', v.nome], ['CPF', v.cpf || '—'], ['Nascimento', U().fmtDate(v.nascimento)], ['Telefone', v.telefone], ['E-mail', v.email], ['Profissão', v.profissao], ['Área de atuação', v.area], ['Disponibilidade', v.disponibilidade], ['Início', U().fmtDate(v.inicio)], ['Término previsto', v.fim ? U().fmtDate(v.fim) : 'Indeterminado']]);
-      html += sec(`<h2>Cláusulas</h2><ol style="font-size:11.5px;padding-left:18px">
-        <li>O(A) VOLUNTÁRIO(A) prestará serviço voluntário ao ${esc(ICM.C.ORG.razao)}, CNPJ ${esc(ICM.C.ORG.cnpj)}, na área acima descrita, nos termos da Lei nº 9.608/1998.</li>
-        <li>O serviço voluntário é atividade não remunerada e <b>não gera vínculo empregatício</b>, nem obrigação de natureza trabalhista, previdenciária ou afim.</li>
-        <li>O(A) voluntário(a) poderá ser ressarcido(a) por despesas que comprovadamente realizar no desempenho das atividades, desde que previamente autorizadas pela instituição.</li>
-        <li>O(A) voluntário(a) compromete-se a cumprir as normas internas, o Estatuto da Criança e do Adolescente (ECA) e a manter <b>sigilo sobre os dados pessoais</b> de alunos e famílias a que tiver acesso (LGPD).</li>
-        <li>É vedado ao(à) voluntário(a) fotografar, filmar ou divulgar imagens de alunos sem autorização expressa da instituição.</li>
-        <li>As horas dedicadas serão registradas pela instituição e poderão ser certificadas.</li>
-        <li>Este termo pode ser rescindido a qualquer tempo, por qualquer das partes, mediante comunicação.</li>
-      </ol><p style="text-align:right;font-size:11.5px">${esc(ICM.C.ORG.cidade)}, ${esc(U().fmtDateLong(v.inicio || U().today()))}.</p>`);
+      html += sec(`<h2>Cláusulas</h2><div style="font-size:11.5px">${ICM.api.assinaturas.clausulasVoluntario()}</div><p style="text-align:right;font-size:11.5px">${esc(ICM.C.ORG.cidade)}, ${esc(U().fmtDateLong(v.inicio || U().today()))}.</p>`);
       html += signs(`${v.nome} — Voluntário(a)`, 'Pela instituição');
       return { title: `Termo de adesão — ${v.nome}`, html, file: `termo-voluntario-${v.id}` };
     }

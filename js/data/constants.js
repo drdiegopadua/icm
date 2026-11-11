@@ -174,7 +174,8 @@
       matricula: 'Ficha de matrícula e declaração do responsável',
       lgpd: 'Termo de consentimento — LGPD',
       imagem: 'Autorização de uso de imagem e voz',
-      emprestimo: 'Termo de empréstimo de bem'
+      emprestimo: 'Termo de empréstimo de bem',
+      voluntariado: 'Termo de adesão ao serviço voluntário'
     },
 
     // Modelos de mensagem do WhatsApp — {campos} são preenchidos automaticamente

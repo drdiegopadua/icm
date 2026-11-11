@@ -11,7 +11,7 @@
     document.title = 'Assinatura de documento · ICM';
     const d = await ICM.api.assinaturas.porToken(token);
     const wrap = inner => `<div class="portal"><div class="bg-orbs"><div class="orb ring o1"></div><div class="orb o3"></div></div>
-      <header class="portal-head glass"><div class="row">${ICM.logo(34)}<div><b>Assinatura de documento</b><div class="xs muted">${esc(ICM.C.ORG.nome)}</div></div></div><a class="btn btn-sm" href="#/portal">${I('arrowLeft', 16)} Portal da Família</a></header>
+      <header class="portal-head glass"><div class="row">${ICM.logo(34)}<div><b>Assinatura de documento</b><div class="xs muted">${esc(ICM.C.ORG.nome)}</div></div></div>${d && d.voluntario ? '' : `<a class="btn btn-sm" href="#/portal">${I('arrowLeft', 16)} Portal da Família</a>`}</header>
       <main class="portal-main page">${inner}</main></div>`;
     if (!d) { root.innerHTML = wrap(`<div class="card">${ui().empty('Link inválido ou expirado.', 'alert')}</div>`); return; }
     if (d.status !== 'pendente') {
@@ -23,7 +23,7 @@
         <div class="doc-assin mt-4">${d.html}</div></div>
       <form class="card" novalidate>
         <div class="section-title">${I('edit', 18)} Seus dados</div>
-        <div class="grid grid-2">${ui().field({ name: 'nome', label: 'Nome completo do responsável', value: d.aluno.responsavel || '', required: true })}${ui().field({ name: 'cpf', label: 'CPF', required: true, attrs: 'inputmode="numeric" maxlength="14"' })}</div>
+        <div class="grid grid-2">${ui().field({ name: 'nome', label: d.voluntario ? 'Seu nome completo' : 'Nome completo do responsável', value: d.aluno.responsavel || '', required: true })}${ui().field({ name: 'cpf', label: 'CPF', required: true, attrs: 'inputmode="numeric" maxlength="14"' })}</div>
         <div class="section-title mt-4">${I('edit', 18)} Assine no quadro abaixo</div>
         <div class="sig-wrap"><canvas class="sig-pad" width="900" height="260"></canvas><div class="sig-line">Assine aqui com o dedo ou o mouse</div></div>
         <div class="row between mt-2"><button type="button" class="btn btn-sm" data-limpar>${I('refresh', 14)} Limpar</button><span class="xs muted">Data e hora serão registradas.</span></div>
@@ -44,7 +44,7 @@
       const b = f.querySelector('[type=submit]'); b.classList.add('is-loading');
       try {
         const hash = await ICM.api.assinaturas.assinar(token, { nome: f.nome.value, cpf: f.cpf.value, imagem: pad.png() });
-        root.querySelector('main').innerHTML = `<div class="card" style="text-align:center;padding:48px 20px"><div class="login-logo" style="margin:0 auto 20px;width:120px;height:120px">${I('check', 60)}</div><h1 class="login-title" style="font-size:30px">Documento assinado! ✅</h1><p class="muted mt-2">${esc(d.titulo)} — ${esc(d.aluno.nome)}</p><p class="xs muted mt-4">Código de integridade: <span style="font-family:monospace">${esc(hash.slice(0, 32))}</span></p><a class="btn btn-primary mt-6" href="#/portal">Ir para o Portal da Família</a></div>`;
+        root.querySelector('main').innerHTML = `<div class="card" style="text-align:center;padding:48px 20px"><div class="login-logo" style="margin:0 auto 20px;width:120px;height:120px">${I('check', 60)}</div><h1 class="login-title" style="font-size:30px">Documento assinado! ✅</h1><p class="muted mt-2">${esc(d.titulo)} — ${esc(d.aluno.nome)}</p><p class="xs muted mt-4">Código de integridade: <span style="font-family:monospace">${esc(hash.slice(0, 32))}</span></p>${d.voluntario ? `<p class="small mt-4">Obrigado por fazer parte do ${esc(ICM.C.ORG.nome)}! Pode fechar esta página.</p>` : `<a class="btn btn-primary mt-6" href="#/portal">Ir para o Portal da Família</a>`}</div>`;
       } catch (ex) { b.classList.remove('is-loading'); err.textContent = ex.message; }
     });
   };

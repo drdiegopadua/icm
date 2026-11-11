@@ -35,11 +35,14 @@
     const projetos = await ICM.api.raw('projetos');
     const edit = ICM.auth.can('voluntarios.gerir');
     const certs = (await ICM.api.certificados.list()).filter(c => c.destinatario_tipo === 'voluntario' && c.destinatario_id === v.id);
+    // Assinatura digital do termo de adesão (pedido pelo WhatsApp)
+    let assin = []; try { assin = await ICM.api.assinaturas.doVoluntario(v.id); } catch (e) { /* sem permissão */ }
+    const pend = assin.find(x => x.status === 'pendente'), assinado = assin.find(x => x.status === 'assinado');
     el.innerHTML = `<div class="page">
       <div class="card mb-4"><div class="profile-hero">${ICM.util.avatar(v.nome, null, 'lg')}
         <div class="grow"><h1 class="page-title" style="font-size:28px">${esc(v.nome)}</h1><div class="meta mt-2"><span>${I('award', 15)} ${esc(v.area || '')}</span><span>${I('clock', 15)} ${num(v.total_horas, 1)} horas doadas</span><span>${I('calendar', 15)} desde ${esc(fmtDate(v.inicio))}</span></div>
-          <div class="row wrap mt-2">${v.termo_assinado ? ui().badge('Termo de adesão assinado', 'ok', true) : ui().badge('Termo de adesão pendente', 'danger', true)}${v.status === 'ativo' ? ui().badge('Ativo', 'ok') : ui().badge('Inativo', 'neutral')}</div></div>
-        <div class="row wrap"><button class="btn" data-termo>${I('fileText', 18)} Termo de adesão</button>${ICM.auth.can('certificados.emitir') ? `<button class="btn" data-cert>${I('award', 18)} Emitir certificado</button>` : ''}${edit ? `<button class="btn" data-edit>${I('edit', 18)} Editar</button><button class="btn btn-primary" data-horas>${I('plus', 18)} Lançar horas</button>` : ''}</div></div></div>
+          <div class="row wrap mt-2">${v.termo_assinado ? ui().badge(`Termo de adesão assinado${v.termo_assinado_em ? ' em ' + fmtDate(v.termo_assinado_em) : ''}`, 'ok', true) : pend ? ui().badge(`Aguardando assinatura (enviado em ${fmtDate(pend.solicitado_em)})`, 'warn', true) : ui().badge('Termo de adesão pendente', 'danger', true)}${v.status === 'ativo' ? ui().badge('Ativo', 'ok') : ui().badge('Inativo', 'neutral')}</div></div>
+        <div class="row wrap">${edit && !v.termo_assinado ? `<button class="btn btn-wa" data-assinar title="Envia o link para o voluntário assinar o termo pelo celular">${ICM.waIcon ? ICM.waIcon(18) : ''} ${pend ? 'Reenviar termo para assinar' : 'Enviar termo para assinar'}</button>` : ''}${assinado ? `<button class="btn" data-comprov="${esc(assinado.id)}">${I('shield', 18)} Comprovante da assinatura</button>` : ''}<button class="btn" data-termo>${I('fileText', 18)} Termo de adesão</button>${ICM.auth.can('certificados.emitir') ? `<button class="btn" data-cert>${I('award', 18)} Emitir certificado</button>` : ''}${edit ? `<button class="btn" data-edit>${I('edit', 18)} Editar</button><button class="btn btn-primary" data-horas>${I('plus', 18)} Lançar horas</button>` : ''}</div></div></div>
       <div class="grid grid-2">
         <div class="card"><div class="section-title">${I('user', 18)} Cadastro</div>${ui().kv([['CPF', v.cpf ? ICM.util.maskCPF(v.cpf) : ''], ['Nascimento', fmtDate(v.nascimento)], ['Telefone', v.telefone], ['E-mail', v.email], ['Profissão', v.profissao], ['Disponibilidade', v.disponibilidade], ['Endereço', v.endereco], ['Término previsto', v.fim ? fmtDate(v.fim) : '']])}
           ${certs.length ? `<hr class="divider"><div class="section-title">${I('award', 18)} Certificados emitidos</div>${certs.map(c => `<div class="list-item"><b class="grow">${esc(c.titulo)}</b><span class="xs muted">${esc(c.codigo)}</span><button class="btn btn-sm" data-imp="${esc(c.id)}">${I('printer', 14)}</button></div>`).join('')}` : ''}</div>
@@ -48,6 +51,20 @@
       </div></div>`;
     const on = (s, fn) => { const b = el.querySelector(s); if (b) b.addEventListener('click', fn); };
     on('[data-termo]', () => ICM.reports.generate('voluntario_termo', { voluntario_id: v.id }));
+    on('[data-comprov]', e => ICM.reports.generate('assinatura_comprovante', { id: e.currentTarget.dataset.comprov }));
+    on('[data-assinar]', e => ui().busy(e.currentTarget, async () => {
+      const x = await ui().run(() => ICM.api.assinaturas.solicitarVoluntario(v.id));
+      const link = ICM.api.assinaturas.linkAssinar(x.token);
+      const texto = `Olá, ${String(v.nome).split(' ')[0]}! Obrigado por fazer parte do voluntariado do ${ICM.C.ORG.nome}. 💙
+Para formalizar, leia e assine o *Termo de Adesão ao Serviço Voluntário* pelo link abaixo (leva 2 minutos, pelo celular):
+${link}`;
+      if (v.telefone && ICM.wa) await ICM.wa.abrir({ tipo: 'assinatura', aluno_id: '', aluno: '', responsavel: v.nome, telefone: v.telefone, texto, key: `assin-vol:${v.id}:${x.id}` });
+      else {
+        const m = ui().modal({ title: 'Link do termo para assinar', size: 'sm', body: `<p class="small">${v.telefone ? '' : 'Este voluntário não tem telefone cadastrado. '}Envie este link para ${esc(v.nome)} assinar pelo celular:</p><input class="input" readonly value="${esc(link)}" data-link>`, foot: `<button class="btn" data-close>Fechar</button><button class="btn btn-primary" data-copiar>${I('check', 16)} Copiar link</button>` });
+        m.$('[data-copiar]').addEventListener('click', async () => { try { await navigator.clipboard.writeText(link); ui().toast('Link copiado', 'ok'); } catch (er) { m.$('[data-link]').select(); } });
+      }
+      ICM.app.reload();
+    }).catch(() => { }));
     on('[data-edit]', () => form(v));
     on('[data-cert]', async () => {
       const [c] = await ui().run(() => ICM.api.certificados.emitir([{ tipo: 'voluntariado', destinatario_tipo: 'voluntario', destinatario_id: v.id, nome: v.nome, titulo: `Trabalho voluntário — ${v.area || ICM.C.ORG.nome}`, descricao: `atuou como voluntário(a) em ${v.area || 'atividades da instituição'}, no período de ${fmtDate(v.inicio)} a ${fmtDate(v.fim || ICM.util.today())}`, carga_horaria: v.total_horas }]), 'Certificado emitido');

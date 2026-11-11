@@ -125,11 +125,11 @@
       const { sec, head, meta } = h();
       const x = (await api().raw('assinaturas')).find(s => s.id === id);
       if (!x) throw new Error('Assinatura não encontrada.');
-      const a = await api().alunos.get(x.aluno_id) || {};
+      const a = (x.voluntario_id ? await api().voluntarios.get(x.voluntario_id) : await api().alunos.get(x.aluno_id)) || {};
       const titulo = ICM.C.DOCS_ASSINATURA[x.tipo] || 'Documento';
       const conferido = x.doc_html && x.doc_hash ? (await U().sha256(x.doc_html)) === x.doc_hash : false;
       let html = head('Comprovante de Assinatura Eletrônica', `${titulo} — ${a.nome || ''}`);
-      html += meta([['Documento', titulo], ['Aluno(a)', `${a.nome || ''} (${a.matricula || ''})`], ['Situação', x.status === 'assinado' ? 'Assinado' : x.status === 'recusado' ? 'Recusado' : x.status], ['Solicitado em', U().fmtDate(x.solicitado_em)],
+      html += meta([['Documento', titulo], x.voluntario_id ? ['Voluntário(a)', a.nome || ''] : ['Aluno(a)', `${a.nome || ''} (${a.matricula || ''})`], ['Situação', x.status === 'assinado' ? 'Assinado' : x.status === 'recusado' ? 'Recusado' : x.status], ['Solicitado em', U().fmtDate(x.solicitado_em)],
         ['Assinado por', x.signatario_nome || '—'], ['CPF do signatário', x.signatario_cpf ? U().maskCPF(x.signatario_cpf) : '—'], ['Data e hora', x.assinado_em ? new Date(x.assinado_em).toLocaleString('pt-BR') : (x.recusado_em ? 'Recusado em ' + new Date(x.recusado_em).toLocaleString('pt-BR') : '—')], ['Dispositivo', (x.user_agent || '—').slice(0, 90)]]);
       if (x.status === 'recusado') html += sec(`<h2>Recusa</h2><p>${esc(x.motivo_recusa || 'Sem motivo informado.')}</p>`);
       if (x.doc_html) html += sec(`<h2>Texto assinado</h2><div style="border:1px solid #dbe5fb;border-radius:8px;padding:12px;font-size:11.5px">${x.doc_html}</div>`);

@@ -153,6 +153,11 @@
           <div class="card"><div class="section-title">${I('wallet', 18)} Situação financeira</div>
             ${ui().kv([['Renda familiar', f.renda_familiar != null ? money(f.renda_familiar) : ''], ['Renda per capita', f.renda_per_capita != null ? money(f.renda_per_capita) : ''], ['Fonte de renda', f.fonte_renda], ['Isento de contribuição', f.isencao ? 'Sim' : 'Não'], ['Contribuição mensal', f.isencao ? '' : money(f.contribuicao_mensal)], ['Observações', f.observacoes]])}
             ${f.renda_per_capita != null ? `<div class="mt-4">${f.renda_per_capita <= 706 ? ui().badge('Renda per capita até ½ salário mínimo', 'warn', true) : ui().badge('Acima de ½ salário mínimo per capita', 'neutral', true)}</div>` : ''}</div>
+          <div class="card span-all"><div class="card-head"><div class="section-title" style="margin:0">${I('users', 18)} Pessoas que moram na casa</div><a class="btn btn-sm" href="#/alunos/${esc(a.id)}/editar">${I('edit', 15)} Editar</a></div>
+            ${(s.moradores || []).length ? `<div class="table-wrap"><table class="table"><thead><tr><th>Nome</th><th>Parentesco</th><th>Idade</th><th>Escolaridade</th><th>Ocupação</th><th>Renda</th><th>Telefone</th></tr></thead><tbody>
+              ${s.moradores.map(m => { const n = m.nascimento ? new Date(m.nascimento + 'T12:00') : null, h = new Date(); let id = n ? h.getFullYear() - n.getFullYear() : null; if (n && h < new Date(h.getFullYear(), n.getMonth(), n.getDate())) id--;
+                return `<tr><td><b>${m.aluno_id ? `<a href="#/alunos/${esc(m.aluno_id)}">${esc(m.nome)}</a> ${ui().badge('Aluno(a)', 'ok')}` : esc(m.nome)}</b></td><td class="small">${esc(m.parentesco || '')}</td><td class="small">${id != null ? id + ' anos' : ''}</td><td class="small">${esc(m.escolaridade || '')}</td><td class="small">${esc(m.ocupacao || '')}</td><td class="small">${m.renda ? money(m.renda) : ''}</td><td class="small">${esc(m.telefone || '')}</td></tr>`; }).join('')}
+            </tbody></table></div><div class="xs muted mt-2">${s.moradores.length + 1} pessoas na casa contando o aluno.</div>` : '<div class="small muted">Nenhuma pessoa cadastrada. Use "Editar" → etapa "Dados socioeconômicos" para incluir quem mora com o aluno.</div>'}</div>
         </div>`;
       },
 

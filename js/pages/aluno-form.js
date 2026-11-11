@@ -84,6 +84,10 @@
           ${F({ name: 'social.cras', label: 'Acompanhado(a) pelo CRAS/CREAS?', type: 'select', value: s.cras, options: ['', 'Sim', 'Não', 'Não sabe'] })}
           ${F({ name: 'social.cadunico', label: 'Família inscrita no CadÚnico', type: 'toggle', value: s.cadunico, hint: 'Alunos fora do CadÚnico participam como associados (mensalidade).', cls: 'span-2' })}          <div class="field span-all"><span class="label">Benefícios sociais</span><div class="row wrap">${BENEF.map(b => `<label class="check"><input type="checkbox" name="social.beneficios" value="${esc(b)}" data-multi ${(s.beneficios || []).includes(b) ? 'checked' : ''}> ${esc(b)}</label>`).join('')}</div></div>
           ${F({ name: 'social.vulnerabilidades', label: 'Situações de vulnerabilidade', type: 'textarea', value: s.vulnerabilidades, cls: 'span-all', rows: 3 })}
+          <div class="span-all section-title mt-4">${I('users', 18)} Pessoas que moram na casa <span class="xs muted" style="font-weight:500">(composição familiar — além do aluno)</span></div>
+          <div class="span-all col" data-moradores></div>
+          <div class="span-all row wrap"><button type="button" class="btn btn-sm" data-mor-add>${I('userPlus', 16)} Adicionar pessoa</button><button type="button" class="btn btn-sm btn-ghost" data-mor-resp>${I('user', 16)} Adicionar o responsável</button><span class="xs muted" data-mor-info></span></div>
+          <datalist id="lista-alunos-casa"></datalist>
           <div class="span-all section-title mt-4">${I('wallet', 18)} Situação financeira</div>
           ${F({ name: 'financeiro.renda_familiar', label: 'Renda familiar mensal (R$)', type: 'money', value: fi.renda_familiar, attrs: 'min="0" step="0.01"' })}
           ${F({ name: 'financeiro.fonte_renda', label: 'Principal fonte de renda', type: 'select', value: fi.fonte_renda, options: ['', 'Trabalho formal', 'Trabalho informal', 'Benefícios', 'Aposentadoria/pensão', 'Sem renda'] })}
@@ -171,6 +175,63 @@
     const pc = () => { const r = ICM.util.parseMoney(form['financeiro.renda_familiar'].value) || 0, p = Number(form['social.pessoas_casa'].value || 0); el.querySelector('[data-percapita]').textContent = r && p ? ICM.util.money(r / p) : '—'; };
     form['financeiro.renda_familiar'].addEventListener('input', pc); form['social.pessoas_casa'].addEventListener('input', pc); pc();
 
+    // Pessoas que moram na casa (composição familiar) — gravadas junto dos dados sensíveis do aluno
+    const PARENT = ['', 'Mãe', 'Pai', 'Padrasto', 'Madrasta', 'Irmã(o)', 'Avó', 'Avô', 'Tia', 'Tio', 'Prima(o)', 'Tutor(a) legal', 'Outro'];
+    const ESCOL = ['', 'Não estuda (criança pequena)', 'Sem escolaridade', 'Fundamental incompleto', 'Fundamental completo', 'Médio incompleto', 'Médio completo', 'Técnico', 'Superior incompleto', 'Superior completo', 'Pós-graduação'];
+    const moradores = (s.moradores || []).map(m => ({ ...m }));
+    let alunosCasa = [];
+    ICM.api.alunos.list({ status: '' }).then(l => { alunosCasa = l.filter(x => x.id !== a.id); el.querySelector('#lista-alunos-casa').innerHTML = alunosCasa.map(x => `<option value="${esc(x.nome)}"></option>`).join(''); }).catch(() => { });
+    const boxMor = el.querySelector('[data-moradores]');
+    const opt = (lista, v) => lista.map(o => `<option value="${esc(o)}" ${o === (v || '') ? 'selected' : ''}>${esc(o || 'Selecione')}</option>`).join('');
+    const idade = d => { if (!d) return ''; const n = new Date(d + 'T12:00'), h = new Date(); let i = h.getFullYear() - n.getFullYear(); if (h < new Date(h.getFullYear(), n.getMonth(), n.getDate())) i--; return i >= 0 ? `${i} ano${i === 1 ? '' : 's'}` : ''; };
+    function infoMor() {
+      const soma = moradores.reduce((t, m) => t + (ICM.util.parseMoney(m.renda) || 0), 0);
+      el.querySelector('[data-mor-info]').textContent = moradores.length ? `${moradores.length + 1} pessoas na casa (com o aluno)${soma ? ` · soma das rendas informadas: ${ICM.util.money(soma)}` : ''}` : '';
+      if (moradores.length) { form['social.pessoas_casa'].value = moradores.length + 1; pc(); }
+    }
+    function drawMor() {
+      boxMor.innerHTML = moradores.length ? moradores.map((m, i) => `<div class="card flat" style="padding:12px" data-mi="${i}">
+        <div class="grid grid-3" style="gap:10px">
+          <div class="field span-2"><label>Nome completo</label><input class="input" data-k="nome" value="${esc(m.nome || '')}" list="lista-alunos-casa" autocomplete="off" placeholder="Nome da pessoa">${m.aluno_id ? `<span class="xs" style="color:var(--ok)">${I('check', 13)} Também é aluno(a) do Instituto</span>` : ''}</div>
+          <div class="field"><label>Parentesco com o aluno</label><select class="select" data-k="parentesco">${opt(PARENT, m.parentesco)}</select></div>
+          <div class="field"><label>Nascimento ${m.nascimento ? `<span class="muted">(${idade(m.nascimento)})</span>` : ''}</label><input class="input" type="date" data-k="nascimento" value="${esc(m.nascimento || '')}"></div>
+          <div class="field"><label>Escolaridade</label><select class="select" data-k="escolaridade">${opt(ESCOL, m.escolaridade)}</select></div>
+          <div class="field"><label>Ocupação / trabalho</label><input class="input" data-k="ocupacao" value="${esc(m.ocupacao || '')}" placeholder="Ex.: lavrador, estudante, do lar"></div>
+          <div class="field"><label>Renda mensal (R$)</label><input class="input" data-k="renda" inputmode="decimal" value="${esc(m.renda != null && m.renda !== '' ? String(m.renda).replace('.', ',') : '')}" placeholder="0,00"></div>
+          <div class="field"><label>Telefone</label><input class="input" data-k="telefone" value="${esc(m.telefone || '')}" placeholder="(00) 00000-0000"></div>
+          <div class="field" style="justify-content:flex-end"><button type="button" class="btn btn-sm btn-danger" data-mor-rm="${i}">${I('trash', 15)} Remover</button></div>
+        </div></div>`).join('') : '<div class="small muted">Nenhuma pessoa adicionada. Inclua todos que moram com o aluno (pais, irmãos, avós…).</div>';
+      infoMor();
+    }
+    boxMor.addEventListener('input', e => {
+      const k = e.target.dataset.k, row = e.target.closest('[data-mi]'); if (!k || !row) return;
+      const m = moradores[+row.dataset.mi]; m[k] = e.target.value;
+      if (k === 'renda') infoMor();
+    });
+    boxMor.addEventListener('change', e => {
+      const k = e.target.dataset.k, row = e.target.closest('[data-mi]'); if (!row) return;
+      const m = moradores[+row.dataset.mi];
+      if (k === 'nome') {   // nome igual ao de um aluno já cadastrado: liga os dois (irmãos no Instituto)
+        const al = alunosCasa.find(x => x.nome.trim().toLowerCase() === e.target.value.trim().toLowerCase());
+        const antes = m.aluno_id; m.aluno_id = al ? al.id : undefined;
+        if (al && !m.nascimento && al.nascimento) m.nascimento = al.nascimento;
+        if (al && !m.parentesco) m.parentesco = 'Irmã(o)';
+        if (antes !== m.aluno_id || al) drawMor();
+      }
+      if (k === 'nascimento') drawMor();
+    });
+    boxMor.addEventListener('click', e => { const b = e.target.closest('[data-mor-rm]'); if (b) { moradores.splice(+b.dataset.morRm, 1); drawMor(); } });
+    el.querySelector('[data-mor-add]').addEventListener('click', () => { moradores.push({}); drawMor(); const ins = boxMor.querySelectorAll('[data-k="nome"]'); ins[ins.length - 1].focus(); });
+    el.querySelector('[data-mor-resp]').addEventListener('click', () => {
+      const nome = form['responsavel.nome'].value.trim();
+      if (!nome) { ICM.ui.toast('Preencha primeiro o responsável na etapa "Responsável e endereço".', 'warn'); return; }
+      if (moradores.some(m => (m.nome || '').trim().toLowerCase() === nome.toLowerCase())) { ICM.ui.toast('O responsável já está na lista.', 'warn'); return; }
+      moradores.push({ nome, parentesco: form['responsavel.parentesco'].value, nascimento: form['responsavel.nascimento'].value, escolaridade: form['responsavel.escolaridade'].value, ocupacao: form['responsavel.profissao'].value, telefone: form['responsavel.telefone'].value });
+      drawMor();
+    });
+    drawMor();
+    if (!moradores.length && s.pessoas_casa) form['social.pessoas_casa'].value = s.pessoas_casa;
+
     // Máscara CPF
     ['cpf', 'responsavel.cpf'].forEach(n => form[n].addEventListener('input', e => {
       const d = e.target.value.replace(/\D/g, '').slice(0, 11);
@@ -202,6 +263,11 @@
       const turmasSel = data._turmas || []; delete data._turmas;
       if (!data.autorizacoes.lgpd && !(await ICM.ui.confirm({ title: 'Termo LGPD não assinado', text: 'O termo de consentimento LGPD ainda não foi marcado como assinado. Deseja salvar mesmo assim? Ele deverá ser coletado o quanto antes.', ok: 'Salvar mesmo assim' }))) return;
       data.foto = foto;
+      data.social = data.social || {};
+      data.social.moradores = moradores.filter(m => (m.nome || '').trim()).map(m => {
+        const o = {}; ['nome', 'parentesco', 'nascimento', 'escolaridade', 'ocupacao', 'telefone', 'aluno_id'].forEach(k => { if (m[k]) o[k] = String(m[k]).trim(); });
+        const r = ICM.util.parseMoney(m.renda); if (r) o.renda = r; return o;
+      });
       if (data.financeiro && data.social) data.financeiro.renda_per_capita = data.social.pessoas_casa ? Math.round((data.financeiro.renda_familiar || 0) / data.social.pessoas_casa) : null;
       if (editing) data.id = a.id;
       const btn = el.querySelector('[data-save]');

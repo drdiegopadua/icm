@@ -98,7 +98,18 @@
             <ul class="text-block" style="margin:0;padding-left:20px">${(p.objetivos_especificos || []).map(o => `<li>${esc(o)}</li>`).join('')}</ul></div>
           ${block('Metodologia', p.metodologia, 'book')}
           ${block('Contrapartidas', p.contrapartidas, 'heart')}
+          <div class="card" data-vols><div class="section-title">${I('heart', 18)} Voluntários do projeto</div><div class="small muted">Carregando…</div></div>
         </div>`;
+        // Voluntários vinculados a este projeto (cadastro do voluntário → "Projetos em que atua")
+        ICM.api.voluntarios.list().then(vs => {
+          const l = vs.filter(v => (v.projeto_ids || []).includes(p.id));
+          const ano = String(new Date().getFullYear());
+          const horas = v => (v.horas || []).filter(h => h.projeto_id === p.id && String(h.data).startsWith(ano)).reduce((s, h) => s + Number(h.horas || 0), 0);
+          const box = panel.querySelector('[data-vols]'); if (!box) return;
+          box.innerHTML = `<div class="card-head"><div class="section-title" style="margin:0">${I('heart', 18)} Voluntários do projeto</div>${l.length ? `<a class="btn btn-sm" href="#/voluntarios?projeto=${esc(p.id)}">Ver todos</a>` : ''}</div>
+            ${l.length ? l.map(v => `<a class="list-item" href="#/voluntarios/${esc(v.id)}" style="color:inherit">${ICM.util.avatar(v.nome, null, 'sm')}<div class="grow"><b>${esc(v.nome)}</b><div class="xs muted">${esc(v.area || v.profissao || '')}</div></div><span class="small"><b>${num(horas(v), 1)}h</b> em ${ano}</span>${v.termo_assinado ? '' : ui().badge('Termo pendente', 'danger')}</a>`).join('')
+              : '<div class="small muted">Nenhum voluntário vinculado. Vincule no cadastro do voluntário (Comunidade → Voluntários → Editar → Projetos em que atua).</div>'}`;
+        }).catch(() => { const box = panel.querySelector('[data-vols]'); if (box) box.remove(); });
       },
       async metas() {
         const recarregar = () => { const h = `#/projetos/${p.id}?tab=metas`; if (location.hash === h) ICM.app.reload(); else location.hash = h; };

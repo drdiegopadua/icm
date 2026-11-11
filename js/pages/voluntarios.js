@@ -5,9 +5,11 @@
   const { esc, fmtDate, num } = ICM.util;
   const ui = () => ICM.ui;
 
-  ICM.pages.voluntarios = async function (el) {
+  ICM.pages.voluntarios = async function (el, params, query) {
     ICM.app.setCrumbs([['Início', '#/'], ['Voluntários']]);
-    const list = await ICM.api.voluntarios.list();
+    const projetos = await ICM.api.projetos.list();
+    const filtro = (query && query.get('projeto')) || '';
+    const list = (await ICM.api.voluntarios.list()).filter(v => !filtro || (v.projeto_ids || []).includes(filtro));
     const edit = ICM.auth.can('voluntarios.gerir');
     const ano = ICM.util.today().slice(0, 4);
     const horasAno = list.reduce((s, v) => s + (v.horas || []).filter(h => h.data.startsWith(ano)).reduce((q, h) => q + Number(h.horas), 0), 0);
@@ -20,9 +22,11 @@
         ${stat('dollar', '#8b5cf6', Math.round(horasAno * 25), 'Contrapartida estimada (R$ 25/h)')}
         ${stat('alert', '#f59e0b', list.filter(v => v.status === 'ativo' && !v.termo_assinado).length, 'Termos pendentes')}
       </div>
-      <div class="card"><div class="table-wrap"><table class="table"><thead><tr><th>Voluntário(a)</th><th>Área</th><th>Disponibilidade</th><th>Desde</th><th>Horas</th><th>Termo</th><th>Situação</th></tr></thead><tbody>
-        ${list.map(v => `<tr class="clickable" data-href="#/voluntarios/${esc(v.id)}"><td><div class="row">${ICM.util.avatar(v.nome, null, 'sm')}<div><b>${esc(v.nome)}</b><div class="xs muted">${esc(v.profissao || '')}</div></div></div></td><td class="small">${esc(v.area || '')}</td><td class="small">${esc(v.disponibilidade || '')}</td><td class="small">${esc(fmtDate(v.inicio))}</td><td><b>${num(v.total_horas, 1)}h</b></td><td>${v.termo_assinado ? ui().badge('Assinado', 'ok') : ui().badge('Pendente', 'danger')}</td><td>${v.status === 'ativo' ? ui().badge('Ativo', 'ok', true) : ui().badge('Inativo', 'neutral', true)}</td></tr>`).join('')}
+      <div class="row wrap mb-4"><span class="label">Projeto</span><select class="select" data-filtro style="width:auto;min-width:240px"><option value="">Todos os projetos</option>${projetos.map(p => `<option value="${esc(p.id)}" ${p.id === filtro ? 'selected' : ''}>${esc(p.nome)}</option>`).join('')}</select>${filtro ? `<span class="small muted">${list.length} voluntário(s) neste projeto</span>` : ''}</div>
+      <div class="card"><div class="table-wrap"><table class="table"><thead><tr><th>Voluntário(a)</th><th>Projetos</th><th>Área</th><th>Disponibilidade</th><th>Desde</th><th>Horas</th><th>Termo</th><th>Situação</th></tr></thead><tbody>
+        ${list.map(v => `<tr class="clickable" data-href="#/voluntarios/${esc(v.id)}"><td><div class="row">${ICM.util.avatar(v.nome, null, 'sm')}<div><b>${esc(v.nome)}</b><div class="xs muted">${esc(v.profissao || '')}</div></div></div></td><td>${tagsProjetos(v, projetos) || '<span class="xs muted">—</span>'}</td><td class="small">${esc(v.area || '')}</td><td class="small">${esc(v.disponibilidade || '')}</td><td class="small">${esc(fmtDate(v.inicio))}</td><td><b>${num(v.total_horas, 1)}h</b></td><td>${v.termo_assinado ? ui().badge('Assinado', 'ok') : ui().badge('Pendente', 'danger')}</td><td>${v.status === 'ativo' ? ui().badge('Ativo', 'ok', true) : ui().badge('Inativo', 'neutral', true)}</td></tr>`).join('')}
       </tbody></table></div></div></div>`;
+    el.querySelector('[data-filtro]').addEventListener('change', e => { location.hash = e.target.value ? `#/voluntarios?projeto=${e.target.value}` : '#/voluntarios'; });
     el.querySelectorAll('tr[data-href]').forEach(tr => tr.addEventListener('click', () => { location.hash = tr.dataset.href; }));
     el.querySelector('[data-rel]').addEventListener('click', () => ICM.reports.openDialog('voluntarios_horas'));
     const nb = el.querySelector('[data-novo]'); if (nb) nb.addEventListener('click', () => form());
@@ -41,6 +45,7 @@
     el.innerHTML = `<div class="page">
       <div class="card mb-4"><div class="profile-hero">${ICM.util.avatar(v.nome, null, 'lg')}
         <div class="grow"><h1 class="page-title" style="font-size:28px">${esc(v.nome)}</h1><div class="meta mt-2"><span>${I('award', 15)} ${esc(v.area || '')}</span><span>${I('clock', 15)} ${num(v.total_horas, 1)} horas doadas</span><span>${I('calendar', 15)} desde ${esc(fmtDate(v.inicio))}</span></div>
+          ${(v.projeto_ids || []).length ? `<div class="row wrap mt-2" style="gap:6px">${tagsProjetos(v, projetos)}</div>` : ''}
           <div class="row wrap mt-2">${v.termo_assinado ? ui().badge(`Termo de adesão assinado${v.termo_assinado_em ? ' em ' + fmtDate(v.termo_assinado_em) : ''}`, 'ok', true) : pend ? ui().badge(`Aguardando assinatura (enviado em ${fmtDate(pend.solicitado_em)})`, 'warn', true) : ui().badge('Termo de adesão pendente', 'danger', true)}${v.status === 'ativo' ? ui().badge('Ativo', 'ok') : ui().badge('Inativo', 'neutral')}</div></div>
         <div class="row wrap">${edit && !v.termo_assinado ? `<button class="btn btn-wa" data-assinar title="Envia o link para o voluntário assinar o termo pelo celular">${ICM.waIcon ? ICM.waIcon(18) : ''} ${pend ? 'Reenviar termo para assinar' : 'Enviar termo para assinar'}</button>` : ''}${assinado ? `<button class="btn" data-comprov="${esc(assinado.id)}">${I('shield', 18)} Comprovante da assinatura</button>` : ''}<button class="btn" data-termo>${I('fileText', 18)} Termo de adesão</button>${ICM.auth.can('certificados.emitir') ? `<button class="btn" data-cert>${I('award', 18)} Emitir certificado</button>` : ''}${edit ? `<button class="btn" data-edit>${I('edit', 18)} Editar</button><button class="btn btn-primary" data-horas>${I('plus', 18)} Lançar horas</button>` : ''}</div></div></div>
       <div class="grid grid-2">
@@ -74,7 +79,7 @@ ${link}`;
     on('[data-horas]', () => {
       const m = ui().modal({
         title: 'Lançar horas voluntárias', size: 'sm',
-        body: `<form class="col">${ui().field({ name: 'data', label: 'Data', type: 'date', value: ICM.util.today() })}${ui().field({ name: 'horas', label: 'Horas', type: 'number', value: 2, attrs: 'min="0.5" step="0.5"' })}${ui().field({ name: 'atividade', label: 'Atividade', required: true })}${ui().field({ name: 'projeto_id', label: 'Projeto', type: 'select', options: [['', 'Institucional'], ...projetos.map(p => [p.id, p.nome])] })}</form>`,
+        body: `<form class="col">${ui().field({ name: 'data', label: 'Data', type: 'date', value: ICM.util.today() })}${ui().field({ name: 'horas', label: 'Horas', type: 'number', value: 2, attrs: 'min="0.5" step="0.5"' })}${ui().field({ name: 'atividade', label: 'Atividade', required: true })}${ui().field({ name: 'projeto_id', label: 'Projeto', type: 'select', value: (v.projeto_ids || [])[0] || '', options: [['', 'Institucional'], ...projetos.map(p => [p.id, p.nome])] })}</form>`,
         foot: `<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" data-ok>${I('check', 16)} Lançar</button>`
       });
       m.$('[data-ok]').addEventListener('click', e => ui().busy(e.currentTarget, async () => { await ui().run(() => ICM.api.voluntarios.addHoras(v.id, ICM.util.formData(m.$('form'))), 'Horas lançadas'); m.close(); ICM.app.reload(); }).catch(() => { }));
@@ -82,8 +87,10 @@ ${link}`;
     el.querySelectorAll('[data-rmh]').forEach(b => b.addEventListener('click', async () => { if (await ui().confirm({ title: 'Remover lançamento', text: 'Remover estas horas?', ok: 'Remover', danger: true })) { await ICM.api.voluntarios.removeHoras(v.id, b.dataset.rmh); ICM.app.reload(); } }));
   };
 
-  function form(v = {}) {
+  async function form(v = {}) {
     const F = o => ui().field(o);
+    const projetos = (await ICM.api.projetos.list()).filter(p => p.status !== 'encerrado' || (v.projeto_ids || []).includes(p.id));
+    const projSel = new Set((v.projeto_ids || []).filter(id => projetos.some(p => p.id === id)));
     const m = ui().modal({
       title: v.id ? 'Editar voluntário' : 'Novo voluntário',
       body: `<form class="grid grid-2">
@@ -91,6 +98,7 @@ ${link}`;
         ${F({ name: 'cpf', label: 'CPF', value: v.cpf })}${F({ name: 'nascimento', label: 'Nascimento', type: 'date', value: v.nascimento })}
         ${F({ name: 'telefone', label: 'Telefone', value: v.telefone })}${F({ name: 'email', label: 'E-mail', type: 'email', value: v.email })}
         ${F({ name: 'profissao', label: 'Profissão', value: v.profissao })}${F({ name: 'area', label: 'Área de atuação', value: v.area })}
+        <div class="field span-2"><label for="f_vproj">Projetos em que atua</label><div class="proj-sel"><select class="select" id="f_vproj" data-proj-add></select><div class="proj-tags" data-projs></div></div></div>
         ${F({ name: 'disponibilidade', label: 'Disponibilidade', value: v.disponibilidade, cls: 'span-2' })}
         ${F({ name: 'endereco', label: 'Endereço', value: v.endereco, cls: 'span-2' })}
         ${F({ name: 'inicio', label: 'Início', type: 'date', value: v.inicio || ICM.util.today() })}${F({ name: 'fim', label: 'Término (se houver)', type: 'date', value: v.fim })}
@@ -99,12 +107,28 @@ ${link}`;
       </form>`,
       foot: `<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" data-ok>${I('check', 18)} Salvar</button>`
     });
+    const drawProj = () => {
+      const livres = projetos.filter(p => !projSel.has(p.id));
+      m.$('[data-proj-add]').innerHTML = `<option value="">${livres.length ? 'Adicionar projeto…' : 'Todos os projetos já foram adicionados'}</option>${livres.map(p => `<option value="${esc(p.id)}">${esc(p.nome)}</option>`).join('')}`;
+      m.$('[data-proj-add]').disabled = !livres.length;
+      const ps = [...projSel].map(id => projetos.find(p => p.id === id)).filter(Boolean);
+      m.$('[data-projs]').innerHTML = ps.length ? ps.map(p => `<span class="proj-tag" style="--c:${esc(p.cor || '#2563eb')}"><span class="truncate">${esc(p.nome)}</span><button type="button" data-proj-rm="${esc(p.id)}" aria-label="Tirar ${esc(p.nome)}" title="Tirar">${I('x', 13)}</button></span>`).join('') : '<span class="xs muted">Nenhum projeto — atua no institucional</span>';
+    };
+    drawProj();
+    m.$('[data-proj-add]').addEventListener('change', ev => { if (ev.target.value) { projSel.add(ev.target.value); drawProj(); } });
+    m.$('[data-projs]').addEventListener('click', ev => { const b = ev.target.closest('[data-proj-rm]'); if (b) { projSel.delete(b.dataset.projRm); drawProj(); } });
     m.$('[data-ok]').addEventListener('click', e => ui().busy(e.currentTarget, async () => {
       const d = ICM.util.formData(m.$('form'));
+      d.projeto_ids = [...projSel];
       const x = await ui().run(() => ICM.api.voluntarios.save(v.id ? { ...v, ...d, total_horas: undefined } : d), 'Voluntário salvo');
       m.close(); location.hash = `#/voluntarios/${x.id}`; ICM.app.reload();
     }).catch(() => { }));
   }
+
+  // Etiquetas dos projetos em que o voluntário atua
+  const tagsProjetos = (v, projetos) => (v.projeto_ids || []).map(id => projetos.find(p => p.id === id)).filter(Boolean)
+    .map(p => `<span class="proj-tag" style="--c:${esc(p.cor || '#2563eb')};padding:3px 10px;font-size:11.5px"><span class="truncate">${esc(p.nome)}</span></span>`).join(' ');
+  ICM.pages._tagsProjetosVol = tagsProjetos;
 
   function stat(icon, color, val, label) { return `<div class="card stat hoverable"><div class="ic" style="--c:${color}">${I(icon, 22)}</div><div class="val" data-count="${val}">0</div><div class="lbl">${esc(label)}</div></div>`; }
   ICM.pages._stat = stat;

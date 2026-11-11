@@ -23,7 +23,7 @@
     const occ = v.ocupantes || [];
     const seat = i => {
       const o = occ[i];
-      return `<button type="button" class="ts-seat ${o ? 'on ' + o.tipo : ''}" data-seat="${i}" title="${o ? esc(o.nome) + ' — clique para tirar' : 'Lugar ' + (i + 1) + ' livre'}">${o ? `<b>${esc(ini(o.nome))}</b><small>${esc(curto(o.nome))}</small>` : `<span>${i + 1}</span>`}</button>`;
+      return `<button type="button" class="ts-seat ${o ? 'on ' + o.tipo : ''}" data-seat="${i}" ${o ? 'draggable="true"' : ''} title="${o ? esc(o.nome) + ' — arraste para trocar de lugar' : 'Lugar ' + (i + 1) + ' livre'}">${o ? `<b>${esc(ini(o.nome))}</b><small>${esc(curto(o.nome))}</small>` : `<span>${i + 1}</span>`}</button>`;
     };
     let html = '', k = 0;
     // primeira fila: motorista à esquerda, passageiros da frente à direita
@@ -53,6 +53,8 @@
     box.innerHTML = `<div class="card-head"><div><div class="section-title" style="margin:0">${I('flag', 18)} Transporte</div>
         <div class="card-sub">${transp.length ? `${transp.length} veículo(s) · ${totalOc} de ${totalLug} lugares ocupados` : 'Nenhum veículo'}${pessoas.length ? ` · ${semLugar.length ? `<b style="color:var(--warn)">${semLugar.length} participante(s) sem lugar</b>` : 'todos os participantes com lugar'}` : ''}</div></div>
         <div class="row wrap">${transp.length ? `<button class="btn btn-sm" data-imp>${I('printer', 14)} Lista do transporte</button>` : ''}${canEdit ? `<button class="btn btn-sm btn-primary" data-novo>${I('plus', 14)} Veículo</button>` : ''}</div></div>
+      ${canEdit && transp.length ? `<div class="ts-selbar" data-sel-bar hidden>${I('users', 15)} <span>Mover <b data-sel-nome></b>: toque no novo lugar (ocupado = trocam de lugar)</span><button type="button" class="btn btn-sm" data-sel-tirar>${I('x', 14)} Tirar do veículo</button><button type="button" class="btn btn-sm btn-ghost" data-sel-cancelar>Cancelar</button></div>
+      <div class="xs muted mb-2">Arraste uma pessoa para outro assento (ou toque nela e depois no novo lugar). Soltando num lugar ocupado, as duas trocam.</div>` : ''}
       ${transp.length ? `<div class="ts-grid">${transp.map((v, vi) => { const oc = (v.ocupantes || []).filter(Boolean).length; return `<div class="ts-card">
         <div class="row between wrap mb-2"><div><b>${esc(v.nome || TIPOS[v.tipo].nome)}</b> <span class="xs muted">${esc(TIPOS[v.tipo].nome)}${v.placa ? ' · ' + esc(v.placa) : ''}${v.motorista ? ' · motorista: ' + esc(v.motorista) : ''}</span></div>
           <span class="badge ${oc >= v.lugares ? 'danger' : 'ok'}">${oc}/${v.lugares} lugares</span></div>
@@ -109,10 +111,36 @@
       await salvar(`${n} pessoa(s) colocada(s)`);
     }));
     box.querySelectorAll('[data-esvaziar]').forEach(b => b.addEventListener('click', async () => { const v = transp[+b.dataset.esvaziar]; v.ocupantes = []; await salvar('Veículo esvaziado'); }));
-    box.querySelectorAll('.ts-seat.on').forEach(b => b.addEventListener('click', async () => {
-      const vi = [...box.querySelectorAll('.ts-card')].indexOf(b.closest('.ts-card')); const v = transp[vi]; const o = v.ocupantes[+b.dataset.seat];
-      v.ocupantes[+b.dataset.seat] = null; await salvar(`${o.nome.split(' ')[0]} saiu do lugar ${+b.dataset.seat + 1}`);
-    }));
+    // Trocar de lugar: arrastar e soltar (computador) ou tocar na pessoa e depois no novo lugar (celular)
+    const pos = b => ({ vi: [...box.querySelectorAll('.ts-card')].indexOf(b.closest('.ts-card')), si: +b.dataset.seat });
+    const mover = async (de, para) => {
+      if (de.vi === para.vi && de.si === para.si) return;
+      const vA = transp[de.vi], vB = transp[para.vi]; const a = vA.ocupantes[de.si], b = vB.ocupantes[para.si] || null;
+      if (!a) return;
+      vB.ocupantes[para.si] = a; vA.ocupantes[de.si] = b;
+      await salvar(b ? `${a.nome.split(' ')[0]} e ${b.nome.split(' ')[0]} trocaram de lugar` : `${a.nome.split(' ')[0]} foi para o lugar ${para.si + 1}`);
+    };
+    let origem = null;
+    const barra = box.querySelector('[data-sel-bar]');
+    const limparSel = () => { origem = null; box.querySelectorAll('.ts-seat.sel').forEach(x => x.classList.remove('sel')); if (barra) barra.hidden = true; };
+    box.querySelectorAll('.ts-seat:not(.drv)').forEach(b => {
+      b.addEventListener('dragstart', ev => { origem = pos(b); ev.dataTransfer.effectAllowed = 'move'; ev.dataTransfer.setData('text/plain', 'assento'); b.classList.add('arrastando'); });
+      b.addEventListener('dragend', () => { b.classList.remove('arrastando'); box.querySelectorAll('.ts-seat.alvo').forEach(x => x.classList.remove('alvo')); });
+      b.addEventListener('dragover', ev => { if (!origem) return; ev.preventDefault(); ev.dataTransfer.dropEffect = 'move'; b.classList.add('alvo'); });
+      b.addEventListener('dragleave', () => b.classList.remove('alvo'));
+      b.addEventListener('drop', async ev => { ev.preventDefault(); b.classList.remove('alvo'); if (origem) { const de = origem; origem = null; await mover(de, pos(b)); } });
+      b.addEventListener('click', async () => {
+        if (origem) { const de = origem; limparSel(); await mover(de, pos(b)); return; }
+        if (!b.classList.contains('on')) return;
+        origem = pos(b); b.classList.add('sel');
+        const o = transp[origem.vi].ocupantes[origem.si];
+        if (barra) { barra.hidden = false; barra.querySelector('[data-sel-nome]').textContent = o.nome; }
+      });
+    });
+    if (barra) {
+      barra.querySelector('[data-sel-tirar]').addEventListener('click', async () => { if (!origem) return; const { vi, si } = origem; const o = transp[vi].ocupantes[si]; limparSel(); transp[vi].ocupantes[si] = null; await salvar(`${o.nome.split(' ')[0]} saiu do veículo`); });
+      barra.querySelector('[data-sel-cancelar]').addEventListener('click', limparSel);
+    }
     const bi = box.querySelector('[data-imp]'); if (bi) bi.addEventListener('click', () => ICM.reports.generate('evento_transporte', { evento_id: e.id }));
   }
 
@@ -127,7 +155,9 @@
     .ts-seat span{font-weight:700}
     .ts-seat b{font-size:12px;color:#fff}.ts-seat small{font-size:8.5px;color:#fff;opacity:.95;max-width:42px;overflow:hidden;white-space:nowrap}
     .ts-seat.on{border-color:transparent;background:var(--primary)}.ts-seat.on.equipe{background:#8b5cf6}.ts-seat.on.outro{background:#0891b2}
-    .ts-seat.on:hover{filter:brightness(.9)}
+    .ts-seat.on:hover{filter:brightness(.9)}.ts-seat.on[draggable=true]{cursor:grab}
+    .ts-seat.arrastando{opacity:.4}.ts-seat.alvo{outline:3px dashed var(--primary);outline-offset:2px}.ts-seat.sel{outline:3px solid #f59e0b;outline-offset:2px}
+    .ts-selbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 12px;margin-bottom:10px;border-radius:12px;background:color-mix(in srgb,#f59e0b 14%,transparent);font-size:13px}.ts-selbar span{flex:1}
     .ts-seat.drv{background:#1e293b;border-color:#1e293b;color:#fff;cursor:default}.ts-seat.drv small{font-size:8.5px;color:#fff}
     .ts-aisle{width:10px}
     .ts-leg{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px}.ts-leg span{display:flex;align-items:center;gap:4px}
@@ -154,5 +184,14 @@
     }
   });
 
-  ICM.transporte = { card, mapa, TIPOS, css };
+  // "Ônibus", "Van e carro", "2 vans" — a partir dos veículos; sem veículos, o que foi digitado antes
+  function descricao(e) {
+    const vs = e.veiculos || [];
+    if (!vs.length) return (e.transporte || {}).tipo || '';
+    const cont = {}; vs.forEach(v => { const n = (TIPOS[v.tipo] || TIPOS.van).nome; cont[n] = (cont[n] || 0) + 1; });
+    const pl = n => n === 'Ônibus' ? 'ônibus' : n === 'Micro-ônibus' ? 'micro-ônibus' : n.toLowerCase() + 's';
+    const ps = Object.entries(cont).map(([n, q], i) => q > 1 ? `${q} ${pl(n)}` : (i ? n.toLowerCase() : n));
+    return ps.length > 1 ? ps.slice(0, -1).join(', ') + ' e ' + ps[ps.length - 1] : ps[0];
+  }
+  ICM.transporte = { card, mapa, TIPOS, css, descricao };
 })();

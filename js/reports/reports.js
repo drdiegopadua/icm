@@ -332,7 +332,7 @@
     const tr = e.transporte || {}, al = e.alimentacao || {};
     const nomes = ps2 => (ps2 || []).map(x => x.nome + (x.cargo ? ` (${x.cargo})` : '')).join(', ');
     html += meta([
-      ['Transporte', tr.tem ? [tr.tipo, tr.saida_local && `saída de ${tr.saida_local}`, tr.saida_hora && `às ${tr.saida_hora}`, tr.chegada_hora && `chegada prevista às ${tr.chegada_hora}${tr.chegada_local ? ` em ${tr.chegada_local}` : ''}`].filter(Boolean).join(', ') || 'Sim' : 'Sem transporte do Instituto'],
+      ['Transporte', tr.tem ? [ICM.transporte ? ICM.transporte.descricao(e) : tr.tipo, tr.saida_local && `saída de ${tr.saida_local}`, tr.saida_hora && `às ${tr.saida_hora}`, tr.chegada_hora && `chegada prevista às ${tr.chegada_hora}${tr.chegada_local ? ` em ${tr.chegada_local}` : ''}`].filter(Boolean).join(', ') || 'Sim' : 'Sem transporte do Instituto'],
       ['Alimentação', al.tipo ? `${(ICM.C.ALIMENTACAO_EVENTO[al.tipo] || al.tipo)}${al.detalhes ? ` — ${al.detalhes}` : ''}` : 'Não informado'],
       ['Equipe presente', nomes(e.equipe_presente) || 'Não informado'],
       ['Acompanham os alunos', nomes(e.acompanhantes) || 'Não informado']

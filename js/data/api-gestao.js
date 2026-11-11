@@ -152,7 +152,7 @@
   function preencher(modelo, d) { return String(modelo || '').replace(/\{(\w+)\}/g, (_, k) => d[k] != null ? String(d[k]) : ''); }
   async function modelos() { const c = await S().getConfig(); return { ...ICM.C.MODELOS_WHATSAPP, ...((c && c.whatsapp) || {}) }; }
   const primeiroNome = n => String(n || '').split(' ')[0];
-  const linkApp = h => `${location.origin}${location.pathname}#${h}`;
+  const linkApp = h => window.ICM_LINK(h);
 
   const avisos = {
     foneWA, linkWA, preencher, modelos,

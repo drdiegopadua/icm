@@ -11,7 +11,7 @@
   const nrm = t => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
   const FUNCOES = ['Presidência', 'Vice-presidência', 'Direção', 'Direção executiva', 'Representante legal da OSC', 'Coordenação', 'Coordenação pedagógica', 'Serviço social',
     'Psicologia', 'Secretaria', 'Tesouraria', 'Conselho Fiscal', 'Recursos humanos', 'Responsável pelo patrimônio', 'Responsável pelo almoxarifado', 'Responsável pelas compras'];
-  const linkMinha = () => `${location.origin}${location.pathname}#/minha-assinatura`;
+  const linkMinha = () => window.ICM_LINK('/minha-assinatura');
 
   // ---------- dados ----------
   const api = {

@@ -5,7 +5,7 @@
   const I = (n, s) => ICM.icon(n, s);
   const { esc, fmtDate, money } = ICM.util;
   const ui = () => ICM.ui;
-  const linkDoar = id => `${location.origin}${location.pathname}#/doar${id ? '/' + id : ''}`;
+  const linkDoar = id => window.ICM_LINK(`/doar${id ? '/' + id : ''}`);
 
   const termometro = c => `<div class="termo"><div class="row between small"><b>${esc(money(c.arrecadado))}</b><span class="muted">${c.meta ? `meta ${esc(money(c.meta))}` : `${c.doadores} doação(ões)`}</span></div>${c.meta ? `<div class="progress mt-2 ok" style="height:14px"><span style="width:${c.pct}%"></span></div><div class="xs muted mt-2">${c.pct}% · ${c.doadores} doador(es) · até ${esc(fmtDate(c.fim))}</div>` : ''}</div>`;
 

@@ -5,7 +5,7 @@
   if (!window.ICM || !ICM.store || ICM.store.modo !== 'supabase') return;
   const sb = ICM.store.sb;
   const IDLE_MIN = 60;
-  const SITE = location.origin + location.pathname;
+  const SITE = window.ICM_LINK ? window.ICM_LINK('/').replace(/#\/$/, '') : location.origin + location.pathname;
   let current = null, idleTimer = null, recuperando = false;
   // Hora da última atividade (fica no aparelho): vale mesmo com a aba fechada ou o computador hibernado
   const AKEY = 'icm_ultima_atividade', PKEY = 'icm_perfil';

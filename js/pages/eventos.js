@@ -62,15 +62,15 @@
       <div class="grid grid-2">
         <div class="card"><div class="section-title">${I('info', 18)} Descrição</div><div class="text-block">${esc(e.descricao || 'Sem descrição')}</div>
           <hr class="divider">${ui().kv([['Público estimado', e.publico ? num(e.publico) : ''], ['Alunos participantes', String(alunos.length)], ['Resultado / premiação', e.resultado]])}
-          <hr class="divider"><div class="grid grid-2" style="gap:14px"><div>${transporteHtml(e.transporte)}</div><div><div class="xs bold muted" style="text-transform:uppercase;letter-spacing:.04em">${I('heart', 13)} Alimentação</div>
+          <hr class="divider"><div class="grid grid-2" style="gap:14px"><div>${transporteHtml(e.transporte, e.veiculos)}</div><div><div class="xs bold muted" style="text-transform:uppercase;letter-spacing:.04em">${I('heart', 13)} Alimentação</div>
             <div class="small mt-2">${(e.alimentacao || {}).tipo ? `<b>${esc(ICM.C.ALIMENTACAO_EVENTO[e.alimentacao.tipo] || e.alimentacao.tipo)}</b>${e.alimentacao.detalhes ? `<div class="xs muted">${esc(e.alimentacao.detalhes)}</div>` : ''}` : '<span class="muted">Não informado</span>'}</div></div></div>
           <hr class="divider"><div class="grid grid-2" style="gap:14px">${[['Equipe do Instituto presente', e.equipe_presente], ['Acompanham os alunos', e.acompanhantes]].map(([tit, ps]) => `<div><div class="xs bold muted" style="text-transform:uppercase;letter-spacing:.04em">${esc(tit)}</div>
             ${(ps || []).length ? `<div class="col mt-2" style="gap:6px">${ps.map(x => `<div class="small"><b>${esc(x.nome)}</b>${descPessoa(x) ? `<div class="xs muted">${esc(descPessoa(x))}</div>` : ''}</div>`).join('')}</div>` : `<div class="small muted mt-2">Não informado${canEdit ? ' — use Editar' : ''}</div>`}</div>`).join('')}</div></div>
         <div class="card"><div class="section-title">${I('users', 18)} Alunos participantes</div>
           ${alunos.length ? `<div class="col" style="max-height:340px;overflow:auto">${alunos.map(a => `<a class="list-item" href="#/alunos/${esc(a.id)}">${ICM.util.avatar(a.nome, a.foto, 'sm')}<div class="grow"><b>${esc(a.nome)}</b><div class="xs muted">${esc(a.matricula)}</div></div>${menor(a) ? ui().badge('Menor', 'warn') : ''}</a>`).join('')}</div>` : ui().empty('Nenhum aluno vinculado', 'users')}</div>
-        <div class="card span-all" data-veiculos></div>
-        <div class="card span-all"><div class="card-head"><div class="section-title" style="margin:0">${I('clipboard', 18)} Checklist do evento <span class="badge" data-ck-cnt></span></div></div>
-          <div class="progress ok mb-4"><span data-ck-bar style="width:0%"></span></div><div data-checklist></div></div>
+        <div class="span-all ev-duo"><div class="card" data-veiculos></div>
+        <div class="card"><div class="card-head"><div class="section-title" style="margin:0">${I('clipboard', 18)} Checklist do evento <span class="badge" data-ck-cnt></span></div></div>
+          <div class="progress ok mb-4"><span data-ck-bar style="width:0%"></span></div><div data-checklist></div></div></div>
         <div class="card span-all"><div class="card-head"><div class="section-title" style="margin:0">${I('camera', 18)} Fotos</div>${canEdit ? `<button class="btn btn-sm btn-primary" data-savefotos>${I('check', 16)} Salvar fotos</button>` : ''}</div><div data-fotos></div></div>
       </div></div>`;
     ui().photoPicker(el.querySelector('[data-fotos]'), fotos, () => { }, { editable: canEdit });
@@ -78,7 +78,7 @@
     const sf = el.querySelector('[data-savefotos]'); if (sf) sf.addEventListener('click', ev => ui().busy(ev.currentTarget, async () => { await ui().run(() => ICM.api.eventos.atualizar(e.id, { fotos }), 'Fotos salvas'); e.fotos = fotos; }).catch(() => { }));
     checklist(el.querySelector('[data-checklist]'), e, canEdit);
     if (ICM.transporte) {
-      el.insertAdjacentHTML('beforeend', ICM.transporte.css);
+      el.insertAdjacentHTML('beforeend', ICM.transporte.css + '<style>.ev-duo{display:grid;grid-template-columns:minmax(0,auto) minmax(320px,1fr);gap:16px;align-items:start}.ev-duo>.card{min-width:0}@media (max-width:1000px){.ev-duo{grid-template-columns:1fr}}</style>');
       const equipeEv = [...(e.equipe_presente || []), ...(e.acompanhantes || [])].filter((p, i, a) => a.findIndex(q => q.nome === p.nome) === i);
       ICM.transporte.card(el.querySelector('[data-veiculos]'), e, { alunos, equipe: equipeEv, canEdit, recarregar: () => ICM.pages.eventoDetalhe(el, params) });
     } else el.querySelector('[data-veiculos]').remove();
@@ -147,7 +147,7 @@
       : al.tipo === 'nao_ha' ? `Alimentação: não haverá refeição${al.detalhes ? ` — ${al.detalhes}` : ''}`
       : 'Alimentação: horário e local (informar se terá custo)';
     const progPadrao = (tr.tem ? [
-      `Saída: ${tr.saida_local || '____'}, às ${hora(tr.saida_hora)}${tr.tipo ? ` (${tr.tipo})` : ''}`,
+      `Saída: ${tr.saida_local || '____'}, às ${hora(tr.saida_hora)}${tipoTr(e) ? ` (${tipoTr(e)})` : ''}`,
       alLinha,
       evLinha,
       `Retorno: chegada prevista às ${hora(tr.chegada_hora)} em ${tr.chegada_local || tr.saida_local || '____'} (avisaremos assim que sairmos e o horário previsto de chegada)`
@@ -199,11 +199,10 @@
     const novos = [...(r.equipe_presente || []).map(p => ({ ...p, papel: 'presente' })), ...(r.acompanhantes || []).map(p => ({ ...p, papel: 'acompanhante' }))]
       .filter(p => !ja.has(sem(p.nome))).map(p => ({ ...p, uid: uidDe(p) })).filter((p, i, a) => p.uid && p.uid !== eu && a.findIndex(q => q.uid === p.uid) === i);
     if (!novos.length) return;
-    const link = `${location.origin}${location.pathname}#/eventos/${r.id}`;
     const tr = r.transporte || {};
     let ok = 0;
     for (const p of novos) {
-      const texto = `📣 Olá, ${String(p.nome).split(' ')[0]}! Você foi incluído(a) ${p.papel === 'acompanhante' ? 'para acompanhar os alunos' : 'na equipe'} do evento “${r.titulo}”.\n📅 ${ICM.util.fmtDateLong(r.data)}${r.horario ? ', às ' + r.horario : ''}${r.local ? '\n📍 ' + r.local : ''}${tr.tem && tr.saida_local ? `\n🚌 Saída: ${tr.saida_local}${tr.saida_hora ? ' às ' + tr.saida_hora : ''}` : ''}\nDetalhes e lugar no transporte: ${link}`;
+      const texto = `📣 Olá, ${String(p.nome).split(' ')[0]}! Você foi incluído(a) ${p.papel === 'acompanhante' ? 'para acompanhar os alunos' : 'na equipe'} do evento “${r.titulo}”.\n📅 ${ICM.util.fmtDateLong(r.data)}${r.horario ? ', às ' + r.horario : ''}${r.local ? '\n📍 ' + r.local : ''}${tr.tem && tr.saida_local ? `\n🚌 Saída: ${tr.saida_local}${tr.saida_hora ? ' às ' + tr.saida_hora : ''}` : ''}\nVeja os detalhes e o seu lugar no transporte em Pedagógico → Eventos e ações.`;
       try { await ICM.api.chat.enviar(ICM.api.chat.idDireto(eu, p.uid), texto); ok++; } catch (er) { /* sem permissão ou sem internet */ }
     }
     if (ok) ui().toast(`Aviso enviado no chat para ${ok} pessoa(s) da equipe`, 'ok', 4000);
@@ -220,11 +219,12 @@
   }
   const descPessoa = p => [p.cargo, p.telefone].filter(Boolean).join(' · ');
   // Bloco "Transporte" da página do evento
-  function transporteHtml(tr) {
+  const tipoTr = ev => ICM.transporte ? ICM.transporte.descricao(ev) : ((ev.transporte || {}).tipo || '');
+  function transporteHtml(tr, vs) {
     tr = tr || {};
     const tit = `<div class="xs bold muted" style="text-transform:uppercase;letter-spacing:.04em">${I('pin', 13)} Transporte</div>`;
     if (!tr.tem) return `${tit}<div class="small muted mt-2">Sem transporte do Instituto (ou não informado)</div>`;
-    return `${tit}${ui().kv([['Tipo', tr.tipo], ['Sai de', tr.saida_local], ['Previsão de saída', tr.saida_hora], ['Previsão de chegada (volta)', tr.chegada_hora ? `${tr.chegada_hora}${tr.chegada_local ? ' — ' + tr.chegada_local : ''}` : '']])}`;
+    return `${tit}${ui().kv([['Tipo', tipoTr({ transporte: tr, veiculos: vs })], ['Sai de', tr.saida_local], ['Previsão de saída', tr.saida_hora], ['Previsão de chegada (volta)', tr.chegada_hora ? `${tr.chegada_hora}${tr.chegada_local ? ' — ' + tr.chegada_local : ''}` : '']])}`;
   }
   // Lista suspensa + etiquetas; "Outra pessoa…" permite digitar um nome que não está no sistema
   function pessoasPicker(box, pessoas, sel, rotulo) {
@@ -276,7 +276,6 @@
           <div class="proj-sel"><select class="select" id="f_proj_add" data-proj-add></select><div class="proj-tags" data-projs></div></div></div>
         ${F({ name: 'transporte.tem', label: 'Haverá transporte do Instituto para os alunos', type: 'toggle', value: tr.tem, cls: 'span-all' })}
         <div class="span-all grid grid-3" data-transp ${tr.tem ? '' : 'hidden'} style="gap:12px 16px">
-          ${F({ name: 'transporte.tipo', label: 'Tipo de transporte', value: tr.tipo, placeholder: 'Ex.: ônibus, van do Instituto' })}
           ${F({ name: 'transporte.saida_local', label: 'Local de saída', value: tr.saida_local, placeholder: 'Ex.: pracinha da grama', cls: 'span-2' })}
           ${F({ name: 'transporte.saida_hora', label: 'Previsão de saída', type: 'time', value: tr.saida_hora })}
           ${F({ name: 'transporte.chegada_hora', label: 'Previsão de chegada (volta)', type: 'time', value: tr.chegada_hora })}

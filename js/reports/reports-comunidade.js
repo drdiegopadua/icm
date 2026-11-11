@@ -229,7 +229,7 @@
   });
 
   // ---------------- Certificados (A4 paisagem, com QR de verificação) ----------------
-  function urlVerificacao(codigo) { return `${location.origin}${location.pathname}#/verificar/${codigo}`; }
+  function urlVerificacao(codigo) { return window.ICM_LINK(`/verificar/${codigo}`); }
   function qrSvg(texto) {
     if (!window.qrcode) return '';
     const q = window.qrcode(0, 'M'); q.addData(texto); q.make();

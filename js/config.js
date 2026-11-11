@@ -9,3 +9,10 @@ window.ICM_CONFIG = {
   modo: /[?&]demo\b/.test(location.search) ? 'local' : 'supabase'
 };
 if (!window.ICM_CONFIG.supabaseKey) window.ICM_CONFIG.modo = 'local';
+
+// Endereço oficial do sistema: todos os links (portal, doação, certificados, assinaturas, e-mails) apontam para ele
+window.ICM_CONFIG.site = 'https://institutodasmontanhas.vercel.app/';
+// Quem abrir pelo endereço antigo do GitHub é levado para o oficial (mantém a tela, ex.: #/portal)
+if (/(^|\.)github\.io$/.test(location.hostname)) location.replace(window.ICM_CONFIG.site + location.search + location.hash);
+// Link para uma tela do sistema (no computador de testes, usa o endereço local)
+window.ICM_LINK = h => (/^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? location.origin + location.pathname : window.ICM_CONFIG.site) + '#' + String(h || '/').replace(/^#/, '');

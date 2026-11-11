@@ -80,7 +80,7 @@
             <button class="btn btn-sm" data-papel="${i}" title="O responsável assinou o termo em papel">${I('check', 14)} Assinado em papel</button></td></tr>`).join('')}
       </tbody></table></div>` : ui().empty('Todos os alunos ativos têm os termos assinados. 🎉', 'userCheck')}
     </div>`;
-    const linkPortal = `${location.origin}${location.pathname}#/portal`;
+    const linkPortal = window.ICM_LINK('/portal');
     painel.querySelectorAll('[data-pedir]').forEach(b => b.addEventListener('click', async () => {
       const x = lista[+b.dataset.pedir];
       try {

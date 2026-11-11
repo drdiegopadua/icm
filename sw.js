@@ -1,6 +1,6 @@
 /* Service worker: guarda o app no aparelho para abrir e fazer chamada sem internet.
    Estratégia: tenta a rede primeiro (pega atualizações); sem rede, usa a cópia guardada. */
-const CACHE = 'icm-app-v48';
+const CACHE = 'icm-app-v49';
 const ARQUIVOS = [
   './', 'index.html', 'manifest.webmanifest', 'assets/favicon.ico', 'assets/icon-192.png', 'assets/icon-512.png', 'assets/apple-touch-icon.png', 'assets/icm-marca.png', 'assets/icm-logo-branca.png', 'assets/icm-logo-escura.png',
   'css/design-system.css', 'css/app.css', 'css/report.css', 'css/revista.css',
@@ -13,7 +13,7 @@ const ARQUIVOS = [
   'js/pages/voluntarios.js', 'js/pages/espera.js', 'js/pages/reunioes.js', 'js/pages/certificados.js', 'js/pages/doadores.js',
   'js/pages/associados.js', 'js/pages/pesquisas.js', 'js/pages/agenda.js', 'js/pages/estoque.js', 'js/pages/equipe.js',
   'js/pages/avisos.js', 'js/pages/avisos-faltas.js', 'js/pages/portal.js', 'js/pages/assinaturas.js', 'js/pages/assinaturas-equipe.js', 'js/pages/rotina.js', 'js/pages/chamada.js',
-  'js/pages/dados.js', 'js/pages/admin.js', 'js/pages/chat.js', 'js/pages/calendario.js', 'js/pages/grade-semanal.js', 'js/pages/mapa-atendidos.js', 'js/pages/cadastros.js', 'js/pages/financeiro.js', 'js/pages/compras.js', 'js/pages/campanhas.js', 'js/pages/social.js', 'js/pages/governanca.js', 'js/pages/importar.js', 'js/reports/reports-financeiro.js', 'js/reports/reports.js', 'js/pages/gestao-pedagogica.js', 'js/pages/impacto.js', 'js/reports/reports-comunidade.js', 'js/reports/relatorio-anual.js', 'js/reports/reports-gestao.js', 'js/reports/reports-mrosc.js', 'js/app.js'
+  'js/pages/dados.js', 'js/pages/admin.js', 'js/pages/chat.js', 'js/pages/calendario.js', 'js/pages/grade-semanal.js', 'js/pages/mapa-atendidos.js', 'js/pages/cadastros.js', 'js/pages/financeiro.js', 'js/pages/compras.js', 'js/pages/campanhas.js', 'js/pages/social.js', 'js/pages/governanca.js', 'js/pages/importar.js', 'js/reports/reports-financeiro.js', 'js/reports/reports.js', 'js/pages/gestao-pedagogica.js', 'js/pages/impacto.js', 'js/pages/evento-transporte.js', 'js/reports/reports-comunidade.js', 'js/reports/relatorio-anual.js', 'js/reports/reports-gestao.js', 'js/reports/reports-mrosc.js', 'js/app.js'
 ];
 
 self.addEventListener('install', e => {

@@ -68,6 +68,7 @@
             ${(ps || []).length ? `<div class="col mt-2" style="gap:6px">${ps.map(x => `<div class="small"><b>${esc(x.nome)}</b>${descPessoa(x) ? `<div class="xs muted">${esc(descPessoa(x))}</div>` : ''}</div>`).join('')}</div>` : `<div class="small muted mt-2">Não informado${canEdit ? ' — use Editar' : ''}</div>`}</div>`).join('')}</div></div>
         <div class="card"><div class="section-title">${I('users', 18)} Alunos participantes</div>
           ${alunos.length ? `<div class="col" style="max-height:340px;overflow:auto">${alunos.map(a => `<a class="list-item" href="#/alunos/${esc(a.id)}">${ICM.util.avatar(a.nome, a.foto, 'sm')}<div class="grow"><b>${esc(a.nome)}</b><div class="xs muted">${esc(a.matricula)}</div></div>${menor(a) ? ui().badge('Menor', 'warn') : ''}</a>`).join('')}</div>` : ui().empty('Nenhum aluno vinculado', 'users')}</div>
+        <div class="card span-all" data-veiculos></div>
         <div class="card span-all"><div class="card-head"><div class="section-title" style="margin:0">${I('clipboard', 18)} Checklist do evento <span class="badge" data-ck-cnt></span></div></div>
           <div class="progress ok mb-4"><span data-ck-bar style="width:0%"></span></div><div data-checklist></div></div>
         <div class="card span-all"><div class="card-head"><div class="section-title" style="margin:0">${I('camera', 18)} Fotos</div>${canEdit ? `<button class="btn btn-sm btn-primary" data-savefotos>${I('check', 16)} Salvar fotos</button>` : ''}</div><div data-fotos></div></div>
@@ -76,6 +77,11 @@
     // Só as fotos: não sobrescreve o checklist nem outros campos gravados nesta tela
     const sf = el.querySelector('[data-savefotos]'); if (sf) sf.addEventListener('click', ev => ui().busy(ev.currentTarget, async () => { await ui().run(() => ICM.api.eventos.atualizar(e.id, { fotos }), 'Fotos salvas'); e.fotos = fotos; }).catch(() => { }));
     checklist(el.querySelector('[data-checklist]'), e, canEdit);
+    if (ICM.transporte) {
+      el.insertAdjacentHTML('beforeend', ICM.transporte.css);
+      const equipeEv = [...(e.equipe_presente || []), ...(e.acompanhantes || [])].filter((p, i, a) => a.findIndex(q => q.nome === p.nome) === i);
+      ICM.transporte.card(el.querySelector('[data-veiculos]'), e, { alunos, equipe: equipeEv, canEdit, recarregar: () => ICM.pages.eventoDetalhe(el, params) });
+    } else el.querySelector('[data-veiculos]').remove();
     const ab = el.querySelector('[data-aut]'); if (ab) ab.addEventListener('click', () => autorizacoes(e, menores, canEdit));
     const eb = el.querySelector('[data-edit]'); if (eb) eb.addEventListener('click', () => eventoForm(e));
     el.querySelector('[data-rel]').addEventListener('click', () => ICM.reports.generate('evento', { evento_id: e.id }));
@@ -183,13 +189,32 @@
   // ---------- Pessoas do Instituto no evento ----------
   // Usuários do sistema + equipe (RH, só para quem pode ver) — sem repetir nomes. Guardamos no evento
   // só nome, cargo e telefone, para todos que veem o evento saberem quem vai.
+  // Quem da equipe (com acesso ao sistema) foi incluído agora recebe um aviso no chat
+  async function avisarEquipe(antes, r, pessoas) {
+    if (!ICM.api.chat) return;
+    const sem = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+    const uidDe = p => p.uid || (pessoas.find(x => sem(x.nome) === sem(p.nome)) || {}).uid;
+    const ja = new Set([...(antes.equipe_presente || []), ...(antes.acompanhantes || [])].map(p => sem(p.nome)));
+    const eu = ICM.auth.user().id;
+    const novos = [...(r.equipe_presente || []).map(p => ({ ...p, papel: 'presente' })), ...(r.acompanhantes || []).map(p => ({ ...p, papel: 'acompanhante' }))]
+      .filter(p => !ja.has(sem(p.nome))).map(p => ({ ...p, uid: uidDe(p) })).filter((p, i, a) => p.uid && p.uid !== eu && a.findIndex(q => q.uid === p.uid) === i);
+    if (!novos.length) return;
+    const link = `${location.origin}${location.pathname}#/eventos/${r.id}`;
+    const tr = r.transporte || {};
+    let ok = 0;
+    for (const p of novos) {
+      const texto = `📣 Olá, ${String(p.nome).split(' ')[0]}! Você foi incluído(a) ${p.papel === 'acompanhante' ? 'para acompanhar os alunos' : 'na equipe'} do evento “${r.titulo}”.\n📅 ${ICM.util.fmtDateLong(r.data)}${r.horario ? ', às ' + r.horario : ''}${r.local ? '\n📍 ' + r.local : ''}${tr.tem && tr.saida_local ? `\n🚌 Saída: ${tr.saida_local}${tr.saida_hora ? ' às ' + tr.saida_hora : ''}` : ''}\nDetalhes e lugar no transporte: ${link}`;
+      try { await ICM.api.chat.enviar(ICM.api.chat.idDireto(eu, p.uid), texto); ok++; } catch (er) { /* sem permissão ou sem internet */ }
+    }
+    if (ok) ui().toast(`Aviso enviado no chat para ${ok} pessoa(s) da equipe`, 'ok', 4000);
+  }
   async function pessoasDoInstituto() {
     const sem = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
     const us = await ICM.api.usuarios.list().catch(() => []);
     const eq = ICM.auth.can('equipe.gerir') ? await ICM.api.equipe.list().catch(() => []) : [];
     const mapa = new Map();
     [...eq.filter(p => !/deslig|inativ/i.test(p.status || '')).map(p => ({ nome: p.nome, cargo: p.cargo || '', telefone: p.telefone || '' })),
-      ...us.filter(u => u.ativo !== false && !u.convite).map(u => ({ nome: u.nome, cargo: u.cargo || (ICM.C.PAPEIS && ICM.C.PAPEIS[u.papel] ? ICM.C.PAPEIS[u.papel].nome : ''), telefone: u.telefone || '' }))]
+      ...us.filter(u => u.ativo !== false && !u.convite).map(u => ({ nome: u.nome, cargo: u.cargo || (ICM.C.PAPEIS && ICM.C.PAPEIS[u.papel] ? ICM.C.PAPEIS[u.papel].nome : ''), telefone: u.telefone || '', uid: u.id }))]
       .filter(p => p.nome).forEach(p => { const k = sem(p.nome); const j = mapa.get(k); mapa.set(k, j ? { ...p, ...Object.fromEntries(Object.entries(j).filter(([, v]) => v)) } : p); });
     return [...mapa.values()].sort((a, b) => a.nome.localeCompare(b.nome));
   }
@@ -311,6 +336,7 @@
       const d = ICM.util.formData(m.$('form'));
       const projeto_ids = [...projSel].filter(id => projetos.some(p => p.id === id));   // na ordem em que foram adicionados
       const r = await ui().run(() => ICM.api.eventos.save({ ...e, ...d, projeto_ids, alunos: [...sel], equipe_presente: presentes, acompanhantes }), 'Evento salvo');
+      await avisarEquipe(e, r, pessoas);
       m.close(); location.hash = `#/eventos/${r.id}`; ICM.app.reload();
     }).catch(() => { }));
     const del = m.$('[data-del]');

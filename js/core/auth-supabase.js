@@ -27,7 +27,12 @@
       if (!navigator.onLine || /fetch|network/i.test(error.message)) { if (loc && loc.id === session.user.id) p = loc; else throw new Error('Sem internet. Entre uma vez com internet neste aparelho para poder usar a chamada sem conexão.'); }
       else throw new Error(error.message);
     } else if (p) { try { localStorage.setItem(PKEY, JSON.stringify({ id: p.id, nome: p.nome, email: p.email, papel: p.papel, cargo: p.cargo, ativo: p.ativo, exige_2fa: p.exige_2fa, da_aulas: p.da_aulas })); } catch (e) { /* */ } }
-    if (!p) { await sb.auth.signOut(); throw new Error('Seu acesso ainda não foi liberado. Peça à direção um convite com este e-mail.'); }
+    if (!p && navigator.onLine) {
+      // Conta criada antes do convite: cria o perfil agora, se houver convite para este e-mail (supabase/icm_v9)
+      let ok = false; try { ({ data: ok } = await sb.rpc('vincular_convite')); } catch (e) { ok = false; }
+      if (ok) ({ data: p } = await sb.from('perfis').select('*').eq('id', session.user.id).maybeSingle());
+    }
+    if (!p) { await sb.auth.signOut(); throw new Error('Seu acesso ainda não foi liberado para ' + (session.user.email || 'este e-mail') + '. Peça à direção um convite em Gestão → Usuários e acessos com este mesmo e-mail.'); }
     if (!p.ativo) { await sb.auth.signOut(); throw new Error('Seu acesso está desativado. Fale com a direção.'); }
     // Direção (admin) e quem tiver "exige_2fa": só entra depois do código do celular
     const { data: n } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();

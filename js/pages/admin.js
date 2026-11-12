@@ -12,12 +12,15 @@
     el.innerHTML = `<div class="page">
       <div class="page-head"><div><h1 class="page-title">Usuários e acessos</h1><div class="page-sub">Professores e colaboradores com login no sistema</div></div><button class="btn btn-primary" data-new>${I('userPlus', 18)} Novo usuário</button></div>
       <div class="grid grid-4 mb-4">${Object.entries(ICM.C.PAPEIS).map(([k, v]) => `<div class="card flat"><div class="bold">${esc(v.nome)}</div><div class="xs muted mt-2">${esc(v.desc)}</div><div class="val mt-2" style="font-size:22px;font-weight:900">${list.filter(u => u.papel === k).length}</div></div>`).join('')}</div>
-      <div class="card"><div class="table-wrap"><table class="table"><thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Permissões</th><th>Situação</th><th></th></tr></thead><tbody>
+      <div class="card"><div class="table-wrap"><table class="table"><thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Permissões</th><th title="Verificação em duas etapas: além da senha, um código do aplicativo autenticador no celular">2 etapas</th><th>Situação</th><th></th></tr></thead><tbody>
         ${list.map(u => { const p = u.permissoes || {}, ne = (p.extra || []).length, nb = (p.bloqueadas || []).length; return `<tr><td><div class="row">${ICM.util.avatar(u.nome, null, 'sm')}<div><b>${esc(u.nome)}</b>${u.cargo ? `<div class="xs muted">${esc(u.cargo)}</div>` : ''}</div></div></td><td class="small">${esc(u.email)}</td><td>${ui().badge(ICM.C.PAPEIS[u.papel].nome, u.papel === 'admin' ? 'danger' : u.papel === 'professor' ? '' : 'neutral')}${u.da_aulas && u.papel !== 'professor' ? ' ' + ui().badge('Dá aulas', '') : ''}</td>
           <td>${ne || nb ? `${ne ? ui().badge(`+${ne} liberada${ne > 1 ? 's' : ''}`, 'ok') : ''} ${nb ? ui().badge(`−${nb} bloqueada${nb > 1 ? 's' : ''}`, 'danger') : ''}` : '<span class="xs muted">Padrão do perfil</span>'}</td>
+          <td>${u.papel === 'admin' ? `<span title="A direção sempre usa duas etapas">${ui().badge('Sempre', 'ok')}</span>` : `<label class="toggle" title="${u.exige_2fa ? 'Desligar' : 'Exigir'} verificação em duas etapas"><input type="checkbox" data-2fa="${esc(u.id)}" ${u.exige_2fa ? 'checked' : ''}><span class="track"></span></label>`}</td>
           <td>${u.convite ? ui().badge('Convite enviado', 'warn', true) : u.ativo ? ui().badge('Ativo', 'ok', true) : ui().badge('Bloqueado', 'danger', true)}</td>
           <td style="text-align:right;white-space:nowrap">${u.papel !== 'admin' ? `<button class="btn btn-sm" data-perm="${esc(u.id)}">${I('shield', 14)} Permissões</button> ` : ''}<button class="btn btn-sm" data-edit="${esc(u.id)}">${I('edit', 14)} Editar</button></td></tr>`; }).join('')}
-      </tbody></table></div></div>
+      </tbody></table></div>
+        <div class="row wrap mt-4" style="gap:8px"><span class="xs muted grow">${I('lock', 14)} <b>2 etapas:</b> quem estiver ligado passa a pedir, além da senha, o código do aplicativo autenticador do celular (Google ou Microsoft Authenticator). No próximo login a pessoa é guiada para configurar. A direção usa sempre.</span>
+          <button class="btn btn-sm" data-2fa-todos="1">${I('shield', 14)} Exigir de todos</button><button class="btn btn-sm btn-ghost" data-2fa-todos="0">Desligar de todos</button></div></div>
       <div class="card mt-6"><div class="card-head"><div><div class="section-title" style="margin:0">${I('shield', 18)} Padrão de cada perfil</div><div class="card-sub">O que cada perfil faz de fábrica. Para liberar ou bloquear algo só para uma pessoa, use o botão <b>Permissões</b> ao lado do nome dela.</div></div></div>
         <div class="table-wrap"><table class="table"><thead><tr><th>Permissão</th>${Object.values(ICM.C.PAPEIS).map(p => `<th style="text-align:center">${esc(p.nome)}</th>`).join('')}</tr></thead><tbody>
         ${ICM.C.PERM_GRUPOS.map(g => `<tr><td colspan="${1 + Object.keys(ICM.C.PAPEIS).length}" style="background:var(--surface-2);font-weight:800">${I(g.icon, 16)} ${esc(g.nome)}</td></tr>` + g.itens.map(([k, nome]) => { const roles = ICM.C.PERMISSOES[k] || []; return `<tr><td class="small">${esc(nome)}${ICM.C.PERM_SO_PERFIL.has(k) ? ' <span class="xs muted">(só pelo perfil)</span>' : ''}</td>${Object.keys(ICM.C.PAPEIS).map(r => `<td style="text-align:center">${roles.includes(r) ? `<span style="color:var(--ok)">${I('check', 18)}</span>` : `<span class="muted">${I('x', 16)}</span>`}</td>`).join('')}</tr>`; }).join('')).join('')}
@@ -25,6 +28,28 @@
     el.querySelector('[data-new]').addEventListener('click', () => form());
     el.querySelectorAll('[data-edit]').forEach(b => b.addEventListener('click', () => form(list.find(u => u.id === b.dataset.edit))));
     el.querySelectorAll('[data-perm]').forEach(b => b.addEventListener('click', () => permissoes(list.find(u => u.id === b.dataset.perm))));
+
+    // ---------- Verificação em duas etapas: liga/desliga por pessoa ----------
+    const salvar2fa = async (u, on) => {
+      await ICM.api.usuarios.save({ ...u, exige_2fa: on }); u.exige_2fa = on;
+      ICM.api.audit('2fa', 'usuarios', u.id, `${on ? 'Exigiu' : 'Dispensou'} verificação em duas etapas de ${u.nome}`).catch(() => { });
+    };
+    el.querySelectorAll('[data-2fa]').forEach(cb => cb.addEventListener('change', async () => {
+      const u = list.find(x => x.id === cb.dataset['2fa']), on = cb.checked;
+      if (!on && !(await ui().confirm({ title: 'Desligar duas etapas', text: `${u.nome} voltará a entrar só com a senha. Se lida com dados sensíveis (alunos, social, financeiro), o recomendado é manter ligado.`, ok: 'Desligar' }))) { cb.checked = true; return; }
+      cb.disabled = true;
+      try { await salvar2fa(u, on); ui().toast(on ? `${u.nome}: duas etapas exigidas a partir do próximo login.` : `${u.nome}: duas etapas desligadas.`, 'ok'); }
+      catch (er) { cb.checked = !on; ui().toast(er.message, 'danger'); }
+      cb.disabled = false;
+    }));
+    el.querySelectorAll('[data-2fa-todos]').forEach(b => b.addEventListener('click', () => ui().busy(b, async () => {
+      const on = b.dataset['2faTodos'] === '1', alvo = list.filter(u => u.papel !== 'admin' && !!u.exige_2fa !== on);
+      if (!alvo.length) { ui().toast(on ? 'Todos já usam duas etapas.' : 'Ninguém além da direção usa duas etapas.', 'info'); return; }
+      if (!(await ui().confirm({ title: on ? 'Exigir duas etapas de todos' : 'Desligar duas etapas de todos', text: `${on ? 'Exigir' : 'Desligar'} para ${alvo.length} pessoa(s): ${alvo.map(u => u.nome).join(', ')}.${on ? ' Cada uma configura o código no próximo login.' : ' A direção continua usando sempre.'}`, ok: on ? 'Exigir de todos' : 'Desligar de todos', danger: !on }))) return;
+      let falhas = 0; for (const u of alvo) { try { await salvar2fa(u, on); } catch (er) { falhas++; } }
+      ui().toast(falhas ? `${alvo.length - falhas} atualizado(s), ${falhas} com erro.` : 'Pronto!', falhas ? 'warn' : 'ok');
+      ICM.app.reload();
+    })));
 
     // ---------- Permissões de um usuário: padrão do perfil + liberar / bloquear item a item ----------
     function permissoes(u) {

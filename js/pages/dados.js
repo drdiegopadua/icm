@@ -25,6 +25,15 @@
             <label class="btn btn-ghost" style="color:var(--danger)">${I('refresh', 16)} Restaurar de um backup…<input type="file" accept="application/json,.json" data-rest hidden></label>
           </div>
           <div class="sens-lock mt-4">${I('lock', 16)} O backup contém dados pessoais e sensíveis de crianças. Guarde só em local protegido (Drive da instituição com acesso restrito) — nunca em pen drive ou e-mail pessoal.</div></div>
+        <div class="card span-all"><div class="section-title">${I('folder', 18)} Baixar tudo de um período</div>
+          <p class="small muted mb-4">Um arquivo .zip com tudo o que foi registrado entre as duas datas, separado em pastas: matrículas, fotos (aulas, eventos e alunos), aulas e frequência, termos e assinaturas, atas e reuniões, eventos, documentos, acompanhamento social, financeiro, equipe e registro de auditoria. Em cada pasta vão as planilhas (abrem no Excel), os arquivos anexados e uma ficha de cada ata, aluno ou evento.</p>
+          <div class="row wrap" style="align-items:flex-end">
+            <label class="field" style="margin:0"><span class="label">De</span><input type="date" class="input" data-exp-de value="${esc(new Date().getFullYear() + '-01-01')}"></label>
+            <label class="field" style="margin:0"><span class="label">Até</span><input type="date" class="input" data-exp-ate value="${esc(ICM.util.today())}"></label>
+            <button class="btn btn-primary" data-exp>${I('download', 18)} Baixar período (.zip)</button>
+          </div>
+          <div class="xs muted mt-2" data-exp-st></div>
+          <div class="sens-lock mt-4">${I('lock', 16)} Contém dados pessoais e sensíveis de crianças. Guarde só em local protegido; não envie por e-mail nem WhatsApp. Fica registrado na auditoria quem baixou.</div></div>
         <div class="card"><div class="section-title">${I('folder', 18)} Backup automático no Google Drive</div>
           <p class="text-block small">Todo dia às <b>2h</b>, o script de automações do Instituto salva uma cópia completa do banco na pasta <b>BACKUP ICM</b> do Google Drive (arquivo <span style="font-family:monospace">ICM-backup-AAAA-MM-DD.json.gz</span>) e apaga as cópias com mais de 30 dias. Às <b>7h</b>, manda o e-mail de avisos do dia.</p>
           <div class="xs muted">Para baixar uma cópia na hora, use os botões ao lado. Guarde só em local protegido.</div>
@@ -43,6 +52,16 @@
     const marca = () => { try { localStorage.setItem('icm_ultimo_backup', new Date().toISOString()); } catch (e) { /* */ } };
     el.querySelector('[data-xlsx]').addEventListener('click', e => ui().busy(e.currentTarget, async () => { await ui().run(() => ICM.api.backup.baixarExcel(), 'Excel gerado — salve na pasta Backups do Drive'); marca(); }).catch(() => { }));
     el.querySelector('[data-json]').addEventListener('click', e => ui().busy(e.currentTarget, async () => { await ui().run(() => ICM.api.backup.baixarJSON(), 'Backup completo baixado — salve na pasta Backups do Drive'); marca(); }).catch(() => { }));
+    el.querySelector('[data-exp]').addEventListener('click', e => ui().busy(e.currentTarget, async () => {
+      const st = el.querySelector('[data-exp-st]');
+      const de = el.querySelector('[data-exp-de]').value, ate = el.querySelector('[data-exp-ate]').value;
+      try {
+        if (!ICM.exportarPeriodo) await new Promise((res, rej) => { const s = document.createElement('script'); s.src = 'js/data/exportar-periodo.js?v=1'; s.onload = res; s.onerror = () => rej(new Error('Não foi possível carregar o exportador. Verifique a internet.')); document.head.appendChild(s); });
+        const r = await ICM.exportarPeriodo(de, ate, msg => { st.textContent = msg + '…'; });
+        st.textContent = `Pronto: ${r.grupos} tipo(s) de registro e ${r.arquivos} arquivo(s), ${tamanho(r.tamanho)}.${r.falhas ? ` ${r.falhas} arquivo(s) não puderam ser baixados.` : ''}`;
+        ui().toast('Exportação baixada — confira a pasta Downloads', 'ok', 5000);
+      } catch (ex) { st.textContent = ''; ui().toast(ex.message, 'danger'); }
+    }).catch(() => { }));
     el.querySelector('[data-rest]').addEventListener('change', async e => {
       const f = e.target.files[0]; if (!f) return;
       try {

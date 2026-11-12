@@ -78,9 +78,7 @@
   }
 
   function can(perm) {
-    if (!current) return false;
-    const roles = ICM.C.PERMISSOES[perm];
-    return !!roles && roles.includes(current.papel);
+    return ICM.C.temPerm(current, perm);   // perfil + liberadas − bloqueadas para este usuário
   }
 
   ICM.auth = { login, logout, restore, can, user: () => current, IDLE_MIN };

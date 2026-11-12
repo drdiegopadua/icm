@@ -137,7 +137,20 @@
     'compras', 'config', 'minhaAssinatura', 'chat']);
   const ehProf = () => { const u = ICM.auth.user(); return !!u && u.papel === 'professor'; };
   const paginaDe = href => { const p = String(href || '').replace(/^#/, '').split('?')[0]; const r = routes.find(x => x.re.test(p)); return r ? r.page : ''; };
-  const permitidoProf = href => !ehProf() || PROF_PAGINAS.has(paginaDe(href));
+  // Páginas que se abrem para o professor quando a direção libera a permissão só para ele (Usuários e acessos → Permissões)
+  const PERM_PAGINAS = {
+    'voluntarios.gerir': ['voluntarios', 'voluntario'], 'estoque.ver': ['estoque'], 'patrimonio.editar': ['patrimonio', 'patrimonioItem'],
+    'patrimonio.emprestar': ['patrimonio', 'patrimonioItem'], 'espera.gerir': ['espera'], 'certificados.emitir': ['certificados'],
+    'pesquisas.gerir': ['pesquisas', 'pesquisa'], 'agenda.reservar': ['agenda'], 'alunos.editar': ['alunoForm', 'cadastros']
+  };
+  const paginaProfOk = page => PROF_PAGINAS.has(page) || (routes.find(r => r.page === page && r.perm && ICM.auth.can(r.perm)))
+    || Object.entries(PERM_PAGINAS).some(([p, ps]) => ps.includes(page) && ICM.auth.can(p));
+  // Telas que somem quando a pessoa não tem nenhuma destas permissões (ex.: bloqueadas só para ela)
+  const PAGINA_REQ = { compras: ['compras.solicitar', 'compras.cotar', 'compras.aprovar'], avisos: ['avisos.enviar'],
+    estoque: ['estoque.ver'], espera: ['espera.gerir'], agenda: ['agenda.reservar', 'agenda.gerir'],
+    alunoForm: ['alunos.editar'], certificados: ['certificados.emitir'] };
+  const reqOk = page => !PAGINA_REQ[page] || PAGINA_REQ[page].some(p => ICM.auth.can(p));
+  const permitidoProf = href => { const pg = paginaDe(href); return reqOk(pg) && (!ehProf() || paginaProfOk(pg)); };
   // Menus grandes abrem em colunas por assunto
   const SECOES = {
     '#/gestao-pedagogica': 'Acompanhamento', '#/rotina': 'Acompanhamento',
@@ -287,7 +300,7 @@
     for (const r of routes) { const m = path.match(r.re); if (m) { match = r; (r.keys || []).forEach((k, i) => params[k] = m[i + 1]); break; } }
     window.scrollTo({ top: 0 });
     if (!match) { view.innerHTML = `<div class="page">${ICM.ui.empty('Página não encontrada', 'alert')}</div>`; return; }
-    if (ehProf() && !PROF_PAGINAS.has(match.page)) { view.innerHTML = `<div class="page">${ICM.ui.empty('Acesso restrito: o perfil de professor vê só o que é das próprias turmas.', 'lock')}</div>`; return; }
+    if (!reqOk(match.page) || (ehProf() && !paginaProfOk(match.page))) { view.innerHTML = `<div class="page">${ICM.ui.empty(ehProf() && reqOk(match.page) ? 'Acesso restrito: o perfil de professor vê só o que é das próprias turmas.' : 'Acesso restrito: esta função não está liberada para o seu usuário. Fale com a direção.', 'lock')}</div>`; return; }
     if (match.perm && !ICM.auth.can(match.perm)) { view.innerHTML = `<div class="page">${ICM.ui.empty('Acesso restrito ao seu perfil.', 'lock')}</div>`; return; }
     view.innerHTML = `<div class="page"><div class="card" style="height:120px;background:linear-gradient(90deg,var(--surface) 0,var(--surface-2) 50%,var(--surface) 100%);background-size:800px 100%;animation:shimmer 1.2s linear infinite"></div></div>`;
     try {

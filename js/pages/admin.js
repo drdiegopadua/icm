@@ -12,15 +12,86 @@
     el.innerHTML = `<div class="page">
       <div class="page-head"><div><h1 class="page-title">Usuários e acessos</h1><div class="page-sub">Professores e colaboradores com login no sistema</div></div><button class="btn btn-primary" data-new>${I('userPlus', 18)} Novo usuário</button></div>
       <div class="grid grid-4 mb-4">${Object.entries(ICM.C.PAPEIS).map(([k, v]) => `<div class="card flat"><div class="bold">${esc(v.nome)}</div><div class="xs muted mt-2">${esc(v.desc)}</div><div class="val mt-2" style="font-size:22px;font-weight:900">${list.filter(u => u.papel === k).length}</div></div>`).join('')}</div>
-      <div class="card"><div class="table-wrap"><table class="table"><thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Cargo</th><th>Situação</th><th></th></tr></thead><tbody>
-        ${list.map(u => `<tr><td><div class="row">${ICM.util.avatar(u.nome, null, 'sm')}<b>${esc(u.nome)}</b></div></td><td class="small">${esc(u.email)}</td><td>${ui().badge(ICM.C.PAPEIS[u.papel].nome, u.papel === 'admin' ? 'danger' : u.papel === 'professor' ? '' : 'neutral')}${u.da_aulas && u.papel !== 'professor' ? ' ' + ui().badge('Dá aulas', '') : ''}</td><td class="small">${esc(u.cargo || '')}</td><td>${u.ativo ? ui().badge('Ativo', 'ok', true) : ui().badge('Bloqueado', 'danger', true)}</td>
-          <td style="text-align:right"><button class="btn btn-sm" data-edit="${esc(u.id)}">${I('edit', 14)} Editar</button></td></tr>`).join('')}
+      <div class="card"><div class="table-wrap"><table class="table"><thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Permissões</th><th>Situação</th><th></th></tr></thead><tbody>
+        ${list.map(u => { const p = u.permissoes || {}, ne = (p.extra || []).length, nb = (p.bloqueadas || []).length; return `<tr><td><div class="row">${ICM.util.avatar(u.nome, null, 'sm')}<div><b>${esc(u.nome)}</b>${u.cargo ? `<div class="xs muted">${esc(u.cargo)}</div>` : ''}</div></div></td><td class="small">${esc(u.email)}</td><td>${ui().badge(ICM.C.PAPEIS[u.papel].nome, u.papel === 'admin' ? 'danger' : u.papel === 'professor' ? '' : 'neutral')}${u.da_aulas && u.papel !== 'professor' ? ' ' + ui().badge('Dá aulas', '') : ''}</td>
+          <td>${ne || nb ? `${ne ? ui().badge(`+${ne} liberada${ne > 1 ? 's' : ''}`, 'ok') : ''} ${nb ? ui().badge(`−${nb} bloqueada${nb > 1 ? 's' : ''}`, 'danger') : ''}` : '<span class="xs muted">Padrão do perfil</span>'}</td>
+          <td>${u.convite ? ui().badge('Convite enviado', 'warn', true) : u.ativo ? ui().badge('Ativo', 'ok', true) : ui().badge('Bloqueado', 'danger', true)}</td>
+          <td style="text-align:right;white-space:nowrap">${u.papel !== 'admin' ? `<button class="btn btn-sm" data-perm="${esc(u.id)}">${I('shield', 14)} Permissões</button> ` : ''}<button class="btn btn-sm" data-edit="${esc(u.id)}">${I('edit', 14)} Editar</button></td></tr>`; }).join('')}
       </tbody></table></div></div>
-      <div class="card mt-6"><div class="section-title">${I('shield', 18)} Matriz de permissões</div><div class="table-wrap"><table class="table"><thead><tr><th>Permissão</th>${Object.values(ICM.C.PAPEIS).map(p => `<th style="text-align:center">${esc(p.nome)}</th>`).join('')}</tr></thead><tbody>
-        ${Object.entries(ICM.C.PERMISSOES).map(([k, roles]) => `<tr><td class="small bold">${esc(PERM_TXT[k] || k)}</td>${Object.keys(ICM.C.PAPEIS).map(r => `<td style="text-align:center">${roles.includes(r) ? `<span style="color:var(--ok)">${I('check', 18)}</span>` : `<span class="muted">${I('x', 16)}</span>`}</td>`).join('')}</tr>`).join('')}
+      <div class="card mt-6"><div class="card-head"><div><div class="section-title" style="margin:0">${I('shield', 18)} Padrão de cada perfil</div><div class="card-sub">O que cada perfil faz de fábrica. Para liberar ou bloquear algo só para uma pessoa, use o botão <b>Permissões</b> ao lado do nome dela.</div></div></div>
+        <div class="table-wrap"><table class="table"><thead><tr><th>Permissão</th>${Object.values(ICM.C.PAPEIS).map(p => `<th style="text-align:center">${esc(p.nome)}</th>`).join('')}</tr></thead><tbody>
+        ${ICM.C.PERM_GRUPOS.map(g => `<tr><td colspan="${1 + Object.keys(ICM.C.PAPEIS).length}" style="background:var(--surface-2);font-weight:800">${I(g.icon, 16)} ${esc(g.nome)}</td></tr>` + g.itens.map(([k, nome]) => { const roles = ICM.C.PERMISSOES[k] || []; return `<tr><td class="small">${esc(nome)}${ICM.C.PERM_SO_PERFIL.has(k) ? ' <span class="xs muted">(só pelo perfil)</span>' : ''}</td>${Object.keys(ICM.C.PAPEIS).map(r => `<td style="text-align:center">${roles.includes(r) ? `<span style="color:var(--ok)">${I('check', 18)}</span>` : `<span class="muted">${I('x', 16)}</span>`}</td>`).join('')}</tr>`; }).join('')).join('')}
       </tbody></table></div></div></div>`;
     el.querySelector('[data-new]').addEventListener('click', () => form());
     el.querySelectorAll('[data-edit]').forEach(b => b.addEventListener('click', () => form(list.find(u => u.id === b.dataset.edit))));
+    el.querySelectorAll('[data-perm]').forEach(b => b.addEventListener('click', () => permissoes(list.find(u => u.id === b.dataset.perm))));
+
+    // ---------- Permissões de um usuário: padrão do perfil + liberar / bloquear item a item ----------
+    function permissoes(u) {
+      const p0 = u.permissoes || {};
+      const extra = new Set(p0.extra || []), bloq = new Set(p0.bloqueadas || []);
+      const papel = ICM.C.PAPEIS[u.papel].nome;
+      let soMudancas = false, busca = '';
+      const efetiva = k => ICM.C.temPerm({ papel: u.papel, permissoes: { extra: [...extra], bloqueadas: [...bloq] } }, k);
+      const m = ui().modal({
+        title: `Permissões de ${u.nome}`, size: 'wide',
+        body: `<div class="col">
+          <div class="small">Perfil <b>${esc(papel)}</b>. Cada item começa no <b>padrão do perfil</b>; você pode <b style="color:var(--ok)">liberar</b> algo a mais ou <b style="color:var(--danger)">bloquear</b> algo só para esta pessoa. ${u.papel === 'professor' ? 'O que for liberado para um professor vale para o sistema todo, não só para as turmas dele.' : ''}</div>
+          <div class="row wrap"><input class="input" data-busca placeholder="Procurar permissão…" style="max-width:280px"><label class="check"><input type="checkbox" data-so> Mostrar só o que foi alterado</label><span class="grow"></span><span class="small" data-resumo></span></div>
+          <div data-lista class="col" style="gap:14px"></div>
+          <div class="xs muted">${I('info', 14)} Itens marcados "só pelo perfil" dependem do perfil da pessoa (para eles, troque o perfil em Editar). A mudança vale no próximo login da pessoa.</div>
+        </div>`,
+        foot: `<button class="btn btn-ghost" data-reset style="margin-right:auto">${I('refresh', 16)} Voltar tudo ao padrão</button><button class="btn" data-close>Cancelar</button><button class="btn btn-primary" data-ok>${I('check', 18)} Salvar permissões</button>`
+      });
+      const seg = (k, est, dis) => `<div class="seg" role="group" style="display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;${dis ? 'opacity:.45;pointer-events:none' : ''}">
+        ${[['padrao', 'Padrão', ''], ['liberar', 'Liberar', 'var(--ok)'], ['bloquear', 'Bloquear', 'var(--danger)']].map(([v, t, c]) => `<button type="button" data-k="${esc(k)}" data-v="${v}" style="border:0;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;background:${est === v ? (c || 'var(--primary)') : 'transparent'};color:${est === v ? '#fff' : 'var(--text-2)'}">${t}</button>`).join('')}</div>`;
+      function draw() {
+        const q = busca.toLowerCase();
+        m.$('[data-lista]').innerHTML = ICM.C.PERM_GRUPOS.map(g => {
+          const itens = g.itens.filter(([k, nome, desc]) => (!q || (nome + ' ' + desc).toLowerCase().includes(q)) && (!soMudancas || extra.has(k) || bloq.has(k)));
+          if (!itens.length) return '';
+          return `<div class="card flat" style="padding:12px 14px"><div class="bold mb-2">${I(g.icon, 16)} ${esc(g.nome)}</div>
+            ${itens.map(([k, nome, desc]) => {
+              const padrao = (ICM.C.PERMISSOES[k] || []).includes(u.papel), so = ICM.C.PERM_SO_PERFIL.has(k);
+              const est = extra.has(k) ? 'liberar' : bloq.has(k) ? 'bloquear' : 'padrao', ok = efetiva(k);
+              const faltam = (ICM.C.PERM_DEPENDE[k] || []).filter(d => !efetiva(d));
+              return `<div class="row wrap" style="padding:8px 0;border-top:1px solid var(--line-2);gap:10px">
+                <div class="grow" style="min-width:220px"><div class="small bold">${esc(nome)}</div>
+                  <div class="xs muted">${padrao ? `No padrão de ${esc(papel)}` : `Fora do padrão de ${esc(papel)}`}${desc ? ' · ' + esc(desc) : ''}${so ? ' · <b>só pelo perfil</b>' : ''}${faltam.length && (padrao || extra.has(k)) ? ` · <span style="color:var(--warn)">precisa de: ${faltam.map(d => esc(ICM.C.permNome(d))).join(', ')}</span>` : ''}</div></div>
+                <span style="width:92px;text-align:center">${ok ? ui().badge('Tem acesso', 'ok') : ui().badge('Sem acesso', 'neutral')}</span>
+                ${seg(k, est, so)}</div>`;
+            }).join('')}</div>`;
+        }).join('') || '<div class="small muted">Nada encontrado.</div>';
+        m.$('[data-resumo]').innerHTML = `${extra.size ? `<b style="color:var(--ok)">+${extra.size} liberada(s)</b>` : ''} ${bloq.size ? `<b style="color:var(--danger)">−${bloq.size} bloqueada(s)</b>` : ''}` || 'Igual ao padrão do perfil';
+        if (!extra.size && !bloq.size) m.$('[data-resumo]').textContent = 'Igual ao padrão do perfil';
+      }
+      m.$('[data-lista]').addEventListener('click', e => {
+        const b = e.target.closest('[data-v]'); if (!b) return;
+        const k = b.dataset.k, v = b.dataset.v, padrao = (ICM.C.PERMISSOES[k] || []).includes(u.papel);
+        extra.delete(k); bloq.delete(k);
+        if (v === 'liberar') {
+          if (padrao) ui().toast('Já faz parte do padrão do perfil.', 'info');
+          else {
+            extra.add(k);
+            // libera junto o que ela precisa para funcionar
+            const add = []; const dep = x => (ICM.C.PERM_DEPENDE[x] || []).forEach(d => { if (!(ICM.C.PERMISSOES[d] || []).includes(u.papel) && !extra.has(d) && !ICM.C.PERM_SO_PERFIL.has(d)) { extra.add(d); bloq.delete(d); add.push(ICM.C.permNome(d)); dep(d); } else if (bloq.has(d)) { bloq.delete(d); add.push(ICM.C.permNome(d)); } });
+            dep(k); if (add.length) ui().toast('Liberado junto, porque é necessário: ' + add.join(', '), 'info');
+          }
+        }
+        if (v === 'bloquear') { if (!padrao) ui().toast('Fora do padrão do perfil: a pessoa já não tem. Bloquear garante que continue sem.', 'info'); bloq.add(k); }
+        draw();
+      });
+      m.$('[data-busca]').addEventListener('input', e => { busca = e.target.value; draw(); });
+      m.$('[data-so]').addEventListener('change', e => { soMudancas = e.target.checked; draw(); });
+      m.$('[data-reset]').addEventListener('click', () => { extra.clear(); bloq.clear(); draw(); });
+      m.$('[data-ok]').addEventListener('click', e => ui().busy(e.currentTarget, async () => {
+        const permissoes = { extra: [...extra].sort(), bloqueadas: [...bloq].sort() };
+        await ui().run(() => ICM.api.usuarios.save({ ...u, permissoes }), 'Permissões salvas');
+        ICM.api.audit('permissoes', 'usuarios', u.id, `Permissões de ${u.nome}: ${permissoes.extra.length ? 'liberou ' + permissoes.extra.map(ICM.C.permNome).join(', ') : ''}${permissoes.extra.length && permissoes.bloqueadas.length ? '; ' : ''}${permissoes.bloqueadas.length ? 'bloqueou ' + permissoes.bloqueadas.map(ICM.C.permNome).join(', ') : ''}${!permissoes.extra.length && !permissoes.bloqueadas.length ? 'voltou ao padrão do perfil' : ''}`).catch(() => { });
+        m.close(); ICM.app.reload();
+      }).catch(() => { }));
+      draw();
+    }
 
     function form(u = {}) {
       const F = o => ui().field(o);

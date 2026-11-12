@@ -358,4 +358,90 @@
     // Regra de assiduidade (configurável em Configurações)
     ASSIDUIDADE: { alerta: 2, desligamento: 3, periodo: 'mes' }
   };
+
+  // ---------- Permissões: catálogo, grupos e ajustes por usuário ----------
+  // Cada usuário tem o padrão do perfil + "permissoes": { extra: [...], bloqueadas: [...] } (liberadas ou bloqueadas só para ele)
+  ICM.C.PERM_GRUPOS = [
+    { nome: 'Alunos e atendimento social', icon: 'users', itens: [
+      ['alunos.ver_todos', 'Ver todos os alunos', 'Sem isso, vê só os alunos das próprias turmas'],
+      ['alunos.editar', 'Matricular e editar alunos', 'Cadastro completo, inclusive dados sensíveis'],
+      ['alunos.sensivel', 'Ver dados sociais, financeiros e de saúde', 'CPF, renda, moradores da casa, saúde completa, endereço'],
+      ['turmas.alunos', 'Incluir e retirar alunos das turmas', ''],
+      ['espera.gerir', 'Lista de espera e triagem', ''],
+      ['social.gerir', 'Acompanhamento social (PIA, encaminhamentos, pareceres)', '']] },
+    { nome: 'Pedagógico', icon: 'school', itens: [
+      ['projetos.editar', 'Criar e editar projetos', ''],
+      ['turmas.editar', 'Criar e editar turmas', ''],
+      ['aulas.registrar', 'Registrar aulas, chamada e fotos', ''],
+      ['avaliacoes.registrar', 'Avaliar a evolução dos alunos', ''],
+      ['ocorrencias.registrar', 'Registrar ocorrências', ''],
+      ['pedagogico.gestao', 'Gestão pedagógica (planos, conferências, cronograma)', ''],
+      ['calendario.editar', 'Editar o calendário letivo', ''],
+      ['relatorios.gerais', 'Relatórios de projeto e da instituição', '']] },
+    { nome: 'Comunidade e comunicação', icon: 'heart', itens: [
+      ['eventos.editar', 'Criar e editar eventos', ''],
+      ['reunioes.gerir', 'Reuniões de pais (presença e ata)', ''],
+      ['voluntarios.gerir', 'Voluntários e horas', ''],
+      ['certificados.emitir', 'Emitir e revogar certificados', ''],
+      ['pesquisas.gerir', 'Pesquisas de satisfação', ''],
+      ['avisos.enviar', 'Enviar avisos às famílias (WhatsApp)', ''],
+      ['avisos.modelos', 'Editar modelos de aviso', ''],
+      ['assinaturas.solicitar', 'Pedir assinaturas de termos', ''],
+      ['chat.grupos', 'Criar grupos no chat', '']] },
+    { nome: 'Recursos, estoque e compras', icon: 'layers', itens: [
+      ['patrimonio.editar', 'Cadastrar bens, baixa e manutenção', ''],
+      ['patrimonio.emprestar', 'Emprestar e receber bens', ''],
+      ['patrimonio.valores', 'Ver valores e notas fiscais do patrimônio', ''],
+      ['agenda.reservar', 'Reservar espaços e insumos', ''],
+      ['agenda.gerir', 'Cadastrar espaços e insumos', ''],
+      ['estoque.ver', 'Ver o estoque', ''],
+      ['estoque.movimentar', 'Dar entrada e saída no estoque', ''],
+      ['estoque.editar', 'Cadastrar itens do estoque', ''],
+      ['compras.solicitar', 'Pedir compras', ''],
+      ['compras.cotar', 'Cotar compras e cadastrar fornecedores', ''],
+      ['compras.aprovar', 'Aprovar compras', '']] },
+    { nome: 'Financeiro e captação', icon: 'wallet', itens: [
+      ['financeiro.ver', 'Ver o financeiro', ''],
+      ['financeiro.lancar', 'Lançar receitas e despesas', ''],
+      ['financeiro.aprovar', 'Aprovar pagamentos e orçamentos', ''],
+      ['doadores.gerir', 'Doadores, doações e recibos', ''],
+      ['associados.gerir', 'Associados e mensalidades', ''],
+      ['campanhas.gerir', 'Campanhas de arrecadação', '']] },
+    { nome: 'Equipe e instituição', icon: 'building', itens: [
+      ['equipe.gerir', 'Equipe (cadastro dos colaboradores)', ''],
+      ['equipe.assinaturas', 'Assinaturas da equipe', ''],
+      ['equipe.salarios', 'Salários e conta bancária da equipe', ''],
+      ['docinst.ver', 'Ver documentos da instituição', ''],
+      ['docinst.gerir', 'Gerenciar documentos da instituição', ''],
+      ['governanca.ver', 'Ver governança (atas, mandatos, estatuto)', ''],
+      ['governanca.gerir', 'Gerenciar governança', '']] },
+    { nome: 'Sistema', icon: 'shield', itens: [
+      ['listas.editar', 'Editar listas do sistema', ''],
+      ['importar.dados', 'Importar planilhas', ''],
+      ['backup.exportar', 'Exportar cópia dos dados', ''],
+      ['usuarios.gerenciar', 'Usuários, permissões e configurações', ''],
+      ['auditoria.ver', 'Ver auditoria', ''],
+      ['privacidade.gerir', 'Privacidade (LGPD)', '']] }
+  ];
+  // Só valem pelo perfil (o banco confere o perfil direto): não dá para liberar nem bloquear por usuário
+  ICM.C.PERM_SO_PERFIL = new Set(['usuarios.gerenciar', 'auditoria.ver', 'privacidade.gerir', 'backup.exportar', 'equipe.salarios', 'importar.dados', 'listas.editar', 'avisos.modelos']);
+  // Uma permissão só vale se as que ela precisa também valerem
+  ICM.C.PERM_DEPENDE = {
+    'alunos.editar': ['alunos.ver_todos', 'alunos.sensivel'], 'social.gerir': ['alunos.sensivel'],
+    'financeiro.lancar': ['financeiro.ver'], 'financeiro.aprovar': ['financeiro.ver'],
+    'estoque.movimentar': ['estoque.ver'], 'estoque.editar': ['estoque.ver'],
+    'docinst.gerir': ['docinst.ver'], 'governanca.gerir': ['governanca.ver'], 'agenda.gerir': ['agenda.reservar'],
+    'compras.aprovar': ['compras.cotar']
+  };
+  ICM.C.permNome = k => { for (const g of ICM.C.PERM_GRUPOS) { const i = g.itens.find(x => x[0] === k); if (i) return i[1]; } return k; };
+  // Vale para o usuário? perfil + liberadas − bloqueadas, e as dependências
+  ICM.C.temPerm = function temPerm(u, perm, vis) {
+    if (!u) return false;
+    const roles = ICM.C.PERMISSOES[perm]; if (!roles) return false;
+    const p = u.permissoes || {}, so = ICM.C.PERM_SO_PERFIL.has(perm);
+    if (!so && (p.bloqueadas || []).includes(perm)) return false;
+    if (!roles.includes(u.papel) && (so || !(p.extra || []).includes(perm))) return false;
+    vis = vis || new Set(); if (vis.has(perm)) return true; vis.add(perm);
+    return (ICM.C.PERM_DEPENDE[perm] || []).every(d => temPerm(u, d, vis));
+  };
 })();

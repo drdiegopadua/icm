@@ -26,7 +26,7 @@
       const loc = (() => { try { return JSON.parse(localStorage.getItem(PKEY) || 'null'); } catch (e) { return null; } })();
       if (!navigator.onLine || /fetch|network/i.test(error.message)) { if (loc && loc.id === session.user.id) p = loc; else throw new Error('Sem internet. Entre uma vez com internet neste aparelho para poder usar a chamada sem conexão.'); }
       else throw new Error(error.message);
-    } else if (p) { try { localStorage.setItem(PKEY, JSON.stringify({ id: p.id, nome: p.nome, email: p.email, papel: p.papel, cargo: p.cargo, ativo: p.ativo, exige_2fa: p.exige_2fa, da_aulas: p.da_aulas })); } catch (e) { /* */ } }
+    } else if (p) { try { localStorage.setItem(PKEY, JSON.stringify({ id: p.id, nome: p.nome, email: p.email, papel: p.papel, cargo: p.cargo, ativo: p.ativo, exige_2fa: p.exige_2fa, da_aulas: p.da_aulas, permissoes: p.permissoes || {} })); } catch (e) { /* */ } }
     if (!p && navigator.onLine) {
       // Conta criada antes do convite: cria o perfil agora, se houver convite para este e-mail (supabase/icm_v9)
       let ok = false; try { ({ data: ok } = await sb.rpc('vincular_convite')); } catch (e) { ok = false; }
@@ -40,7 +40,7 @@
       const e = new Error(n.nextLevel === 'aal2' ? 'Digite o código do aplicativo autenticador.' : 'Seu perfil exige verificação em duas etapas. Vamos configurar agora.');
       e.code = n.nextLevel === 'aal2' ? 'MFA_VERIFICAR' : 'MFA_CADASTRAR'; throw e;
     }
-    current = { id: p.id, nome: p.nome, email: p.email, papel: p.papel, cargo: p.cargo, telefone: p.telefone, ativo: p.ativo, exige_2fa: !!p.exige_2fa, da_aulas: !!p.da_aulas };
+    current = { id: p.id, nome: p.nome, email: p.email, papel: p.papel, cargo: p.cargo, telefone: p.telefone, ativo: p.ativo, exige_2fa: !!p.exige_2fa, da_aulas: !!p.da_aulas, permissoes: p.permissoes || {} };
     sincronizarFila();
     return current;
   }
@@ -136,7 +136,7 @@
       if (motivo) sessionStorage.setItem('icm_logout_msg', motivo);
       location.hash = ''; location.reload();
     },
-    can(perm) { if (!current) return false; const roles = ICM.C.PERMISSOES[perm]; return !!roles && roles.includes(current.papel); },
+    can(perm) { return ICM.C.temPerm(current, perm); },   // perfil + liberadas − bloqueadas para este usuário
     user: () => current
   };
 

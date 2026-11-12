@@ -34,9 +34,9 @@
     }
     if (!p) { await sb.auth.signOut(); throw new Error('Seu acesso ainda não foi liberado para ' + (session.user.email || 'este e-mail') + '. Peça à direção um convite em Gestão → Usuários e acessos com este mesmo e-mail.'); }
     if (!p.ativo) { await sb.auth.signOut(); throw new Error('Seu acesso está desativado. Fale com a direção.'); }
-    // Direção (admin) e quem tiver "exige_2fa": só entra depois do código do celular
+    // Quem tiver "2 etapas" ligado (exige_2fa): só entra depois do código do celular
     const { data: n } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
-    if (n && n.currentLevel !== 'aal2' && (n.nextLevel === 'aal2' || p.papel === 'admin' || p.exige_2fa)) {
+    if (n && n.currentLevel !== 'aal2' && (n.nextLevel === 'aal2' || p.exige_2fa)) {
       const e = new Error(n.nextLevel === 'aal2' ? 'Digite o código do aplicativo autenticador.' : 'Seu perfil exige verificação em duas etapas. Vamos configurar agora.');
       e.code = n.nextLevel === 'aal2' ? 'MFA_VERIFICAR' : 'MFA_CADASTRAR'; throw e;
     }
@@ -93,7 +93,7 @@
         if (current) await ICM.api.audit('2fa_ativado', 'usuarios', current.id, 'Aplicativo autenticador cadastrado');
       },
       async remover(factorId) {
-        if ((await auth.mfa.fatores()).filter(f => f.status === 'verified').length <= 1 && current && (current.papel === 'admin' || current.exige_2fa)) throw new Error('Seu perfil exige duas etapas: cadastre outro aparelho antes de remover este.');
+        if ((await auth.mfa.fatores()).filter(f => f.status === 'verified').length <= 1 && current && current.exige_2fa) throw new Error('Seu perfil exige duas etapas: cadastre outro aparelho antes de remover este.');
         const { error } = await sb.auth.mfa.unenroll({ factorId }); if (error) throw new Error(msgErro(error));
         await ICM.api.audit('2fa_removido', 'usuarios', current.id, 'Aparelho autenticador removido');
       }

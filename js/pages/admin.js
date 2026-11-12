@@ -15,11 +15,11 @@
       <div class="card"><div class="table-wrap"><table class="table"><thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Permissões</th><th title="Verificação em duas etapas: além da senha, um código do aplicativo autenticador no celular">2 etapas</th><th>Situação</th><th></th></tr></thead><tbody>
         ${list.map(u => { const p = u.permissoes || {}, ne = (p.extra || []).length, nb = (p.bloqueadas || []).length; return `<tr><td><div class="row">${ICM.util.avatar(u.nome, null, 'sm')}<div><b>${esc(u.nome)}</b>${u.cargo ? `<div class="xs muted">${esc(u.cargo)}</div>` : ''}</div></div></td><td class="small">${esc(u.email)}</td><td>${ui().badge(ICM.C.PAPEIS[u.papel].nome, u.papel === 'admin' ? 'danger' : u.papel === 'professor' ? '' : 'neutral')}${u.da_aulas && u.papel !== 'professor' ? ' ' + ui().badge('Dá aulas', '') : ''}</td>
           <td>${ne || nb ? `${ne ? ui().badge(`+${ne} liberada${ne > 1 ? 's' : ''}`, 'ok') : ''} ${nb ? ui().badge(`−${nb} bloqueada${nb > 1 ? 's' : ''}`, 'danger') : ''}` : '<span class="xs muted">Padrão do perfil</span>'}</td>
-          <td>${u.papel === 'admin' ? `<span title="A direção sempre usa duas etapas">${ui().badge('Sempre', 'ok')}</span>` : `<label class="toggle" title="${u.exige_2fa ? 'Desligar' : 'Exigir'} verificação em duas etapas"><input type="checkbox" data-2fa="${esc(u.id)}" ${u.exige_2fa ? 'checked' : ''}><span class="track"></span></label>`}</td>
+          <td><label class="toggle" title="${u.exige_2fa ? 'Desligar' : 'Exigir'} verificação em duas etapas"><input type="checkbox" data-2fa="${esc(u.id)}" ${u.exige_2fa ? 'checked' : ''}><span class="track"></span></label>${u.papel === 'admin' && !u.exige_2fa ? ` <span title="Recomendado para a direção">${I('alert', 15)}</span>` : ''}</td>
           <td>${u.convite ? ui().badge('Convite enviado', 'warn', true) : u.ativo ? ui().badge('Ativo', 'ok', true) : ui().badge('Bloqueado', 'danger', true)}</td>
           <td style="text-align:right;white-space:nowrap">${u.papel !== 'admin' ? `<button class="btn btn-sm" data-perm="${esc(u.id)}">${I('shield', 14)} Permissões</button> ` : ''}<button class="btn btn-sm" data-edit="${esc(u.id)}">${I('edit', 14)} Editar</button></td></tr>`; }).join('')}
       </tbody></table></div>
-        <div class="row wrap mt-4" style="gap:8px"><span class="xs muted grow">${I('lock', 14)} <b>2 etapas:</b> quem estiver ligado passa a pedir, além da senha, o código do aplicativo autenticador do celular (Google ou Microsoft Authenticator). No próximo login a pessoa é guiada para configurar. A direção usa sempre.</span>
+        <div class="row wrap mt-4" style="gap:8px"><span class="xs muted grow">${I('lock', 14)} <b>2 etapas:</b> quem estiver ligado passa a pedir, além da senha, o código do aplicativo autenticador do celular (Google ou Microsoft Authenticator). No próximo login a pessoa é guiada para configurar. Recomendado manter ligado para a direção.</span>
           <button class="btn btn-sm" data-2fa-todos="1">${I('shield', 14)} Exigir de todos</button><button class="btn btn-sm btn-ghost" data-2fa-todos="0">Desligar de todos</button></div></div>
       <div class="card mt-6"><div class="card-head"><div><div class="section-title" style="margin:0">${I('shield', 18)} Padrão de cada perfil</div><div class="card-sub">O que cada perfil faz de fábrica. Para liberar ou bloquear algo só para uma pessoa, use o botão <b>Permissões</b> ao lado do nome dela.</div></div></div>
         <div class="table-wrap"><table class="table"><thead><tr><th>Permissão</th>${Object.values(ICM.C.PAPEIS).map(p => `<th style="text-align:center">${esc(p.nome)}</th>`).join('')}</tr></thead><tbody>
@@ -36,16 +36,19 @@
     };
     el.querySelectorAll('[data-2fa]').forEach(cb => cb.addEventListener('change', async () => {
       const u = list.find(x => x.id === cb.dataset['2fa']), on = cb.checked;
-      if (!on && !(await ui().confirm({ title: 'Desligar duas etapas', text: `${u.nome} voltará a entrar só com a senha. Se lida com dados sensíveis (alunos, social, financeiro), o recomendado é manter ligado.`, ok: 'Desligar' }))) { cb.checked = true; return; }
+      const txt = u.papel === 'admin'
+        ? `${u.nome} é ${u.id === ICM.auth.user().id ? 'você, ' : ''}administrador(a): tem acesso a TUDO, inclusive usuários e dados sensíveis. Sem duas etapas, quem descobrir a senha entra com acesso total. Desligar mesmo assim?`
+        : `${u.nome} voltará a entrar só com a senha. Se lida com dados sensíveis (alunos, social, financeiro), o recomendado é manter ligado.`;
+      if (!on && !(await ui().confirm({ title: 'Desligar duas etapas', text: txt, ok: 'Desligar', danger: u.papel === 'admin' }))) { cb.checked = true; return; }
       cb.disabled = true;
       try { await salvar2fa(u, on); ui().toast(on ? `${u.nome}: duas etapas exigidas a partir do próximo login.` : `${u.nome}: duas etapas desligadas.`, 'ok'); }
       catch (er) { cb.checked = !on; ui().toast(er.message, 'danger'); }
       cb.disabled = false;
     }));
     el.querySelectorAll('[data-2fa-todos]').forEach(b => b.addEventListener('click', () => ui().busy(b, async () => {
-      const on = b.dataset['2faTodos'] === '1', alvo = list.filter(u => u.papel !== 'admin' && !!u.exige_2fa !== on);
-      if (!alvo.length) { ui().toast(on ? 'Todos já usam duas etapas.' : 'Ninguém além da direção usa duas etapas.', 'info'); return; }
-      if (!(await ui().confirm({ title: on ? 'Exigir duas etapas de todos' : 'Desligar duas etapas de todos', text: `${on ? 'Exigir' : 'Desligar'} para ${alvo.length} pessoa(s): ${alvo.map(u => u.nome).join(', ')}.${on ? ' Cada uma configura o código no próximo login.' : ' A direção continua usando sempre.'}`, ok: on ? 'Exigir de todos' : 'Desligar de todos', danger: !on }))) return;
+      const on = b.dataset['2faTodos'] === '1', alvo = list.filter(u => !!u.exige_2fa !== on);
+      if (!alvo.length) { ui().toast(on ? 'Todos já usam duas etapas.' : 'Ninguém usa duas etapas.', 'info'); return; }
+      if (!(await ui().confirm({ title: on ? 'Exigir duas etapas de todos' : 'Desligar duas etapas de todos', text: `${on ? 'Exigir' : 'Desligar'} para ${alvo.length} pessoa(s): ${alvo.map(u => u.nome).join(', ')}.${on ? ' Cada uma configura o código no próximo login.' : ' Todos passam a entrar só com a senha — inclusive a direção.'}`, ok: on ? 'Exigir de todos' : 'Desligar de todos', danger: !on }))) return;
       let falhas = 0; for (const u of alvo) { try { await salvar2fa(u, on); } catch (er) { falhas++; } }
       ui().toast(falhas ? `${alvo.length - falhas} atualizado(s), ${falhas} com erro.` : 'Pronto!', falhas ? 'warn' : 'ok');
       ICM.app.reload();
@@ -129,7 +132,7 @@
           ${F({ name: 'papel', label: 'Perfil de acesso', type: 'select', value: u.papel || 'professor', options: Object.entries(ICM.C.PAPEIS).map(([k, v]) => [k, v.nome]) })}
           ${F({ name: 'cargo', label: 'Cargo / função', value: u.cargo })}
           ${ICM.auth.modo === 'supabase' ? (u.id ? '' : '<p class="small span-2">A pessoa receberá acesso pelo <b>Primeiro acesso</b> na tela de login, usando este e-mail, e criará a própria senha.</p>') : F({ name: 'senha', label: u.id ? 'Nova senha (opcional)' : 'Senha inicial', type: 'password', hint: 'Mínimo 8 caracteres com letras e números. Na versão final, o usuário recebe convite por e-mail e define a própria senha.', attrs: 'autocomplete="new-password"' })}
-          ${ICM.auth.modo === 'supabase' ? F({ name: 'exige_2fa', label: 'Exigir verificação em duas etapas (código no celular)', type: 'toggle', value: u.exige_2fa, cls: 'span-2' }) + '<p class="xs muted span-2" style="margin-top:-6px">Administradores sempre usam duas etapas. Marque também para quem lida com dados sensíveis (coordenação, secretaria/social).</p>' : ''}
+          ${ICM.auth.modo === 'supabase' ? F({ name: 'exige_2fa', label: 'Exigir verificação em duas etapas (código no celular)', type: 'toggle', value: u.exige_2fa, cls: 'span-2' }) + '<p class="xs muted span-2" style="margin-top:-6px">Recomendado para a direção e para quem lida com dados sensíveis (coordenação, secretaria/social).</p>' : ''}
           ${F({ name: 'da_aulas', label: 'Também dá aulas (aparece na lista de professores ao cadastrar turmas)', type: 'toggle', value: u.da_aulas, cls: 'span-2' })}
           ${F({ name: 'opera_van', label: 'Opera a van (inicia e encerra rotas no App do Instituto)', type: 'toggle', value: u.opera_van, cls: 'span-2' })}
           ${F({ name: 'ativo', label: 'Acesso ativo', type: 'toggle', value: u.id ? u.ativo : true })}
@@ -178,7 +181,7 @@
           ${ui().kv([['Nome', user.nome], ['E-mail', user.email], ['Perfil', ICM.C.PAPEIS[user.papel].nome], ['Cargo', user.cargo]])}
           <div class="row mt-4"><label class="toggle"><input type="checkbox" data-dark ${document.documentElement.dataset.theme === 'dark' ? 'checked' : ''}><span class="track"></span><span>Modo escuro</span></label></div></div>
         ${ICM.auth.modo === 'supabase' ? `<div class="card"><div class="section-title">${I('shield', 18)} Verificação em duas etapas</div>
-          <div class="small muted">Além da senha, um código do aplicativo autenticador no celular (Google ou Microsoft Authenticator).${user.papel === 'admin' || user.exige_2fa ? ' <b>Obrigatória para o seu perfil.</b>' : ''}</div>
+          <div class="small muted">Além da senha, um código do aplicativo autenticador no celular (Google ou Microsoft Authenticator).${user.exige_2fa ? ' <b>Obrigatória para o seu perfil.</b>' : ''}</div>
           <div class="col mt-4" data-fatores><div class="small muted">Carregando…</div></div>
           <button class="btn mt-4" data-novofator>${I('plus', 16)} Cadastrar outro aparelho</button></div>` : ''}
         <div class="card"><div class="section-title">${I('userCheck', 18)} Regra de assiduidade</div>

@@ -50,6 +50,27 @@
     }
   }
 
+  // Autorizações de viagem: mede cada folha na largura de impressão (A4 com 12 mm de margem)
+  // e diminui a letra só o necessário para caber numa página só (o rodapé conta na última).
+  async function caberNaFolha(v) {
+    const pags = [...v.querySelectorAll('.aut-pagina')]; if (!pags.length) return;
+    try { await document.fonts.ready; } catch (e) { /* */ }
+    const foot = v.querySelector('.doc-foot');
+    const box = document.createElement('div'); box.className = 'doc';
+    box.style.cssText = 'position:absolute;left:-10000px;top:0;width:186mm;padding:0;margin:0;box-shadow:none;animation:none;visibility:hidden';
+    document.body.appendChild(box);
+    const mm = box.getBoundingClientRect().width / 186, limite = 270 * mm;
+    pags.forEach((p, i) => {
+      box.innerHTML = '';
+      const c = p.cloneNode(true); c.classList.remove('page-break'); box.appendChild(c);
+      if (i === pags.length - 1 && foot) box.appendChild(foot.cloneNode(true));
+      let z = 1;
+      while (box.getBoundingClientRect().height > limite && z > 0.5) { z = Math.round((z - 0.02) * 100) / 100; c.style.zoom = z; }
+      p.style.setProperty('--az', z);
+    });
+    box.remove();
+  }
+
   // ====================== Visualizador ======================
   async function view(title, html, filename) {
     const user = ICM.auth.user();
@@ -69,6 +90,7 @@
       <div class="report-scroll">${full}</div>`;
     document.body.appendChild(v);
     document.body.style.overflow = 'hidden';
+    caberNaFolha(v);
     v.querySelectorAll('.doc-section').forEach((s, i) => { s.style.animationDelay = (0.15 + i * 0.07) + 's'; });
     const close = () => { v.remove(); document.body.style.overflow = ''; document.removeEventListener('keydown', onKey); };
     const onKey = e => { if (e.key === 'Escape') close(); };

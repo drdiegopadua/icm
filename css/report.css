@@ -9,16 +9,18 @@
 
 .doc {
   width: min(210mm, 100%); margin: 0 auto; background: #fff; color: #1a2140; border-radius: 6px;
-  box-shadow: 0 30px 80px rgba(15, 25, 60, .25); padding: 18mm 16mm; font-size: 12.5px; line-height: 1.55;
+  box-shadow: 0 30px 80px rgba(15, 25, 60, .25); padding: 18mm 16mm;
+  /* Padrão de todos os documentos (mesmo da autorização de viagem): Inter 12px, títulos de seção 12,5px */
+  font-family: Inter, 'Segoe UI', Arial, sans-serif; font-size: 12px; line-height: 1.6;
   animation: docIn .8s var(--ease-spring);
 }
 @keyframes docIn { from { opacity: 0; transform: translateY(40px) scale(.97); } to { opacity: 1; transform: none; } }
 .doc .doc-section { animation: fadeUp .6s var(--ease) both; }
 .doc h1 { font-size: 22px; font-weight: 900; color: #0e1838; letter-spacing: -.02em; }
-.doc h2 { font-size: 15px; font-weight: 800; color: #1e3fae; margin: 22px 0 10px; padding-bottom: 6px; border-bottom: 2px solid #dbe5fb; text-transform: uppercase; letter-spacing: .04em; }
-.doc h3 { font-size: 13.5px; font-weight: 800; color: #0e1838; margin: 14px 0 6px; }
+.doc h2 { font-size: 12.5px; font-weight: 800; color: #1e3fae; margin: 14px 0 6px; padding-bottom: 3px; border-bottom: 2px solid #dbe5fb; text-transform: uppercase; letter-spacing: .04em; }
+.doc h3 { font-size: 12.5px; font-weight: 800; color: #0e1838; margin: 14px 0 6px; }
 .doc p { margin: 0 0 8px; }
-.doc .doc-head { display: flex; align-items: center; gap: 16px; padding-bottom: 14px; border-bottom: 3px solid #2563eb; margin-bottom: 18px; }
+.doc .doc-head { display: flex; align-items: center; gap: 16px; padding-bottom: 8px; border-bottom: 3px solid #2563eb; margin-bottom: 10px; }
 .doc .doc-head .logo-doc { flex: none; width: auto; padding-right: 16px; border-right: 1.5px solid #dbe5fb; }
 .doc .doc-head-txt { flex: 1; min-width: 0; }
 .doc .doc-head .tipo { margin-top: 4px; font-size: 11px; font-weight: 800; color: #2563eb; text-transform: uppercase; letter-spacing: .12em; }
@@ -61,8 +63,7 @@
 .doc .page-break { page-break-before: always; }
 /* Autorização de viagem (uma página por aluno) */
 .doc .aut-pagina.page-break { margin-top: 34px; padding-top: 26px; border-top: 2px dashed #c9d6f2; }
-.doc .aut-pagina .doc-head { padding-bottom: 8px; margin-bottom: 8px; }
-.doc .aut-pagina h2 { font-size: 12.5px; margin: 12px 0 5px; padding-bottom: 3px; }
+.doc .aut-pagina h2 { margin-top: 12px; }
 .doc .aut-p { font-size: 12px; line-height: 1.6; text-align: justify; }
 .doc .aut-p.xs-nota { font-size: 10.5px; color: #5b6788; text-align: left; }
 .doc .aut-linha { display: inline-block; min-width: 40mm; border-bottom: 1px solid #0e1838; height: 1em; vertical-align: -2px; }

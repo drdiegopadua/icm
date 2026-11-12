@@ -22,6 +22,7 @@
       ['agenda', 'Calendário', 'calendar'], ['ocorrencias', 'Advertências e ocorrências', 'alert'], ['emprestimos', 'Empréstimos', 'download'], ['evolucao', 'Evolução', 'chart'], ['social', 'Acompanhamento social', 'heart'],
       ['socio', 'Dados socioeconômicos', 'wallet'], ['saude', 'Saúde', 'heartPulse'], ['escola', 'Escolaridade', 'school']
     ];
+    if (ICM.autViagem && ICM.autViagem.verAut()) TABS.push(['documentos', 'Documentos', 'fileText']);
 
     el.innerHTML = `<div class="page">
       <div class="card mb-4">
@@ -191,6 +192,29 @@
       async escola() {
         const e = a.escolaridade || {};
         panel.innerHTML = `<div class="card tab-panel"><div class="section-title">${I('school', 18)} Escolaridade</div>${ui().kv([['Escola', e.escola], ['Rede', e.rede], ['Ano/série', e.serie], ['Turno', e.turno], ['Desempenho', e.desempenho], ['Observações', e.observacoes]])}</div>`;
+      },
+
+      // Autorizações de viagem dos eventos em que o aluno participa (menor de idade na data ou já gerada)
+      async documentos() {
+        if (!ICM.autViagem || !ICM.autViagem.verAut()) { panel.innerHTML = restricted(); return; }
+        const AV = ICM.autViagem, podeEd = ICM.auth.can('eventos.editar');
+        const menorEm = data => { const n = ICM.util.parseD(a.nascimento), d = ICM.util.parseD(data); if (!n || !d) return true; let id = d.getFullYear() - n.getFullYear(); if (d.getMonth() < n.getMonth() || (d.getMonth() === n.getMonth() && d.getDate() < n.getDate())) id--; return id < 18; };
+        const evs = (await ICM.api.eventos.list()).filter(e => (e.alunos || []).includes(a.id) && ((e.autorizacoes || {})[a.id] || menorEm(e.data)));
+        const draw = () => {
+          panel.innerHTML = `<div class="card tab-panel"><div class="card-head"><div><div class="card-title">${I('fileText', 18)} Autorizações de viagem</div><div class="card-sub">Folhas assinadas pelos pais em cada evento. Anexe a foto ou o PDF assim que a autorização voltar assinada.</div></div></div>
+            ${evs.length ? `<div class="table-wrap"><table class="table"><thead><tr><th>Evento</th><th>Data</th><th>Situação</th><th style="text-align:right">Arquivo</th></tr></thead><tbody>
+            ${evs.map(e => { const au = (e.autorizacoes || {})[a.id] || {}; return `<tr><td><a class="bold" href="#/eventos/${esc(e.id)}">${esc(e.titulo)}</a></td><td>${esc(fmtDate(e.data))}</td>
+              <td>${AV.situacao(au)}${au.gerada_em ? `<div class="xs muted">Gerada em ${esc(fmtDate(au.gerada_em.slice(0, 10)))}${au.gerada_por ? ` por ${esc(au.gerada_por)}` : ''}</div>` : ''}${au.recebido_por ? `<div class="xs muted">Recebida por ${esc(au.recebido_por)}</div>` : ''}</td>
+              <td style="text-align:right;white-space:nowrap">${au.arquivo ? `<button class="btn btn-sm" data-ver="${esc(e.id)}">${I(au.arquivo.mime === 'application/pdf' ? 'fileText' : 'image', 14)} Ver</button>` : ''}
+              ${podeEd ? (au.arquivo ? `<button class="btn btn-sm btn-ghost" data-anx="${esc(e.id)}">${I('upload', 14)} Trocar</button><button class="btn btn-sm btn-icon lst-del" data-rm="${esc(e.id)}" title="Remover" aria-label="Remover arquivo">${I('trash', 14)}</button>` : `<button class="btn btn-sm btn-primary" data-anx="${esc(e.id)}">${I('upload', 14)} Anexar assinada</button>`) : ''}</td></tr>`; }).join('')}
+            </tbody></table></div>` : ui().empty('Nenhum evento com autorização de viagem para este aluno', 'fileText')}</div>`;
+          const ev = id => evs.find(x => x.id === id);
+          const recarregar = async id => { const n = await ICM.api.eventos.get(id); const i = evs.findIndex(x => x.id === id); if (n && i >= 0) evs[i] = n; draw(); };
+          panel.querySelectorAll('[data-ver]').forEach(b => b.addEventListener('click', () => AV.abrir(((ev(b.dataset.ver).autorizacoes || {})[a.id] || {}).arquivo)));
+          panel.querySelectorAll('[data-anx]').forEach(b => b.addEventListener('click', () => AV.escolher(b.dataset.anx, a.id, () => recarregar(b.dataset.anx))));
+          panel.querySelectorAll('[data-rm]').forEach(b => b.addEventListener('click', () => AV.remover(b.dataset.rm, a.id, () => recarregar(b.dataset.rm))));
+        };
+        draw();
       }
     };
 

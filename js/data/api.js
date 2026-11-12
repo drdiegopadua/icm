@@ -181,7 +181,12 @@
         const ocs = await S().list('ocorrencias', o => o.aluno_id === alunoId);
         ocs.forEach(o => { const t = ICM.C.TIPOS_OCORRENCIA[o.tipo]; items.push({ data: o.data, tipo: 'ocorrencia', titulo: `${t.nome}: ${o.titulo}`, desc: A().can('alunos.sensivel') || o.tipo !== 'atendimento' ? o.descricao : 'Registro restrito', icon: t.icon, cor: t.cls === 'danger' ? '#ef4444' : t.cls === 'warn' ? '#f59e0b' : t.cls === 'ok' ? '#10b981' : '#64748b' }); });
         const evs = await S().list('eventos', e => (e.alunos || []).includes(alunoId));
-        evs.forEach(e => { const t = ICM.C.TIPOS_EVENTO[e.tipo]; items.push({ data: e.data, tipo: 'evento', titulo: `${t.nome}: ${e.titulo}`, desc: [e.local, e.resultado].filter(Boolean).join(' — '), icon: t.icon, cor: t.cor }); });
+        evs.forEach(e => {
+          const t = ICM.C.TIPOS_EVENTO[e.tipo]; items.push({ data: e.data, tipo: 'evento', titulo: `${t.nome}: ${e.titulo}`, desc: [e.local, e.resultado].filter(Boolean).join(' — '), icon: t.icon, cor: t.cor });
+          const au = (e.autorizacoes || {})[alunoId];
+          if (au && au.gerada_em) items.push({ data: au.gerada_em.slice(0, 10), tipo: 'autorizacao', titulo: `Autorização de viagem gerada — ${e.titulo}`, desc: au.gerada_por ? `Por ${au.gerada_por}` : '', icon: 'fileText', cor: '#f59e0b' });
+          if (au && au.entregue_em) items.push({ data: au.entregue_em.slice(0, 10), tipo: 'autorizacao', titulo: `Autorização assinada entregue — ${e.titulo}`, desc: au.recebido_por ? `Recebida por ${au.recebido_por}` : '', icon: 'check', cor: '#10b981' });
+        });
         (await S().list('reunioes', r => r.presencas && alunoId in r.presencas)).forEach(r => items.push({ data: r.data, tipo: 'reuniao', titulo: `Reunião de pais: ${r.titulo}`, desc: r.presencas[alunoId] ? 'Família presente' : 'Família ausente', icon: 'users', cor: r.presencas[alunoId] ? '#10b981' : '#94a3b8' }));
         (await S().list('certificados', c => c.destinatario_id === alunoId && c.status === 'valido')).forEach(c => items.push({ data: c.data_emissao, tipo: 'certificado', titulo: `Certificado: ${c.titulo}`, desc: `Código ${c.codigo}${c.carga_horaria ? ` · ${c.carga_horaria}h` : ''}`, icon: 'award', cor: '#f59e0b' }));
         const emps = await S().list('emprestimos', e => e.aluno_id === alunoId);
@@ -391,6 +396,45 @@
       },
       // Grava só alguns campos (checklist, textos da viagem) sem reenviar o evento inteiro
       async atualizar(id, patch) { need('eventos.editar'); return S().update('eventos', id, patch); },
+      // ---- Autorizações de viagem: evento.autorizacoes[aluno_id] = { gerada_em, gerada_por, entregue_em, recebido_por, arquivo } ----
+      // A folha assinada (foto/PDF) fica no próprio evento; com o banco ela vai para a pasta privada do evento.
+      async autorizacoesGeradas(id, alunoIds) {
+        need('eventos.editar');
+        const e = await S().get('eventos', id); if (!e) throw new Error('Evento não encontrado');
+        const aut = { ...(e.autorizacoes || {}) }, agora = new Date().toISOString();
+        (alunoIds || []).forEach(aid => { aut[aid] = { ...(aut[aid] || {}), gerada_em: agora, gerada_por: me().nome }; });
+        await S().update('eventos', id, { autorizacoes: aut });
+        await audit('gerar_autorizacao', 'eventos', id, `Autorizações de viagem geradas: ${(alunoIds || []).length} aluno(s) — ${e.titulo}`);
+        return aut;
+      },
+      async anexarAutorizacao(id, alunoId, file) {
+        need('eventos.editar');
+        if (!file) throw new Error('Selecione o arquivo.');
+        let data, mime;
+        if (/^image\/(jpeg|png|webp)$/.test(file.type)) { data = await u().compressImage(file, 1600, .82); mime = 'image/jpeg'; }
+        else if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) {
+          const lim = S().modo === 'supabase' ? 10 : 2;
+          if (file.size > lim * 1024 * 1024) throw new Error(`PDF acima de ${lim} MB. Reduza o arquivo ou fotografe a folha.`);
+          data = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(r.error); r.readAsDataURL(file); });
+          mime = 'application/pdf';
+        } else throw new Error('Envie uma foto (JPG, PNG) ou um PDF da autorização assinada.');
+        const e = await S().get('eventos', id); if (!e) throw new Error('Evento não encontrado');
+        if (!(e.alunos || []).includes(alunoId)) throw new Error('Este aluno não está no evento.');
+        const aut = { ...(e.autorizacoes || {}) };
+        aut[alunoId] = { ...(aut[alunoId] || {}), entregue_em: new Date().toISOString(), recebido_por: me().nome, arquivo: { nome: file.name, mime, data } };
+        const r = await S().update('eventos', id, { autorizacoes: aut });
+        await audit('anexar', 'eventos', id, `Autorização de viagem assinada anexada — ${e.titulo}`);
+        return (r.autorizacoes || {})[alunoId];
+      },
+      async removerAutorizacao(id, alunoId) {
+        need('eventos.editar');
+        const e = await S().get('eventos', id); if (!e) throw new Error('Evento não encontrado');
+        const aut = { ...(e.autorizacoes || {}) }; if (!aut[alunoId]) return;
+        const { entregue_em, recebido_por, arquivo, ...resto } = aut[alunoId];
+        aut[alunoId] = resto;
+        await S().update('eventos', id, { autorizacoes: aut });
+        await audit('excluir', 'eventos', id, `Autorização de viagem assinada removida — ${e.titulo}`);
+      },
       async remove(id) { need('eventos.editar'); await S().remove('eventos', id); await audit('excluir', 'eventos', id, 'Evento excluído'); }
     },
 

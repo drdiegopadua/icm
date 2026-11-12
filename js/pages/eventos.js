@@ -68,6 +68,7 @@
             ${(ps || []).length ? `<div class="col mt-2" style="gap:6px">${ps.map(x => `<div class="small"><b>${esc(x.nome)}</b>${descPessoa(x) ? `<div class="xs muted">${esc(descPessoa(x))}</div>` : ''}</div>`).join('')}</div>` : `<div class="small muted mt-2">Não informado${canEdit ? ' — use Editar' : ''}</div>`}</div>`).join('')}</div></div>
         <div class="card"><div class="section-title">${I('users', 18)} Alunos participantes</div>
           ${alunos.length ? `<div class="col" style="max-height:340px;overflow:auto">${alunos.map(a => `<a class="list-item" href="#/alunos/${esc(a.id)}">${ICM.util.avatar(a.nome, a.foto, 'sm')}<div class="grow"><b>${esc(a.nome)}</b><div class="xs muted">${esc(a.matricula)}</div></div>${menor(a) ? ui().badge('Menor', 'warn') : ''}</a>`).join('')}</div>` : ui().empty('Nenhum aluno vinculado', 'users')}</div>
+        ${menores.length && verAut() ? `<div class="card span-all" data-aut-assinadas></div>` : ''}
         <div class="span-all ev-duo"><div class="card" data-veiculos></div>
         <div class="card"><div class="card-head"><div class="section-title" style="margin:0">${I('clipboard', 18)} Checklist do evento <span class="badge" data-ck-cnt></span></div></div>
           <div class="progress ok mb-4"><span data-ck-bar style="width:0%"></span></div><div data-checklist></div></div></div>
@@ -82,7 +83,10 @@
       const equipeEv = [...(e.equipe_presente || []), ...(e.acompanhantes || [])].filter((p, i, a) => a.findIndex(q => q.nome === p.nome) === i);
       ICM.transporte.card(el.querySelector('[data-veiculos]'), e, { alunos, equipe: equipeEv, canEdit, recarregar: () => ICM.pages.eventoDetalhe(el, params) });
     } else el.querySelector('[data-veiculos]').remove();
-    const ab = el.querySelector('[data-aut]'); if (ab) ab.addEventListener('click', () => autorizacoes(e, menores, canEdit));
+    const autBox = el.querySelector('[data-aut-assinadas]');
+    const drawAut = () => { if (autBox) listaAutorizacoes(autBox, e, menores, canEdit); };
+    drawAut();
+    const ab = el.querySelector('[data-aut]'); if (ab) ab.addEventListener('click', () => autorizacoes(e, menores, canEdit, drawAut));
     const eb = el.querySelector('[data-edit]'); if (eb) eb.addEventListener('click', () => eventoForm(e));
     el.querySelector('[data-rel]').addEventListener('click', () => ICM.reports.generate('evento', { evento_id: e.id }));
   };
@@ -131,7 +135,7 @@
   }
 
   // ---------- Autorizações de viagem (menores de idade) ----------
-  function autorizacoes(e, menores, canEdit) {
+  function autorizacoes(e, menores, canEdit, aoGerar) {
     const F = o => ui().field(o);
     const D = ICM.C.AUTORIZACAO_VIAGEM, v = e.viagem || {};
     // Texto dos responsáveis montado com quem acompanha os alunos (cadastrado no evento)
@@ -181,9 +185,60 @@
     m.$('[data-ok]').addEventListener('click', ev => ui().busy(ev.currentTarget, async () => {
       const ids = marcados(); if (!ids.length) return ui().toast('Marque pelo menos um aluno.', 'warn');
       const viagem = ICM.util.formData(m.$('form'));
-      if (canEdit) { try { await ICM.api.eventos.atualizar(e.id, { viagem }); e.viagem = viagem; } catch (er) { /* sem permissão de gravar: gera mesmo assim */ } }
+      if (canEdit) {
+        try { await ICM.api.eventos.atualizar(e.id, { viagem }); e.viagem = viagem; } catch (er) { /* sem permissão de gravar: gera mesmo assim */ }
+        try { e.autorizacoes = await ICM.api.eventos.autorizacoesGeradas(e.id, ids); if (aoGerar) aoGerar(); } catch (er) { /* fica só sem o registro */ }
+      }
       m.close(); setTimeout(() => ICM.reports.generate('autorizacao_viagem', { evento_id: e.id, alunos: ids, viagem }), 250);
     }).catch(() => { }));
+  }
+
+  // ---------- Autorizações assinadas (entregue / pendente) ----------
+  // Ver a folha assinada: quem edita eventos ou vê dados sensíveis dos alunos
+  const verAut = () => ICM.auth.can('eventos.editar') || ICM.auth.can('alunos.sensivel');
+  ICM.autViagem = {
+    verAut,
+    // Abre o arquivo (link temporário do banco ou, no modo demonstração, o arquivo guardado no navegador)
+    abrir(arq) {
+      if (!arq || !arq.data) return ui().toast('Arquivo indisponível.', 'warn');
+      if (!arq.data.startsWith('data:')) return window.open(arq.data, '_blank', 'noopener');
+      const b64 = arq.data.slice(arq.data.indexOf(',') + 1), bin = atob(b64), arr = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+      const url = URL.createObjectURL(new Blob([arr], { type: arq.mime || 'application/octet-stream' }));
+      window.open(url, '_blank', 'noopener'); setTimeout(() => URL.revokeObjectURL(url), 60000);
+    },
+    // Escolhe o arquivo e anexa; chama depois(registro) ao terminar
+    escolher(eventoId, alunoId, depois) {
+      const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'application/pdf,image/jpeg,image/png,image/webp';
+      inp.addEventListener('change', () => { const f = inp.files[0]; if (!f) return; ui().run(() => ICM.api.eventos.anexarAutorizacao(eventoId, alunoId, f), 'Autorização assinada anexada').then(r => depois && depois(r)).catch(() => { }); });
+      inp.click();
+    },
+    async remover(eventoId, alunoId, depois) {
+      if (!await ui().confirm({ title: 'Remover autorização assinada', text: 'O arquivo anexado será apagado e o aluno volta a ficar pendente. Continuar?', ok: 'Remover', danger: true })) return;
+      await ui().run(() => ICM.api.eventos.removerAutorizacao(eventoId, alunoId), 'Autorização removida').catch(() => { });
+      if (depois) depois();
+    },
+    situacao(au) {
+      if (au && au.entregue_em) return ui().badge(`Entregue em ${ICM.util.fmtDate(au.entregue_em.slice(0, 10))}`, 'ok', true);
+      if (au && au.gerada_em) return ui().badge('Pendente — gerada, falta a assinada', 'warn', true);
+      return ui().badge('Pendente — ainda não gerada', 'neutral', true);
+    }
+  };
+  function listaAutorizacoes(box, e, menores, canEdit) {
+    const aut = e.autorizacoes || {};
+    const ok = menores.filter(a => (aut[a.id] || {}).entregue_em).length;
+    const recarregar = async () => { const n = await ICM.api.eventos.get(e.id); e.autorizacoes = (n && n.autorizacoes) || {}; listaAutorizacoes(box, e, menores, canEdit); };
+    box.innerHTML = `<div class="card-head"><div class="section-title" style="margin:0">${I('fileText', 18)} Autorizações assinadas <span class="badge ${ok === menores.length ? 'ok' : 'warn'}">${ok}/${menores.length}</span></div>
+        <div class="xs muted">Anexe a foto ou o PDF da autorização assinada pelos pais. Fica também no cadastro do aluno (aba Documentos).</div></div>
+      <div class="progress ${ok === menores.length ? 'ok' : 'warn'} mb-4"><span style="width:${menores.length ? Math.round(ok / menores.length * 100) : 0}%"></span></div>
+      <div class="table-wrap"><table class="table"><thead><tr><th>Aluno</th><th>Situação</th><th style="text-align:right">Arquivo</th></tr></thead><tbody>
+      ${menores.map(a => { const au = aut[a.id] || {}; return `<tr><td><a class="bold" href="#/alunos/${esc(a.id)}?tab=documentos">${esc(a.nome)}</a></td><td>${ICM.autViagem.situacao(au)}${au.recebido_por ? `<div class="xs muted">Recebida por ${esc(au.recebido_por)}</div>` : ''}</td>
+        <td style="text-align:right;white-space:nowrap">${au.arquivo ? `<button class="btn btn-sm" data-ver-aut="${esc(a.id)}">${I(au.arquivo.mime === 'application/pdf' ? 'fileText' : 'image', 14)} Ver</button>` : ''}
+        ${canEdit ? (au.arquivo ? `<button class="btn btn-sm btn-ghost" data-anx-aut="${esc(a.id)}">${I('upload', 14)} Trocar</button><button class="btn btn-sm btn-icon lst-del" data-rm-aut="${esc(a.id)}" title="Remover" aria-label="Remover arquivo">${I('trash', 14)}</button>` : `<button class="btn btn-sm btn-primary" data-anx-aut="${esc(a.id)}">${I('upload', 14)} Anexar assinada</button>`) : ''}</td></tr>`; }).join('')}
+      </tbody></table></div>`;
+    box.querySelectorAll('[data-ver-aut]').forEach(b => b.addEventListener('click', () => ICM.autViagem.abrir((aut[b.dataset.verAut] || {}).arquivo)));
+    box.querySelectorAll('[data-anx-aut]').forEach(b => b.addEventListener('click', () => ICM.autViagem.escolher(e.id, b.dataset.anxAut, recarregar)));
+    box.querySelectorAll('[data-rm-aut]').forEach(b => b.addEventListener('click', () => ICM.autViagem.remover(e.id, b.dataset.rmAut, recarregar)));
   }
 
   // ---------- Pessoas do Instituto no evento ----------

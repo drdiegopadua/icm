@@ -45,6 +45,8 @@
 .doc .photos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 6px 0 12px; }
 .doc .photos figure { margin: 0; }
 .doc .photos img { width: 100%; aspect-ratio: 4/3; object-fit: cover; border-radius: 6px; }
+.doc .photos .ph { aspect-ratio: 4/3; overflow: hidden; border-radius: 6px; }
+.doc .photos .ph img { height: 100%; aspect-ratio: auto; border-radius: 0; display: block; }
 .doc .photos figcaption { font-size: 9.5px; color: #5b6788; margin-top: 2px; }
 .doc .lesson { padding: 10px 12px; border: 1px solid #e3e9f5; border-left: 4px solid #2563eb; border-radius: 6px; margin-bottom: 10px; page-break-inside: avoid; }
 .doc .lesson .lh { display: flex; justify-content: space-between; font-weight: 800; color: #0e1838; }

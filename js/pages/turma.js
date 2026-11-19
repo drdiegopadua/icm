@@ -65,7 +65,7 @@
               <td class="small"><b>${esc(a.plano && a.plano.tema || '—')}</b></td>
               <td>${pr.length ? `<b>${P}/${pr.length}</b>` : '<span class="muted">—</span>'}</td>
               <td>${a.relatorio && a.relatorio.texto ? ui().badge('Preenchido', 'ok') : ui().badge('Pendente', a.status === 'realizada' || atrasada ? 'warn' : 'neutral')}</td>
-              <td>${(a.fotos || []).length ? `<span class="row" style="gap:4px">${I('image', 14)} ${(a.fotos || []).length}</span>` : '<span class="muted">—</span>'}</td>
+              <td>${(a.fotos || []).length ? `<span class="row" style="gap:4px;${a.status === 'realizada' && (a.fotos || []).length < 3 ? 'color:var(--danger)' : ''}">${I('image', 14)} ${(a.fotos || []).length}/3</span>` : `<span class="${a.status === 'realizada' ? 'badge danger' : 'muted'}">${a.status === 'realizada' ? 'faltam 3' : '—'}</span>`}</td>
               <td>${a.status === 'realizada' ? ui().badge('Realizada', 'ok', true) : atrasada ? ui().badge('Aguardando registro', 'warn', true) : a.status === 'cancelada' ? ui().badge('Cancelada', 'danger', true) : ui().badge('Planejada', 'neutral', true)}</td></tr>`; }).join('')}
             </tbody></table></div>` : ui().empty('Nenhuma aula neste mês', 'book')}
           </div></div>`;
@@ -97,7 +97,7 @@
           <div class="card"><div class="card-title mb-2">Obrigações do mês</div>
             ${conf ? `<div class="row mb-4" style="gap:12px"><b style="font-size:34px;color:${cor(conf.total)}">${conf.total == null ? '—' : conf.total + '%'}</b><span class="small muted">do que precisa ser feito em ${esc(ICM.util.fmtMonth(ym))}${conf.aulas ? ` (${conf.aulas} aula(s) até ontem)` : ''}</span></div>
               <div class="progress mb-4"><span style="width:${conf.total || 0}%;background:${cor(conf.total)}"></span></div>
-              ${it('Plano de aula do mês', conf.status.plano)}${it('Chamada das aulas', conf.status.chamada, conf.status.chamada ? `${conf.comChamada}/${conf.aulas}` : '')}${it('Relatório de cada aula', conf.status.relatorio, conf.status.relatorio ? `${conf.comRel}/${conf.aulas}` : '')}
+              ${it('Plano de aula do mês', conf.status.plano)}${it('Chamada das aulas', conf.status.chamada, conf.status.chamada ? `${conf.comChamada}/${conf.aulas}` : '')}${it('Relatório de cada aula', conf.status.relatorio, conf.status.relatorio ? `${conf.comRel}/${conf.aulas}` : '')}${it('Fotos (3 por aula)', conf.status.fotos, conf.status.fotos ? `${conf.comFotos}/${conf.aulas}` : '')}
               ${conf.obs ? `<p class="small mt-4"><b>Coordenação:</b> ${esc(conf.obs)}</p>` : ''}
               <p class="xs muted mt-4">Estar em dia com o plano, as chamadas e os relatórios é obrigatório para o pagamento.</p>` : '<p class="small muted">Turma fora da conferência.</p>'}
           </div></div>`;
@@ -153,7 +153,7 @@
       async fotos() {
         const aulas = (await ICM.api.aulas.list(t.id, ym)).filter(a => (a.fotos || []).length);
         panel.innerHTML = `<div class="card tab-panel">${aulas.length ? aulas.map(a => `<div class="mb-4"><div class="section-title">${I('calendar', 16)} ${esc(fmtDate(a.data))} — ${esc(a.plano && a.plano.tema || '')}</div><div data-g="${esc(a.id)}"></div></div>`).join('') : ui().empty('Nenhuma foto neste mês', 'image')}</div>`;
-        aulas.forEach(a => ui().photoPicker(panel.querySelector(`[data-g="${a.id}"]`), a.fotos, () => { }, { editable: false }));
+        aulas.forEach(a => ui().photoPicker(panel.querySelector(`[data-g="${a.id}"]`), a.fotos, () => { }, { editable: false, aoAjustar: podeEd ? (f, enq) => ICM.fotos.salvar(f, enq).then(ok => ui().toast(ok ? 'Enquadramento salvo' : 'Não foi possível salvar o ajuste', ok ? 'ok' : 'warn')) : null }));
       },
 
       async relatorios() {
@@ -260,6 +260,9 @@
       const ok = m.$('[data-ok]');
       if (ok) ok.addEventListener('click', e => ui().busy(e.currentTarget, async () => {
         const d = ICM.util.formData(m.$('form'));
+        // 3 fotos por aula realizada (obrigatório)
+        const realizada = d.status === 'realizada' || (Object.keys(pres).length && d.status === 'planejada' && d.data <= ICM.util.today());
+        if (realizada && fotos.length < 3) { ui().toast(`Adicione pelo menos 3 fotos da aula (falta${3 - fotos.length > 1 ? 'm' : ''} ${3 - fotos.length}).`, 'warn', 5000); const tb = m.$('[data-atabs] [data-tab="fotos"]'); if (tb) tb.click(); return; }
         const marcados = Object.keys(pres).length;
         if (marcados && d.status === 'planejada' && d.data <= ICM.util.today()) d.status = 'realizada';
         if (d.status === 'realizada' && marcados < mats.length) {

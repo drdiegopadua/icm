@@ -120,7 +120,8 @@
   const meta = pairs => sec(`<div class="doc-meta">${pairs.filter(p => p[1] !== undefined).map(([k, v]) => `<div><b>${esc(k)}</b>${esc(v || '—')}</div>`).join('')}</div>`);
   const kpis = list => sec(`<div class="kpis">${list.map(([n, t]) => `<div class="kpi"><div class="n">${esc(n)}</div><div class="t">${esc(t)}</div></div>`).join('')}</div>`);
   const table = (cols, rows) => `<table><thead><tr>${cols.map(c => `<th class="${c.c ? 'c' : ''}">${esc(c.t || c)}</th>`).join('')}</tr></thead><tbody>${rows.length ? rows.map(r => `<tr>${r.map((v, i) => `<td class="${cols[i].c ? 'c' : ''} ${(v && v.cls) || ''}">${v && v.html !== undefined ? v.html : esc(v)}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${cols.length}" style="text-align:center;color:#5b6788">Sem registros no período</td></tr>`}</tbody></table>`;
-  const photos = (list, max = 9) => list.length ? `<div class="photos">${list.slice(0, max).map(f => `<figure><img src="${esc(f.src)}" alt=""><figcaption>${esc(f.legenda || '')}</figcaption></figure>`).join('')}</div>${list.length > max ? `<p style="font-size:10px;color:#5b6788">+ ${list.length - max} foto(s) arquivada(s) no sistema.</p>` : ''}` : '<p style="color:#5b6788">Sem registros fotográficos no período.</p>';
+  let coletaFotos = null;   // fotos usadas no relatório (para enquadrar antes de gerar)
+  const photos = (list, max = 9) => { if (coletaFotos) coletaFotos.push(...list.slice(0, max)); return list.length ? `<div class="photos">${list.slice(0, max).map(f => `<figure><div class="ph"><img src="${esc(f.src)}" alt="" style="${ICM.fotos ? ICM.fotos.estilo(f) : ''}"></div><figcaption>${esc(f.legenda || '')}</figcaption></figure>`).join('')}</div>${list.length > max ? `<p style="font-size:10px;color:#5b6788">+ ${list.length - max} foto(s) arquivada(s) no sistema.</p>` : ''}` : '<p style="color:#5b6788">Sem registros fotográficos no período.</p>'; };
   const barChart = data => { const mx = Math.max(1, ...data.map(d => d.v)); return `<div class="bar-chart">${data.map(d => `<div class="bc"><b>${esc(d.lbl ?? U().num(d.v))}</b><i style="height:${Math.max(2, d.v / mx * 85)}%"></i><small>${esc(d.l)}</small></div>`).join('')}</div>`; };
   const tagNivel = (n, F) => n === 'danger' ? { html: `<span class="tag danger">${F} faltas — desligamento</span>` } : n === 'warn' ? { html: `<span class="tag warn">${F} faltas — alerta</span>` } : { html: '<span class="tag ok">Regular</span>' };
   // Linhas de assinatura: se a pessoa/função tiver assinatura cadastrada (Gestão → Assinaturas da equipe), imprime a imagem
@@ -544,9 +545,16 @@
   async function generate(kind, params) {
     try {
       if (ICM.assinaturasEquipe) await ICM.assinaturasEquipe.carregar().catch(() => { });
-      const r = await animate(TITLES[kind], STEPS[kind], () => B[kind](params));
+      coletaFotos = [];
+      let r = await animate(TITLES[kind], STEPS[kind], () => B[kind](params));
+      const usadas = coletaFotos; coletaFotos = null;
+      // Relatório com fotos: antes, a tela para conferir/ajustar o enquadramento de todas
+      if (usadas.length && ICM.fotos) {
+        if (!(await ICM.fotos.revisar(usadas))) return;
+        r = await B[kind](params);   // monta de novo com os enquadramentos ajustados
+      }
       if (r.viewer) await r.viewer(r); else await view(r.title, r.html, r.file);
-    } catch (e) { console.error(e); ICM.ui.toast(e.message || 'Falha ao gerar relatório', 'danger'); }
+    } catch (e) { coletaFotos = null; console.error(e); ICM.ui.toast(e.message || 'Falha ao gerar relatório', 'danger'); }
   }
 
   // Diálogo de parâmetros

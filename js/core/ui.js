@@ -166,16 +166,21 @@
   }
 
   // Seletor de fotos (upload + compressão), com legenda e ampliação ao clicar
-  function photoPicker(container, fotos, onChange, { editable = true } = {}) {
+  function photoPicker(container, fotos, onChange, { editable = true, aoAjustar = null } = {}) {
+    const ajustavel = editable || !!aoAjustar;
     function render() {
       container.innerHTML = `<div class="photo-grid">
-        ${fotos.map((f, i) => `<div class="photo-item"><div class="photo"><button type="button" class="photo-open" data-ver="${i}" aria-label="Ampliar foto"><img src="${esc(f.src)}" alt="${esc(f.legenda || 'Foto')}" loading="lazy"></button>${editable ? `<button type="button" class="rm" data-rm="${i}" aria-label="Remover foto">${I('x', 14)}</button>` : ''}</div>
+        ${fotos.map((f, i) => `<div class="photo-item"><div class="photo"><button type="button" class="photo-open" data-ver="${i}" aria-label="Ampliar foto"><img src="${esc(f.src)}" alt="${esc(f.legenda || 'Foto')}" loading="lazy" style="${ICM.fotos ? ICM.fotos.estilo(f) : ''}"></button>${ajustavel && ICM.fotos ? `<button type="button" class="photo-aj" data-aj="${i}" title="Ajustar o enquadramento para os relatórios">${I('maximize', 14)}</button>` : ''}${editable ? `<button type="button" class="rm" data-rm="${i}" aria-label="Remover foto">${I('x', 14)}</button>` : ''}</div>
           ${editable ? `<input class="input photo-leg" data-leg="${i}" value="${esc(f.legenda || '')}" placeholder="Legenda (opcional)" maxlength="200" aria-label="Legenda da foto">` : f.legenda ? `<div class="photo-cap">${esc(f.legenda)}</div>` : ''}</div>`).join('')}
         ${editable ? `<label class="photo-drop">${I('camera', 26)}<span>Adicionar fotos</span><input type="file" accept="image/jpeg,image/png,image/webp" multiple hidden></label>` : ''}
       </div>${!fotos.length && !editable ? empty('Nenhuma foto registrada', 'image') : ''}`;
       container.querySelectorAll('[data-ver]').forEach(b => b.addEventListener('click', () => photoViewer(fotos, +b.dataset.ver)));
       container.querySelectorAll('[data-leg]').forEach(inp => { inp.addEventListener('input', () => { fotos[+inp.dataset.leg].legenda = inp.value.trim(); onChange(fotos); }); inp.addEventListener('keydown', e => { if (e.key === 'Enter') e.preventDefault(); }); });
       container.querySelectorAll('[data-rm]').forEach(b => b.addEventListener('click', () => { fotos.splice(+b.dataset.rm, 1); onChange(fotos); render(); }));
+      container.querySelectorAll('[data-aj]').forEach(b => b.addEventListener('click', async () => {
+        const f = fotos[+b.dataset.aj]; const enq = await ICM.fotos.ajustar(f); if (!enq) return;
+        fotos[+b.dataset.aj] = { ...f, enq }; onChange(fotos); if (aoAjustar) await aoAjustar(fotos[+b.dataset.aj], enq); render();
+      }));
       const inp = container.querySelector('input[type=file]');
       const drop = container.querySelector('.photo-drop');
       if (inp) {

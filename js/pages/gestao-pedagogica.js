@@ -98,16 +98,16 @@
       const q = confBusca.toLowerCase();
       const grupos = profs.map(p => ({ ...p, turmas: p.turmas.filter(l => (confFiltro === 'todas' || situacao(l) === confFiltro || (confFiltro === 'pendente' && situacao(l) === 'parcial')) && (!q || (p.professor + ' ' + l.turma.nome).toLowerCase().includes(q))) })).filter(p => p.turmas.length);
       painel.querySelector('[data-tab-conf]').innerHTML = grupos.length ? `<div class="table-wrap"><table class="table cf-tab">
-        <colgroup><col style="width:23%"><col style="width:6%"><col style="width:11%"><col style="width:12%"><col style="width:12%"><col style="width:12%"><col><col style="width:110px"></colgroup>
-        <thead><tr><th>Turma</th><th class="c">Aulas</th><th>Plano do mês</th><th>Chamada</th><th>Relatório</th><th>Cumprido</th><th>Observação</th><th></th></tr></thead>
-        <tbody>${grupos.map(p => `<tr class="cf-prof"><td colspan="8"><div class="cf-prof-in"><span class="cf-av">${esc(ini(p.professor))}</span><b>${esc(p.professor)}</b><span class="xs muted">${p.turmas.length} turma(s)</span>
+        <colgroup><col style="width:20%"><col style="width:6%"><col style="width:10%"><col style="width:11%"><col style="width:11%"><col style="width:10%"><col style="width:11%"><col><col style="width:110px"></colgroup>
+        <thead><tr><th>Turma</th><th class="c">Aulas</th><th>Plano do mês</th><th>Chamada</th><th>Relatório</th><th>Fotos</th><th>Cumprido</th><th>Observação</th><th></th></tr></thead>
+        <tbody>${grupos.map(p => `<tr class="cf-prof"><td colspan="9"><div class="cf-prof-in"><span class="cf-av">${esc(ini(p.professor))}</span><b>${esc(p.professor)}</b><span class="xs muted">${p.turmas.length} turma(s)</span>
             <span class="cf-prof-dir">${p.total == null ? '' : `<span class="cf-prof-bar">${barra(p.total)}</span><b style="color:${corPct(p.total)}">${p.total}%</b>`}${p.total == null ? '<span class="cf-chip neutro">Sem aulas</span>' : p.emDia ? '<span class="cf-chip ok">Em dia — liberado</span>' : '<span class="cf-chip danger">Pendente</span>'}</span></div></td></tr>
           ${p.turmas.map(l => { const i = linhas.indexOf(l); const aj = l.ajuste && l.ajuste.status ? l.ajuste.status : {}; return `<tr>
             <td><a href="#/turmas/${esc(l.turma.id)}?mes=${ym}" class="cf-turma">${esc(l.turma.nome)}</a><div class="xs muted truncate">${esc(l.projeto.nome || '')}</div></td>
             <td class="c"><b>${l.aulas}</b></td>
             <td>${chip(l.status.plano)}${aj.plano ? '<span class="cf-aj" title="Ajustado pela coordenação">✎</span>' : ''}</td>
             <td>${chip(l.status.chamada, l.status.chamada ? `${l.comChamada}/${l.aulas}` : '')}${aj.chamada ? '<span class="cf-aj" title="Ajustado pela coordenação">✎</span>' : ''}</td>
-            <td>${chip(l.status.relatorio, l.status.relatorio ? `${l.comRel}/${l.aulas}` : '')}${aj.relatorio ? '<span class="cf-aj" title="Ajustado pela coordenação">✎</span>' : ''}</td>
+            <td>${chip(l.status.relatorio, l.status.relatorio ? `${l.comRel}/${l.aulas}` : '')}${aj.relatorio ? '<span class="cf-aj" title="Ajustado pela coordenação">✎</span>' : ''}</td>            <td>${chip(l.status.fotos, l.status.fotos ? `${l.comFotos}/${l.aulas}` : '')}${aj.fotos ? '<span class="cf-aj" title="Ajustado pela coordenação">✎</span>' : ''}</td>
             <td>${pctCel(l.total)}</td>
             <td class="small cf-obs">${esc(l.obs || '') || '<span class="muted">—</span>'}</td>
             <td style="text-align:right">${pode ? `<button class="btn btn-sm" data-aj="${i}">${I('edit', 14)} Conferir</button>` : ''}</td></tr>`; }).join('')}`).join('')}
@@ -167,12 +167,13 @@
         <div class="field"><label class="label">Plano do mês</label>${sel('plano', l.auto.plano)}</div>
         <div class="field"><label class="label">Chamada (${l.comChamada}/${l.aulas})</label>${sel('chamada', l.auto.chamada)}</div>
         <div class="field"><label class="label">Relatório de aula (${l.comRel}/${l.aulas})</label>${sel('relatorio', l.auto.relatorio)}</div>
+        <div class="field"><label class="label">Fotos — 3 por aula (${l.comFotos}/${l.aulas})</label>${sel('fotos', l.auto.fotos)}</div>
       </div>
       <div class="field"><label class="label">Observação (cópias, textos curtos, combinados…)</label><textarea class="textarea" rows="3" name="obs">${esc(l.obs || '')}</textarea></div>
       ${pl ? `<details class="mt-4"><summary class="small bold">Ver plano do mês</summary><div class="small mt-2">${['tema', 'objetivos', 'conteudos', 'metodologia', 'recursos', 'avaliacao'].filter(k => pl[k]).map(k => `<p><b>${esc({ tema: 'Tema', objetivos: 'Objetivos', conteudos: 'Conteúdos', metodologia: 'Metodologia', recursos: 'Recursos', avaliacao: 'Avaliação' }[k])}:</b> ${esc(pl[k])}</p>`).join('')}</div></details>` : '<p class="small muted mt-4">Plano do mês ainda não preenchido.</p>'}`,
       foot: `<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" data-ok>${I('check', 18)} Salvar conferência</button>` });
     m.$('[data-ok]').addEventListener('click', async () => {
-      const status = {}; ['plano', 'chamada', 'relatorio'].forEach(k => { const v = m.$(`[name=${k}]`).value; if (v) status[k] = v; });
+      const status = {}; ['plano', 'chamada', 'relatorio', 'fotos'].forEach(k => { const v = m.$(`[name=${k}]`).value; if (v) status[k] = v; });
       m.close(); await ui().run(() => P().ajustar(l.turma.id, ym, { status, obs: m.$('[name=obs]').value.trim() }), 'Conferência salva'); depois();
     });
   }
@@ -466,8 +467,8 @@
       let html = head('Conferência pedagógica mensal', `Obrigações dos professores — ${ICM.util.fmtMonth(mes)}`);
       html += meta([['Mês de referência', ICM.util.fmtMonth(mes)], ['Professores em dia', `${profs.filter(p => p.emDia && p.total != null).length} de ${profs.filter(p => p.total != null).length}`], ['Conferido em', ICM.util.fmtDate(ICM.util.today())]]);
       html += sec(`<h2>Resumo por professor</h2>${table(['Professor(a)', { t: 'Turmas', c: 1 }, { t: 'Cumprido', c: 1 }, 'Situação para pagamento'], profs.map(p => [p.professor, p.turmas.length, p.total == null ? '—' : p.total + '%', { html: p.total == null ? 'Sem aulas no mês' : p.emDia ? '<b style="color:#047857">LIBERADO — em dia</b>' : '<b style="color:#b91c1c">PENDENTE — aguardar regularização</b>' }]))}`);
-      html += sec(`<h2>Detalhe por turma</h2>${table(['Professor(a)', 'Turma', { t: 'Aulas', c: 1 }, 'Plano do mês', 'Chamada', 'Relatório de aula', { t: '%', c: 1 }, 'Observação'], linhas.map(l => [l.professor, l.turma.nome, l.aulas, s(l.status.plano), l.status.chamada ? `${s(l.status.chamada)} (${l.comChamada}/${l.aulas})` : s(null), l.status.relatorio ? `${s(l.status.relatorio)} (${l.comRel}/${l.aulas})` : s(null), l.total == null ? '—' : l.total + '%', l.obs || '']))}`);
-      html += sec(`<p style="font-size:11px;color:#3a4669">Critérios: plano de aula do mês preenchido; chamada e relatório registrados em todas as aulas do mês (feriados, recessos e aulas canceladas não contam). “Parcial” = alguma aula sem registro. Ajustes e observações feitos pela coordenação pedagógica na conferência.</p>`);
+      html += sec(`<h2>Detalhe por turma</h2>${table(['Professor(a)', 'Turma', { t: 'Aulas', c: 1 }, 'Plano do mês', 'Chamada', 'Relatório de aula', 'Fotos (3/aula)', { t: '%', c: 1 }, 'Observação'], linhas.map(l => [l.professor, l.turma.nome, l.aulas, s(l.status.plano), l.status.chamada ? `${s(l.status.chamada)} (${l.comChamada}/${l.aulas})` : s(null), l.status.relatorio ? `${s(l.status.relatorio)} (${l.comRel}/${l.aulas})` : s(null), l.status.fotos ? `${s(l.status.fotos)} (${l.comFotos}/${l.aulas})` : s(null), l.total == null ? '—' : l.total + '%', l.obs || '']))}`);
+      html += sec(`<p style="font-size:11px;color:#3a4669">Critérios: plano de aula do mês preenchido; chamada, relatório e 3 fotos registrados em todas as aulas do mês (feriados, recessos e aulas canceladas não contam). “Parcial” = alguma aula sem registro. Ajustes e observações feitos pela coordenação pedagógica na conferência.</p>`);
       html += signs('Coordenação pedagógica', 'Tesouraria');
       return { title: `Conferência pedagógica — ${ICM.util.fmtMonth(mes)}`, html, file: `conferencia-pedagogica-${mes}` };
     }

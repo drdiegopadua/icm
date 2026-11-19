@@ -65,9 +65,13 @@
           <div data-alunos></div>
           ${ui().field({ name: 'tema', label: 'Tema da aula (opcional)', value: (a.plano || {}).tema || '' })}
           <div class="mt-4">${ui().field({ name: 'relato', label: 'Relato rápido da aula (opcional)', type: 'textarea', rows: 3, value: (a.relatorio || {}).texto || '' })}</div>
+          <div class="mt-4"><div class="section-title" style="margin-bottom:6px">${I('camera', 18)} Fotos da aula <span class="badge" data-nfotos></span></div><div class="xs muted mb-2">Obrigatório: 3 fotos por aula. Pode tirar agora ou enviar depois.</div><div data-fotos></div></div>
           <button class="btn btn-primary btn-lg mt-6" style="width:100%" data-salvar>${I('check', 20)} Salvar chamada</button>
         </div></div>`;
       document.body.appendChild(ov); document.body.style.overflow = 'hidden';
+      const fotos = (a.fotos || []).map(f => ({ ...f }));
+      const contaFotos = () => { const b = ov.querySelector('[data-nfotos]'); b.textContent = `${fotos.length}/3`; b.className = 'badge ' + (fotos.length >= 3 ? 'ok' : 'warn'); };
+      ui().photoPicker(ov.querySelector('[data-fotos]'), fotos, contaFotos, { editable: true }); contaFotos();
       const fechar = () => { pararCamera(); ov.remove(); document.body.style.overflow = ''; lista(); };
       ov.querySelector('[data-x]').addEventListener('click', fechar);
       const CICLO = { undefined: 'P', P: 'F', F: 'J', J: undefined };
@@ -118,7 +122,8 @@
         const faltam = mats.length - Object.keys(pres).length;
         if (faltam && !(await ui().confirm({ title: 'Chamada incompleta', text: `${faltam} aluno(s) sem marcação. Marcar como falta e salvar?`, ok: 'Marcar falta e salvar' }))) return;
         mats.forEach(m => { if (!pres[m.aluno_id]) pres[m.aluno_id] = 'F'; });
-        const payload = { ...a, presencas: pres, justificativas: just, status: data <= ICM.util.today() ? 'realizada' : a.status, plano: { ...(a.plano || {}), tema: ov.querySelector('[name=tema]').value.trim() || (a.plano || {}).tema }, relatorio: { ...(a.relatorio || {}), texto: ov.querySelector('[name=relato]').value.trim() || (a.relatorio || {}).texto } };
+        if (fotos.length < 3 && data <= ICM.util.today() && !(await ui().confirm({ title: 'Faltam fotos da aula', text: `São obrigatórias 3 fotos por aula e esta tem ${fotos.length}. Salvar a chamada agora e enviar as fotos depois? (Até lá a aula fica pendente na conferência.)`, ok: 'Salvar e enviar depois' }))) return;
+        const payload = { ...a, fotos, presencas: pres, justificativas: just, status: data <= ICM.util.today() ? 'realizada' : a.status, plano: { ...(a.plano || {}), tema: ov.querySelector('[name=tema]').value.trim() || (a.plano || {}).tema }, relatorio: { ...(a.relatorio || {}), texto: ov.querySelector('[name=relato]').value.trim() || (a.relatorio || {}).texto } };
         const r = await ui().run(() => ICM.api.aulas.save(payload));
         if (!navigator.onLine) ICM.api.offline.enfileirar({ tipo: 'chamada', aula_id: r.id, turma: t.nome, data });
         ui().toast(navigator.onLine ? 'Chamada salva!' : 'Chamada salva no aparelho — será enviada quando a internet voltar', 'ok', 4000);

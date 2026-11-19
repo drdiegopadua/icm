@@ -14,7 +14,7 @@
   const can = p => ICM.auth.can(p);
   const me = () => ICM.auth.user();
   const temTexto = o => !!o && Object.values(o).some(v => String(v || '').trim().length > 0);
-  const ITENS = { plano: 'Plano de aula do mês', chamada: 'Registro de chamada', relatorio: 'Relatório de aula' };
+  const ITENS = { plano: 'Plano de aula do mês', chamada: 'Registro de chamada', relatorio: 'Relatório de aula', fotos: 'Fotos (3 por aula)' };
   const PESO = { EM_DIA: 100, PARCIAL: 50, PENDENTE: 0 };
 
   // ---------- Plano de aula mensal ----------
@@ -81,11 +81,13 @@
       const doDia = d => aulas.filter(a => a.data === d && a.status !== 'cancelada');
       const comChamada = dias.filter(d => doDia(d).some(a => Object.keys(a.presencas || {}).length)).length;
       const comRel = dias.filter(d => doDia(d).some(a => a.relatorio && String(a.relatorio.texto || '').trim())).length;
+      const comFotos = dias.filter(d => doDia(d).some(a => (a.fotos || []).length >= 3)).length;
       const pl = pls.find(p => p.turma_id === t.id);
       const auto = {
         plano: temTexto(pl && { a: pl.objetivos, b: pl.conteudos, c: pl.metodologia, d: pl.tema }) ? 'EM_DIA' : 'PENDENTE',
         chamada: temAlunos ? statusDe(comChamada, dias.length) : null,
-        relatorio: statusDe(comRel, dias.length)
+        relatorio: statusDe(comRel, dias.length),
+        fotos: statusDe(comFotos, dias.length)
       };
       const aj = ajustes.find(c => c.turma_id === t.id) || {};
       const st = {}; const pct = {};
@@ -93,14 +95,14 @@
         st[k] = (aj.status && aj.status[k]) || auto[k];
         if (st[k] == null) { pct[k] = null; return; }
         if (aj.status && aj.status[k]) pct[k] = PESO[aj.status[k]];
-        else pct[k] = k === 'plano' ? PESO[st[k]] : Math.round((k === 'chamada' ? comChamada : comRel) / dias.length * 100);
+        else pct[k] = k === 'plano' ? PESO[st[k]] : Math.round(({ chamada: comChamada, relatorio: comRel, fotos: comFotos }[k]) / dias.length * 100);
       });
       const vals = Object.values(pct).filter(v => v != null);
       const total = vals.length ? Math.round(vals.reduce((s, v) => s + v, 0) / vals.length) : null;
       const prof = users.find(x => x.id === t.professor_id) || {};
       return {
         turma: t, projeto: projetos.find(p => p.id === t.projeto_id) || {}, professor: prof.nome || 'A definir', professor_id: t.professor_id || '',
-        aulas: dias.length, dias, comChamada, comRel, plano: pl || null, auto, status: st, pct, total,
+        aulas: dias.length, dias, comChamada, comRel, comFotos, plano: pl || null, auto, status: st, pct, total,
         emDia: total == null ? null : Object.values(st).every(s => s == null || s === 'EM_DIA'),
         ajuste: aj.id ? aj : null, obs: aj.obs || ''
       };

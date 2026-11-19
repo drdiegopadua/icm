@@ -20,7 +20,9 @@
   async function minhasTurmasIds() {
     const ts = await S().list('turmas');
     if (!isProf()) return ts.map(t => t.id);
-    return ts.filter(t => t.professor_id === me().id).map(t => t.id);
+    // Professor: todas as turmas dos projetos em que dá aula (supabase/icm_v15)
+    const projs = new Set(ts.filter(t => t.professor_id === me().id).map(t => t.projeto_id));
+    return ts.filter(t => t.professor_id === me().id || projs.has(t.projeto_id)).map(t => t.id);
   }
   async function podeTurma(turmaId) {
     if (!isProf()) return true;

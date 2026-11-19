@@ -24,6 +24,7 @@
     async list(ym) { return S().list('planos_mensais', p => !ym || p.ym === ym); },
     async save(turmaId, ym, dados) {
       need('aulas.registrar');
+      if (!(await ICM.api.turmas.podeEditar(turmaId))) throw new Error('Nesta turma você tem acesso só para visualizar.');
       const ja = await planos.get(turmaId, ym);
       const rec = { ...dados, turma_id: turmaId, ym, atualizado_por: me().nome, atualizado_em: new Date().toISOString(), enviado_em: (ja && ja.enviado_em) || new Date().toISOString() };
       const r = ja ? await S().update('planos_mensais', ja.id, rec) : await S().insert('planos_mensais', { id: planos.idDe(turmaId, ym), ...rec });

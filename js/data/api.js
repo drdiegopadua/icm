@@ -20,13 +20,19 @@
   async function minhasTurmasIds() {
     const ts = await S().list('turmas');
     if (!isProf()) return ts.map(t => t.id);
-    // Professor: todas as turmas dos projetos em que dá aula (supabase/icm_v15)
-    const projs = new Set(ts.filter(t => t.professor_id === me().id).map(t => t.projeto_id));
-    return ts.filter(t => t.professor_id === me().id || projs.has(t.projeto_id)).map(t => t.id);
+    // Professor: as turmas dele + as que recebeu acesso na turma (supabase/icm_v16)
+    return ts.filter(t => t.professor_id === me().id || (t.acessos || []).some(x => x.usuario_id === me().id)).map(t => t.id);
   }
   async function podeTurma(turmaId) {
     if (!isProf()) return true;
     return (await minhasTurmasIds()).includes(turmaId);
+  }
+  // Pode registrar chamada, relatório e plano: titular ou acesso "editar" dado na turma
+  async function podeEditarTurma(turmaId) {
+    if (!A().can('aulas.registrar')) return false;
+    if (!isProf()) return true;
+    const t = await S().get('turmas', turmaId); if (!t) return false;
+    return t.professor_id === me().id || (t.acessos || []).some(x => x.usuario_id === me().id && x.nivel === 'editar');
   }
   async function alunosVisiveisIds() {
     if (A().can('alunos.ver_todos')) return null; // todos
@@ -298,6 +304,7 @@
         return (await S().list('turmas', t => ids.includes(t.id) && (!projetoId || t.projeto_id === projetoId))).sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR', { numeric: true, sensitivity: 'base' }));
       },
       async get(id) { if (!(await podeTurma(id))) deny('Esta turma não é sua.'); return S().get('turmas', id); },
+      podeEditar: id => podeEditarTurma(id),
       async save(t) {
         need('turmas.editar');
         if (!t.nome) throw new Error('Informe o nome da turma.');
@@ -361,7 +368,7 @@
       async get(id) { const a = await S().get('aulas', id); if (a && !(await podeTurma(a.turma_id))) deny(); return a; },
       async save(a) {
         need('aulas.registrar');
-        if (!(await podeTurma(a.turma_id))) deny('Você só pode registrar aulas das suas turmas.');
+        if (!(await podeEditarTurma(a.turma_id))) deny('Nesta turma você tem acesso só para visualizar.');
         if (!a.data) throw new Error('Informe a data da aula.');
         a.horas = u().hoursBetween(a.inicio, a.fim);
         // Motivo da falta justificada: guarda só o de quem ficou com J e tem texto

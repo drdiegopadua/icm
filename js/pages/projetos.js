@@ -233,12 +233,32 @@
         ${F({ name: 'vagas', label: 'Vagas', type: 'number', value: t.vagas || 20, attrs: 'min="1"' })}
         ${F({ name: 'faixa', label: 'Faixa etária / público', value: t.faixa })}
         ${F({ name: 'status', label: 'Situação', type: 'select', value: t.status || 'ativa', options: [['ativa', 'Ativa'], ['encerrada', 'Encerrada']] })}
+        <div class="field span-2"><span class="label">${I('users', 15)} Outros professores com acesso a esta turma</span>
+          <div class="xs muted mb-2">O professor responsável já tem acesso completo. Aqui você dá acesso a outros: <b>só visualizar</b> ou <b>visualizar e editar</b> (chamada, relatório de aula e plano do mês).</div>
+          <div data-acessos></div>
+          <div class="row wrap mt-2" style="gap:8px"><select class="select" data-ac-prof style="width:auto;min-width:240px"></select><select class="select" data-ac-nivel style="width:auto"><option value="ver">Só visualizar</option><option value="editar">Visualizar e editar</option></select><button type="button" class="btn btn-sm" data-ac-add>${I('plus', 14)} Adicionar</button></div></div>
       </form>`,
       foot: `${t.id ? `<button class="btn btn-danger" data-del style="margin-right:auto">${I('trash', 18)} Excluir</button>` : ''}<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" data-ok>${I('check', 18)} Salvar turma</button>`
     });
+    // Acessos de outros professores (só visualizar / visualizar e editar)
+    const acessos = (t.acessos || []).map(x => ({ ...x }));
+    const NIV = { ver: 'Só visualizar', editar: 'Visualizar e editar' };
+    const nomeP = id => (profs.find(u => u.id === id) || {}).nome || 'Usuário';
+    const drawAc = () => {
+      const titular = m.$('[name=professor_id]').value;
+      const livres = profs.filter(u => u.id !== titular && !acessos.some(x => x.usuario_id === u.id));
+      m.$('[data-ac-prof]').innerHTML = `<option value="">${livres.length ? 'Escolha o professor…' : 'Nenhum outro professor disponível'}</option>${livres.map(u => `<option value="${esc(u.id)}">${esc(u.nome)}</option>`).join('')}`;
+      m.$('[data-acessos]').innerHTML = acessos.filter(x => x.usuario_id !== titular).map((x, i) => `<div class="row mb-2" style="gap:8px"><b class="grow small">${esc(nomeP(x.usuario_id))}</b><select class="select" data-ac-niv="${i}" style="width:auto">${Object.entries(NIV).map(([k, n]) => `<option value="${k}" ${x.nivel === k ? 'selected' : ''}>${n}</option>`).join('')}</select><button type="button" class="btn btn-sm btn-ghost" data-ac-rm="${i}" title="Tirar acesso">${I('x', 14)}</button></div>`).join('') || '<div class="xs muted">Nenhum outro professor com acesso.</div>';
+      m.$$('[data-ac-niv]').forEach(s => s.addEventListener('change', () => { acessos[+s.dataset.acNiv].nivel = s.value; }));
+      m.$$('[data-ac-rm]').forEach(b => b.addEventListener('click', () => { acessos.splice(+b.dataset.acRm, 1); drawAc(); }));
+    };
+    drawAc();
+    m.$('[name=professor_id]').addEventListener('change', drawAc);
+    m.$('[data-ac-add]').addEventListener('click', () => { const id = m.$('[data-ac-prof]').value; if (!id) { ui().toast('Escolha o professor.', 'warn'); return; } acessos.push({ usuario_id: id, nivel: m.$('[data-ac-nivel]').value }); drawAc(); });
     m.$('[data-ok]').addEventListener('click', e => ui().busy(e.currentTarget, async () => {
       const d = ICM.util.formData(m.$('form'));
       d.dias = (d.dias || []).map(Number);
+      d.acessos = acessos.filter(x => x.usuario_id && x.usuario_id !== d.professor_id);
       const r = await ui().run(() => ICM.api.turmas.save(t.id ? { ...t, ...d } : d), 'Turma salva');
       m.close(); location.hash = `#/turmas/${r.id}`; ICM.app.reload();
     }).catch(() => { }));

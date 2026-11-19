@@ -9,6 +9,8 @@
     const t = await ICM.api.turmas.get(params.id);
     if (!t) { el.innerHTML = ui().empty('Turma não encontrada'); return; }
     const p = await ICM.api.projetos.get(t.projeto_id);
+    const podeEd = await ICM.api.turmas.podeEditar(t.id);
+    const soVer = ICM.auth.user().papel === 'professor' && !podeEd;
     const users = await ICM.api.usuarios.list();
     const prof = users.find(u => u.id === t.professor_id) || {};
     ICM.app.setCrumbs([['Turmas', '#/turmas'], [t.nome]]);
@@ -18,12 +20,12 @@
     el.innerHTML = `<div class="page">
       <div class="card mb-4 project-card" style="--c:${p.cor};cursor:default">
         <div class="row between wrap">
-          <div><div class="row wrap"><a class="badge neutral" href="#/projetos/${esc(p.id)}" style="text-decoration:none">${I('folder', 12)} ${esc(p.nome)}</a>${ui().areaChip(p.area)}<span class="badge neutral">${esc(t.modalidade || '')}</span>${t.status === 'encerrada' ? ui().badge('Encerrada', 'neutral') : ui().badge('Ativa', 'ok', true)}</div>
+          <div><div class="row wrap"><a class="badge neutral" href="#/projetos/${esc(p.id)}" style="text-decoration:none">${I('folder', 12)} ${esc(p.nome)}</a>${ui().areaChip(p.area)}<span class="badge neutral">${esc(t.modalidade || '')}</span>${t.status === 'encerrada' ? ui().badge('Encerrada', 'neutral') : ui().badge('Ativa', 'ok', true)}${soVer ? `<span class="badge warn">${I('eye', 12)} Somente visualização</span>` : ''}</div>
             <h1 class="page-title mt-2" style="font-size:28px">${esc(t.nome)}</h1>
             <div class="meta mt-2"><span>${I('user', 15)} ${esc(prof.nome || 'Professor(a) a definir')}</span><span>${I('calendar', 15)} ${esc(ICM.pages._diasTxt(t.dias))}</span><span>${I('clock', 15)} ${esc(t.inicio)}–${esc(t.fim)}</span><span>${I('pin', 15)} ${esc(t.local || '')}</span></div></div>
           <div class="row wrap">
             ${ICM.auth.can('turmas.editar') ? `<button class="btn" data-edit>${I('edit', 18)} Editar</button>` : ''}
-            ${ICM.auth.can('aulas.registrar') ? `<button class="btn btn-primary" data-nova>${I('plus', 18)} Registrar aula</button>` : ''}
+            ${podeEd ? `<button class="btn btn-primary" data-nova>${I('plus', 18)} Registrar aula</button>` : ''}
           </div>
         </div>
       </div>
@@ -56,7 +58,7 @@
             ${mini('Alunos em alerta', linhas.filter(l => l.nivel !== 'ok' && l.status_turma === 'ativo').length, 'alert')}
           </div>
           <div class="card">
-            <div class="card-head"><div class="card-title">Aulas de ${esc(ICM.util.fmtMonth(ym))}</div>${ICM.auth.can('aulas.registrar') ? `<button class="btn btn-sm" data-gerar>${I('sparkles', 16)} Planejar aulas do mês</button>` : ''}</div>
+            <div class="card-head"><div class="card-title">Aulas de ${esc(ICM.util.fmtMonth(ym))}</div>${podeEd ? `<button class="btn btn-sm" data-gerar>${I('sparkles', 16)} Planejar aulas do mês</button>` : ''}</div>
             ${aulas.length ? `<div class="table-wrap"><table class="table"><thead><tr><th>Data</th><th>Tema da aula</th><th>Presença</th><th>Relatório</th><th>Fotos</th><th>Situação</th></tr></thead><tbody>
             ${aulas.map(a => { const pr = Object.values(a.presencas || {}); const P = pr.filter(v => v !== 'F').length; const atrasada = a.status === 'planejada' && a.data < hoje; return `
               <tr class="clickable" data-aula="${esc(a.id)}"><td><b>${esc(fmtDate(a.data))}</b><div class="xs muted">${esc(ICM.util.DIAS[ICM.util.parseD(a.data).getDay()])} · ${esc(a.inicio)}–${esc(a.fim)}</div></td>
@@ -75,7 +77,7 @@
         const PG = ICM.api.pedagogico;
         const pl = (await PG.planos.get(t.id, ym)) || {};
         const conf = (await PG.conferencia(ym)).find(l => l.turma.id === t.id);
-        const pode = ICM.auth.can('aulas.registrar');
+        const pode = podeEd;
         const F = o => ui().field({ ...o, attrs: (o.attrs || '') + (pode ? '' : ' disabled') });
         const cor = v => v == null ? '#94a3b8' : v >= 90 ? '#10b981' : v >= 60 ? '#f59e0b' : '#ef4444';
         const it = (n, st, x) => `<div class="list-item"><div class="grow small bold">${n}</div>${st ? `<span class="badge ${st === 'EM_DIA' ? 'ok' : st === 'PARCIAL' ? 'warn' : 'danger'}">${st === 'EM_DIA' ? 'Em dia' : st === 'PARCIAL' ? 'Parcial' : 'Pendente'}</span>` : '<span class="xs muted">sem aulas</span>'}${x ? `<span class="xs muted">${x}</span>` : ''}</div>`;
@@ -191,7 +193,7 @@
       const pres = { ...(a.presencas || {}) };
       const just = { ...(a.justificativas || {}) };   // motivo de cada falta justificada (J), por aluno
       const fotos = (a.fotos || []).map(f => ({ ...f }));
-      const canEdit = ICM.auth.can('aulas.registrar');
+      const canEdit = podeEd;
       const F = o => ui().field({ ...o, attrs: (o.attrs || '') + (canEdit ? '' : ' disabled') });
       const pl = a.plano || {}, rl = a.relatorio || {};
       const m = ui().modal({

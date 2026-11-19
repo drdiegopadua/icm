@@ -36,7 +36,8 @@
       const out = [];
       // As turmas do próprio professor primeiro; depois as dos colegas do mesmo projeto
       const eu = ICM.auth.user().id;
-      for (const t of turmas.filter(t => t.status !== 'encerrada').sort((x, y) => (y.professor_id === eu) - (x.professor_id === eu))) {
+      const editaveis = []; for (const t of turmas) if (t.status !== 'encerrada' && await ICM.api.turmas.podeEditar(t.id)) editaveis.push(t);
+      for (const t of editaveis.sort((x, y) => (y.professor_id === eu) - (x.professor_id === eu))) {
         const aulas = (await ICM.api.aulas.list(t.id, data.slice(0, 7))).filter(a => a.data === data);
         if (aulas.length) aulas.forEach(a => out.push({ t, a }));
         else if ((t.dias || []).includes(ds)) out.push({ t, a: null });

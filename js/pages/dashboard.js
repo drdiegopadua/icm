@@ -141,6 +141,7 @@
   ICM.pages.dashboard = async function (el) {
     ICM.app.setCrumbs([['Início']]);
     const user = ICM.auth.user();
+    if (!user) return;   // saindo ou entrando: nada para mostrar ainda
     const hr = new Date().getHours();
     const saud = hr < 12 ? 'Bom dia' : hr < 18 ? 'Boa tarde' : 'Boa noite';
     const ehProf = user.papel === 'professor';

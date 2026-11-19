@@ -379,6 +379,25 @@
     },
     usage() { return 0; },
     // Funções públicas do banco (portal, doação, assinatura, certificado)
+    // Fotos/anexos gravados no banco antes do Storage: regrava cada parte (pública e privada) sem mexer no conteúdo
+    async migrarArquivos(aoAvancar) {
+      const { data: m, error: em } = await sb.rpc('uso_armazenamento', {}); if (em) throw new Error(em.message);
+      const cols = Object.keys(m.registros_por_colecao || {}).filter(c => !INLINE.has(c) && !/^chat_/.test(c) && c !== 'auditoria');
+      const velho = /"data:(image\/(jpeg|png|webp|gif)|application\/pdf)[^"]{2000,}/;
+      let achados = 0, movidos = 0, erros = 0;
+      for (const col of cols) {
+        if (aoAvancar) aoAvancar(col);
+        const regs = await buscarColecao(col).catch(() => []);
+        for (const r of regs) {
+          if (!velho.test(JSON.stringify(r))) continue;
+          achados++;
+          const { id, ...dados } = r;
+          try { await gravarParte(col, id, dados, true); movidos++; } catch (e) { erros++; console.warn('migrar', col, id, e.message); }
+        }
+        cache.delete(col.replace(/_privado$/, ''));
+      }
+      return { achados, movidos, erros };
+    },
     async rpc(nome, args) { const { data, error } = await sb.rpc(nome, args); if (error) throw new Error(String(error.message).replace(/^.*?:\s*/, '')); return data; },
     usarSnapshot(snap) { modoPublico = snap; },
     sairSnapshot() { modoPublico = null; }

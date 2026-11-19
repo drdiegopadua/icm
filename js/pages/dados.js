@@ -109,7 +109,15 @@
         ${barra('Banco de dados', m.banco_bytes, m.limites.banco, m.pctBanco, `${ICM.util.num(Object.values(m.registros_por_colecao || {}).reduce((s, n) => s + n, 0))} registro(s) no total`)}
       </div>
       ${pastas.length ? `<div class="mt-4"><div class="small bold mb-2">O que mais ocupa</div>${pastas.slice(0, 6).map(([p, x]) => `<div class="row between small" style="padding:4px 0;border-bottom:1px solid var(--line)"><span>${esc(PASTAS[p] || p)}</span><span>${tamanho(x.bytes)} · ${ICM.util.num(x.qtd)} arquivo(s)</span></div>`).join('')}</div>` : ''}
+      <div class="row wrap mt-4" style="gap:8px"><button class="btn btn-sm" data-migrar>${I('upload', 14)} Procurar fotos antigas guardadas no banco</button><span class="xs muted" data-migrar-st>Move para a pasta de arquivos o que foi salvo antes de 26/10/2026, liberando o banco.</span></div>
       <div class="xs muted mt-4">Medido em ${esc(new Date(m.medido_em).toLocaleString('pt-BR'))}. O sistema avisa no menu e no e-mail diário quando passar de 70%. As fotos já são reduzidas automaticamente antes de subir.</div>`;
+    const mg = box.querySelector('[data-migrar]');
+    if (mg) mg.addEventListener('click', () => ui().busy(mg, async () => {
+      const st = box.querySelector('[data-migrar-st]');
+      const r = await ui().run(() => ICM.store.migrarArquivos(col => { st.textContent = `Conferindo ${col}…`; }));
+      st.textContent = r.achados ? `${r.movidos} registro(s) com fotos antigas movidos${r.erros ? `, ${r.erros} com erro (veja o console)` : ''}.` : 'Nenhuma foto antiga no banco. Tudo já está na pasta de arquivos.';
+      if (r.movidos) desenharEspaco(box);
+    }).catch(() => { }));
     box.querySelector('[data-plano]').addEventListener('change', async e => { await ui().run(() => ICM.api.espaco.salvarPlano(e.target.value), 'Plano atualizado').catch(() => { }); desenharEspaco(box); });
   }
   ICM.pages._tamanho = tamanho;

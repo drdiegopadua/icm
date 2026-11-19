@@ -181,11 +181,13 @@
     });
     await R[tab0]();
     if (query.get('aula')) aulaModal(query.get('aula'));
+    else if (/^\d{4}-\d{2}-\d{2}$/.test(query.get('nova') || '')) aulaModal(null, query.get('nova'));
+    if (query.get('aula') || query.get('nova')) history.replaceState(null, '', location.pathname + location.search + '#/turmas/' + t.id);
 
     // ---------- Modal de aula ----------
-    async function aulaModal(aulaId) {
+    async function aulaModal(aulaId, dataNova) {
       const isNew = !aulaId;
-      const a = isNew ? { turma_id: t.id, data: ICM.util.today(), inicio: t.inicio, fim: t.fim, plano: {}, relatorio: {}, presencas: {}, fotos: [], status: 'planejada' } : await ICM.api.aulas.get(aulaId);
+      const a = isNew ? { turma_id: t.id, data: dataNova || ICM.util.today(), inicio: t.inicio, fim: t.fim, plano: {}, relatorio: {}, presencas: {}, fotos: [], status: 'planejada' } : await ICM.api.aulas.get(aulaId);
       const todosMats = await ICM.api.turmas.alunos(t.id);
       const mats = todosMats.filter(m => m.entrada <= a.data && (!m.saida || m.saida > a.data));
       // Alunos ativos que entraram na turma depois da data desta aula (não aparecem na chamada)

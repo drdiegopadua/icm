@@ -61,7 +61,7 @@
         const naoLidas = l.filter(m => m.autor_id !== u.id && m.em > (lidos.canais[cid] || '')).length;
         return { ultima: ult, naoLidas };
       };
-      const nome = id => (usuarios.find(x => x.id === id) || {}).nome || '';
+      const nome = id => (usuarios.find(x => x.id === id) || {}).nome || (id === 'sistema' ? 'ICM Sistema' : '');
       const grupos = canais.map(c => ({ ...c, ...resumo(c.id), ultimaAutor: '' })).map(c => ({ ...c, ultimaAutor: c.ultima ? nome(c.ultima.autor_id) : '' }));
       const diretos = usuarios.filter(x => x.id !== u.id).map(x => {
         const cid = idDireto(u.id, x.id);
@@ -75,7 +75,7 @@
       fresco();
       const usuarios = await S().list('usuarios');
       return (await S().list('chat_mensagens', m => m.canal_id === cid)).sort((a, b) => a.em.localeCompare(b.em))
-        .map(m => { const a = usuarios.find(x => x.id === m.autor_id) || { nome: 'Usuário removido' }; return { ...m, autor: { id: a.id, nome: a.nome, foto: a.foto } }; });
+        .map(m => { const a = usuarios.find(x => x.id === m.autor_id) || (m.autor_id === 'sistema' ? { id: 'sistema', nome: 'ICM Sistema' } : { nome: 'Usuário removido' }); return { ...m, autor: { id: a.id, nome: a.nome, foto: a.foto } }; });
     },
 
     async enviar(cid, texto) {

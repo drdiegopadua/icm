@@ -593,7 +593,7 @@
   }
 
   ICM.reports = {
-    generate, openDialog, register, fichaAluno: id => generate('ficha_aluno', { aluno_id: id }),
+    generate, openDialog, register, build: (kind, params) => B[kind](params), fichaAluno: id => generate('ficha_aluno', { aluno_id: id }),
     h: { sec, head, logoDoc, meta, kpis, table, photos, barChart, signs, declaracao, esc, view, animate, topicos }, _formsExtra: FORMS_EXTRA
   };
 })();

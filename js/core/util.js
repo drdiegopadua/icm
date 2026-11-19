@@ -81,7 +81,7 @@
   function setPath(o, p, v) { const ks = p.split('.'); let c = o; ks.slice(0, -1).forEach(k => { if (typeof c[k] !== 'object' || c[k] === null) c[k] = {}; c = c[k]; }); c[ks[ks.length - 1]] = v; }
 
   // Reduz imagem antes de salvar (economiza espaço, remove metadados EXIF como GPS)
-  function compressImage(file, max = 1280, quality = .8) {
+  function compressImage(file, max = 1280, quality = .72) {
     return new Promise((resolve, reject) => {
       if (!/^image\/(jpeg|png|webp)$/.test(file.type)) return reject(new Error('Formato não permitido. Use JPG, PNG ou WEBP.'));
       if (file.size > 15 * 1024 * 1024) return reject(new Error('Arquivo acima de 15 MB.'));

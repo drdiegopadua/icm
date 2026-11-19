@@ -37,6 +37,7 @@
       </div>
       ${gerais ? `<div class="section-title">${I('folder', 18)} Projetos e instituição</div>
       <div class="grid grid-3 stagger">
+        ${card('Fechamento do mês', 'Num documento só: relatório mensal de todas as turmas, frequência, folha de bolsas e movimento financeiro — pronto para salvar em PDF.', 'clipboardCheck', '#dc2626', 'fechamento_mes')}
         ${card('Relatório do projeto (prestação de contas)', 'Identificação completa, metas x resultados, turmas, horas, perfil dos beneficiários, eventos e fotos — por período.', 'fileText', '#0891b2', 'projeto')}
         ${card('Execução do objeto (MROSC)', 'Prestação de contas de termo de fomento/colaboração (Lei 13.019): ações, metas x resultados, listas de presença, fotos, satisfação e resumo financeiro.', 'clipboardCheck', '#1d4ed8', 'execucao_objeto')}
         ${card('Relatório anual do projeto', 'O mesmo relatório consolidado para o ano civil escolhido.', 'folder', '#10b981', 'projeto_anual')}

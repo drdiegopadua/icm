@@ -34,6 +34,7 @@
     { re: /^\/relatorios$/, page: 'relatorios' },
     { re: /^\/verificar\/([\w-]+)$/, page: 'verificarApp', keys: ['codigo'] },
     { re: /^\/rotina$/, page: 'rotina' },
+    { re: /^\/pendencias$/, page: 'pendencias' },
     { re: /^\/chamada$/, page: 'chamada' },
     { re: /^\/aniversariantes$/, page: 'aniversariantes' },
     { re: /^\/documentos$/, page: 'documentos', perm: 'docinst.ver' },
@@ -92,6 +93,7 @@
     ] },
     { label: 'Pedagógico', icon: 'folder', itens: [
       ICM.auth.can('pedagogico.gestao') && { href: '#/gestao-pedagogica', icon: 'chart', label: 'Gestão pedagógica', desc: 'Conferência dos professores, frequência, visitas e cronograma', match: /^\/gestao-pedagogica/ },
+      { href: '#/pendencias', icon: 'alert', label: 'Pendências', desc: 'Tudo o que está atrasado, com o botão que resolve', match: /^\/pendencias/ },
       { href: '#/rotina', icon: 'sun', label: 'Rotina do dia', desc: 'Aulas, pendências e avisos de hoje', match: /^\/rotina/ },
       { href: '#/turmas', icon: 'layers', label: 'Turmas', desc: 'Aulas, plano do mês, chamada e frequência', match: /^\/turmas/ },
       { href: '#/grade-semanal', icon: 'calendar', label: 'Agenda da semana', desc: 'Todas as turmas e seus horários', match: /^\/grade-semanal/ },
@@ -136,7 +138,7 @@
     .filter(n => n.itens ? n.itens.length : permitidoProf(n.href));
   // Professor: só o que é pertinente às próprias turmas (o banco também limita os dados — supabase/icm_v12)
   const PROF_PAGINAS = new Set(['dashboard', 'alunos', 'alunoDetalhe', 'turmasLista', 'turma', 'projetos', 'projetoDetalhe', 'eventos', 'eventoDetalhe',
-    'relatorios', 'verificarApp', 'rotina', 'chamada', 'aniversariantes', 'avisos', 'reunioes', 'reuniao', 'calendarioLetivo', 'gradeSemanal',
+    'relatorios', 'verificarApp', 'rotina', 'pendencias', 'chamada', 'aniversariantes', 'avisos', 'reunioes', 'reuniao', 'calendarioLetivo', 'gradeSemanal',
     'compras', 'config', 'minhaAssinatura', 'chat']);
   const ehProf = () => { const u = ICM.auth.user(); return !!u && u.papel === 'professor'; };
   const paginaDe = href => { const p = String(href || '').replace(/^#/, '').split('?')[0]; const r = routes.find(x => x.re.test(p)); return r ? r.page : ''; };
@@ -156,7 +158,7 @@
   const permitidoProf = href => { const pg = paginaDe(href); return reqOk(pg) && (!ehProf() || paginaProfOk(pg)); };
   // Menus grandes abrem em colunas por assunto
   const SECOES = {
-    '#/gestao-pedagogica': 'Acompanhamento', '#/rotina': 'Acompanhamento',
+    '#/gestao-pedagogica': 'Acompanhamento', '#/pendencias': 'Acompanhamento', '#/rotina': 'Acompanhamento',
     '#/turmas': 'Turmas e alunos', '#/projetos': 'Projetos e recursos', '#/impacto': 'Projetos e recursos', '#/grade-semanal': 'Turmas e alunos', '#/mapa-atendidos': 'Turmas e alunos',
     '#/eventos': 'Eventos e calendário', '#/agenda': 'Eventos e calendário', '#/calendario-letivo': 'Eventos e calendário',
     '#/financeiro': 'Projetos e recursos', '#/bolsistas': 'Pessoas e acessos', '#/compras': 'Administrativo', '#/patrimonio': 'Administrativo', '#/estoque': 'Administrativo',

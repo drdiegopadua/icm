@@ -191,5 +191,34 @@
     }
   };
 
-  ICM.api.pedagogico = { ITENS, planos, conferencia, porProfessor, ajustar, acompanhamentos, cronograma };
+  // ---------- Aulas com pendência (painel de pendências) ----------
+  // Dias de aula esperados nos últimos N dias (até hoje) sem chamada, relatório ou as 3 fotos
+  async function aulasPendentes(nDias = 30) {
+    const hoje = u().today(), de = u().addDays(hoje, -nDias);
+    const turmas = (await ICM.api.turmas.list()).filter(t => t.status !== 'encerrada');
+    const yms = [...new Set([de.slice(0, 7), hoje.slice(0, 7)])];
+    const bloq = new Set(); for (const ym of yms) (await diasBloqueados(ym)).forEach(d => bloq.add(d));
+    const aulas = await S().list('aulas', a => a.data >= de && a.data <= hoje);
+    const mats = await S().list('matriculas').catch(() => []);
+    const out = [];
+    for (const t of turmas) {
+      const doT = aulas.filter(a => a.turma_id === t.id);
+      const canceladas = new Set(doT.filter(a => a.status === 'cancelada').map(a => a.data));
+      const datas = new Set(yms.flatMap(ym => diasDaTurma(t, ym, bloq, hoje)).filter(d => d >= de && !canceladas.has(d)));
+      doT.filter(a => a.status === 'realizada').forEach(a => datas.add(a.data));
+      for (const d of [...datas].sort()) {
+        const a = doT.filter(x => x.data === d && x.status !== 'cancelada').sort((x, y) => (y.status === 'realizada') - (x.status === 'realizada'))[0];
+        const temAlunos = mats.some(m => m.turma_id === t.id && m.entrada <= d && (!m.saida || m.saida > d));
+        const nf = a ? (a.fotos || []).length : 0;
+        const faltas = [];
+        if (temAlunos && !(a && Object.keys(a.presencas || {}).length)) faltas.push('chamada');
+        if (!(a && a.relatorio && String(a.relatorio.texto || '').trim())) faltas.push('relatório');
+        if (nf !== 3) faltas.push(`fotos (${nf}/3)`);
+        if (faltas.length) out.push({ turma_id: t.id, turma: t.nome, professor_id: t.professor_id, data: d, aula_id: a ? a.id : '', faltas, hoje: d === hoje });
+      }
+    }
+    return out.sort((x, y) => y.data.localeCompare(x.data) || x.turma.localeCompare(y.turma));
+  }
+
+  ICM.api.pedagogico = { ITENS, planos, conferencia, porProfessor, ajustar, acompanhamentos, cronograma, aulasPendentes };
 })();

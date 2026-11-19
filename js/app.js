@@ -64,6 +64,8 @@
     { re: /^\/config$/, page: 'config' },
     { re: /^\/auditoria$/, page: 'auditoria', perm: 'auditoria.ver' },
     { re: /^\/financeiro$/, page: 'financeiro', perm: 'financeiro.ver' },
+    { re: /^\/bolsistas$/, page: 'bolsistas', perm: 'bolsas.gerir' },
+    { re: /^\/bolsistas\/([\w-]+)$/, page: 'bolsista', keys: ['id'], perm: 'bolsas.gerir' },
     { re: /^\/compras$/, page: 'compras' },
     { re: /^\/campanhas$/, page: 'campanhas', perm: 'campanhas.gerir' },
     { re: /^\/social$/, page: 'social', perm: 'social.gerir' },
@@ -117,6 +119,7 @@
       { href: '#/projetos', icon: 'folder', label: 'Projetos', desc: 'Editais e termos, metas, vigência, orçamento e app', match: /^\/projetos/ },
       ICM.auth.can('projetos.editar') && { href: '#/impacto', icon: 'target', label: 'Indicadores de impacto', desc: 'Matriz de indicadores, ODS e relatório de impacto', match: /^\/impacto/ },
       ICM.auth.can('financeiro.ver') && { href: '#/financeiro', icon: 'dollar', label: 'Financeiro', desc: 'Pagar e receber, orçamento por projeto, conciliação', match: /^\/financeiro/ },
+      ICM.auth.can('bolsas.gerir') && { href: '#/bolsistas', icon: 'award', label: 'Bolsistas e monitores', desc: 'Bolsistas, monitores e jovens aprendizes: requisitos e folha', match: /^\/bolsistas/ },
       { href: '#/compras', icon: 'clipboard', label: 'Compras', desc: 'Pedidos, 3 orçamentos e aprovação', match: /^\/compras/ },
       { href: '#/patrimonio', icon: 'building', label: 'Patrimônio', match: /^\/patrimonio/, count: 'atrasos' },
       { href: '#/estoque', icon: 'layers', label: 'Estoque de consumo', match: /^\/estoque/ },
@@ -156,7 +159,7 @@
     '#/gestao-pedagogica': 'Acompanhamento', '#/rotina': 'Acompanhamento',
     '#/turmas': 'Turmas e alunos', '#/projetos': 'Projetos e recursos', '#/impacto': 'Projetos e recursos', '#/grade-semanal': 'Turmas e alunos', '#/mapa-atendidos': 'Turmas e alunos',
     '#/eventos': 'Eventos e calendário', '#/agenda': 'Eventos e calendário', '#/calendario-letivo': 'Eventos e calendário',
-    '#/financeiro': 'Projetos e recursos', '#/compras': 'Administrativo', '#/patrimonio': 'Administrativo', '#/estoque': 'Administrativo',
+    '#/financeiro': 'Projetos e recursos', '#/bolsistas': 'Pessoas e acessos', '#/compras': 'Administrativo', '#/patrimonio': 'Administrativo', '#/estoque': 'Administrativo',
     '#/equipe': 'Pessoas e acessos', '#/assinaturas-equipe': 'Pessoas e acessos', '#/usuarios': 'Pessoas e acessos',
     '#/auditoria': 'Sistema', '#/importar': 'Sistema', '#/dados': 'Sistema', '#/config': 'Sistema'
   };

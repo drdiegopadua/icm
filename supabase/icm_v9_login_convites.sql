@@ -18,10 +18,10 @@ declare c convites;
 begin
   select * into c from convites where lower(email) = lower(p_email);
   if not found then return exists (select 1 from perfis where id = p_uid); end if;
-  insert into perfis (id, nome, email, papel, cargo, telefone, exige_2fa, da_aulas, opera_van)
-  values (p_uid, c.nome, lower(p_email), c.papel, c.cargo, c.telefone, coalesce(c.exige_2fa, false), coalesce(c.da_aulas, false), coalesce(c.opera_van, false))
+  insert into perfis (id, nome, email, papel, cargo, telefone, exige_2fa, da_aulas, opera_van, permissoes)
+  values (p_uid, c.nome, lower(p_email), c.papel, c.cargo, c.telefone, coalesce(c.exige_2fa, false), coalesce(c.da_aulas, false), coalesce(c.opera_van, false), coalesce(c.permissoes, '{}'::jsonb))
   on conflict (id) do update set nome = excluded.nome, papel = excluded.papel, cargo = excluded.cargo, telefone = excluded.telefone,
-    exige_2fa = excluded.exige_2fa, da_aulas = excluded.da_aulas, opera_van = excluded.opera_van, ativo = true;
+    exige_2fa = excluded.exige_2fa, da_aulas = excluded.da_aulas, opera_van = excluded.opera_van, permissoes = excluded.permissoes, ativo = true;
   delete from convites where lower(email) = lower(p_email);
   update registros set dados = jsonb_set(dados, '{membros}', coalesce(dados->'membros', '[]'::jsonb) || to_jsonb(p_uid::text))
     where colecao = 'chat_canais' and id = 'chg_geral' and not (coalesce(dados->'membros', '[]'::jsonb) ? p_uid::text);

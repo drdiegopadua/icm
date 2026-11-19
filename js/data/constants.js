@@ -78,6 +78,8 @@
       'financeiro.ver': ['admin', 'coordenacao'],
       'financeiro.lancar': ['admin', 'coordenacao'],
       'financeiro.aprovar': ['admin'],
+      'bolsas.gerir': ['admin', 'coordenacao'],
+      'bolsas.aprovar': ['admin'],
       'compras.solicitar': ['admin', 'coordenacao', 'secretaria', 'professor'],
       'compras.cotar': ['admin', 'coordenacao', 'secretaria'],
       'compras.aprovar': ['admin'],
@@ -404,6 +406,8 @@
       ['financeiro.ver', 'Ver o financeiro', ''],
       ['financeiro.lancar', 'Lançar receitas e despesas', ''],
       ['financeiro.aprovar', 'Aprovar pagamentos e orçamentos', ''],
+      ['bolsas.gerir', 'Bolsistas, monitores e aprendizes (cadastro e folha)', ''],
+      ['bolsas.aprovar', 'Aprovar a folha de bolsas', ''],
       ['doadores.gerir', 'Doadores, doações e recibos', ''],
       ['associados.gerir', 'Associados e mensalidades', ''],
       ['campanhas.gerir', 'Campanhas de arrecadação', '']] },
@@ -431,7 +435,7 @@
     'financeiro.lancar': ['financeiro.ver'], 'financeiro.aprovar': ['financeiro.ver'],
     'estoque.movimentar': ['estoque.ver'], 'estoque.editar': ['estoque.ver'],
     'docinst.gerir': ['docinst.ver'], 'governanca.gerir': ['governanca.ver'], 'agenda.gerir': ['agenda.reservar'],
-    'compras.aprovar': ['compras.cotar']
+    'compras.aprovar': ['compras.cotar'], 'bolsas.aprovar': ['bolsas.gerir']
   };
   ICM.C.permNome = k => { for (const g of ICM.C.PERM_GRUPOS) { const i = g.itens.find(x => x[0] === k); if (i) return i[1]; } return k; };
   // Vale para o usuário? perfil + liberadas − bloqueadas, e as dependências

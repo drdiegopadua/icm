@@ -164,7 +164,6 @@
     const horas = aulas.reduce((s, a) => s + a.horas, 0);
     const ps = presStats(aulas);
     const ativos = mats.filter(m => m.status === 'ativo').length;
-    const fotos = aulas.flatMap(a => (a.fotos || []).map(f => ({ ...f, legenda: `${U().fmtDate(a.data)} — ${f.legenda || ''}` })));
     let html = head('Relatório Mensal de Atividades', `${t.nome} — ${U().fmtMonth(ym)}`);
     html += meta([['Projeto', p.nome], ['Área', ICM.C.AREAS[p.area].nome], ['Financiador / instrumento', p.financiador], ['Nº termo / processo', p.numero_termo], ['Professor(a) responsável', prof.nome], ['Dias e horário', `${ICM.pages._diasTxt(t.dias)} · ${t.inicio}–${t.fim}`], ['Local', t.local], ['Período de referência', U().fmtMonth(ym)]]);
     html += kpis([[aulas.length, 'Aulas realizadas'], [U().num(horas, 1) + 'h', 'Horas de aula no mês'], [ativos, 'Alunos ativos'], [ps.freq + '%', 'Frequência média']]);
@@ -185,10 +184,9 @@
         <h3>Relatório da aula</h3>${rl.texto ? topicos(rl.texto) : '<p>Não preenchido.</p>'}${rl.ocorrencias ? `<p><b>Ocorrências:</b> ${esc(rl.ocorrencias)}</p>` : ''}
         <h3>Chamada — ${pf} presentes de ${pres.length}</h3>
         <p style="font-size:11px;columns:2">${pres.map(x => `${esc(x.n)} — <span class="${x.v}">${{ P: 'Presente', F: 'Falta', J: 'Justificada' }[x.v]}</span>`).join('<br>')}</p>
-        ${(a.fotos || []).length ? photos(a.fotos, 3) : ''}</div>`);
+        ${(a.fotos || []).length ? `<h3>Fotos da aula</h3>${photos(a.fotos, 3)}` : ''}</div>`);
     });
     if (!aulas.length) html += sec('<p>Nenhuma aula realizada no período.</p>');
-    html += sec(`<h2>4. Registro fotográfico do mês</h2>${photos(fotos, 12)}`);
     html += declaracao() + signs(`${prof.nome || 'Professor(a)'} — Professor(a)`, `${coord.nome || 'Coordenação'} — Coordenação`);
     return { title: `Relatório mensal — ${t.nome} — ${U().fmtMonth(ym)}`, html, file: `relatorio-mensal-${t.id}-${ym}` };
   };

@@ -14,7 +14,7 @@
   const can = p => ICM.auth.can(p);
   const me = () => ICM.auth.user();
   const temTexto = o => !!o && Object.values(o).some(v => String(v || '').trim().length > 0);
-  const ITENS = { plano: 'Plano de aula do mês', chamada: 'Registro de chamada', relatorio: 'Relatório de aula', fotos: 'Fotos (3 por aula)' };
+  const ITENS = { plano: 'Plano de aula do mês', chamada: 'Registro de chamada', relatorio: 'Relatório de aula', fotos: 'Fotos (exatamente 3 por aula)' };
   const PESO = { EM_DIA: 100, PARCIAL: 50, PENDENTE: 0 };
 
   // ---------- Plano de aula mensal ----------
@@ -81,7 +81,7 @@
       const doDia = d => aulas.filter(a => a.data === d && a.status !== 'cancelada');
       const comChamada = dias.filter(d => doDia(d).some(a => Object.keys(a.presencas || {}).length)).length;
       const comRel = dias.filter(d => doDia(d).some(a => a.relatorio && String(a.relatorio.texto || '').trim())).length;
-      const comFotos = dias.filter(d => doDia(d).some(a => (a.fotos || []).length >= 3)).length;
+      const comFotos = dias.filter(d => doDia(d).some(a => (a.fotos || []).length === 3)).length;
       const pl = pls.find(p => p.turma_id === t.id);
       const auto = {
         plano: temTexto(pl && { a: pl.objetivos, b: pl.conteudos, c: pl.metodologia, d: pl.tema }) ? 'EM_DIA' : 'PENDENTE',

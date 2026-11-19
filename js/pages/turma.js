@@ -65,7 +65,7 @@
               <td class="small"><b>${esc(a.plano && a.plano.tema || '—')}</b></td>
               <td>${pr.length ? `<b>${P}/${pr.length}</b>` : '<span class="muted">—</span>'}</td>
               <td>${a.relatorio && a.relatorio.texto ? ui().badge('Preenchido', 'ok') : ui().badge('Pendente', a.status === 'realizada' || atrasada ? 'warn' : 'neutral')}</td>
-              <td>${(a.fotos || []).length ? `<span class="row" style="gap:4px;${a.status === 'realizada' && (a.fotos || []).length < 3 ? 'color:var(--danger)' : ''}">${I('image', 14)} ${(a.fotos || []).length}/3</span>` : `<span class="${a.status === 'realizada' ? 'badge danger' : 'muted'}">${a.status === 'realizada' ? 'faltam 3' : '—'}</span>`}</td>
+              <td>${(a.fotos || []).length ? `<span class="row" style="gap:4px;${a.status === 'realizada' && (a.fotos || []).length !== 3 ? 'color:var(--danger)' : ''}">${I('image', 14)} ${(a.fotos || []).length}/3</span>` : `<span class="${a.status === 'realizada' ? 'badge danger' : 'muted'}">${a.status === 'realizada' ? 'faltam 3' : '—'}</span>`}</td>
               <td>${a.status === 'realizada' ? ui().badge('Realizada', 'ok', true) : atrasada ? ui().badge('Aguardando registro', 'warn', true) : a.status === 'cancelada' ? ui().badge('Cancelada', 'danger', true) : ui().badge('Planejada', 'neutral', true)}</td></tr>`; }).join('')}
             </tbody></table></div>` : ui().empty('Nenhuma aula neste mês', 'book')}
           </div></div>`;
@@ -251,7 +251,7 @@
       };
       drawDepois();
       const all = m.$('[data-all]'); if (all) all.addEventListener('click', () => { mats.forEach(x => { pres[x.aluno_id] = 'P'; }); drawChamada(); });
-      ui().photoPicker(m.$('[data-fotos]'), fotos, () => { }, { editable: canEdit });
+      ui().photoPicker(m.$('[data-fotos]'), fotos, () => { }, { editable: canEdit, max: 3 });
       if (semImg.size) m.$('[data-s="fotos"]').insertAdjacentHTML('afterbegin', `<div class="sens-lock mb-4">${I('camera', 18)} Sem autorização de imagem: ${esc([...semImg].join(', '))}. Não publique fotos em que apareçam.</div>`);
 
       const secs = m.$$('[data-s]');
@@ -260,9 +260,9 @@
       const ok = m.$('[data-ok]');
       if (ok) ok.addEventListener('click', e => ui().busy(e.currentTarget, async () => {
         const d = ICM.util.formData(m.$('form'));
-        // 3 fotos por aula realizada (obrigatório)
+        // Exatamente 3 fotos por aula realizada (nem mais, nem menos)
         const realizada = d.status === 'realizada' || (Object.keys(pres).length && d.status === 'planejada' && d.data <= ICM.util.today());
-        if (realizada && fotos.length < 3) { ui().toast(`Adicione pelo menos 3 fotos da aula (falta${3 - fotos.length > 1 ? 'm' : ''} ${3 - fotos.length}).`, 'warn', 5000); const tb = m.$('[data-atabs] [data-tab="fotos"]'); if (tb) tb.click(); return; }
+        if ((realizada && fotos.length < 3) || fotos.length > 3) { ui().toast(fotos.length > 3 ? `São exatamente 3 fotos por aula. Remova ${fotos.length - 3}.` : `A aula precisa de 3 fotos (falta${3 - fotos.length > 1 ? 'm' : ''} ${3 - fotos.length}).`, 'warn', 5000); const tb = m.$('[data-atabs] [data-tab="fotos"]'); if (tb) tb.click(); return; }
         const marcados = Object.keys(pres).length;
         if (marcados && d.status === 'planejada' && d.data <= ICM.util.today()) d.status = 'realizada';
         if (d.status === 'realizada' && marcados < mats.length) {
